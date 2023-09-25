@@ -144,6 +144,16 @@ ignore_missing_imports = true
 enable_recursive_aliases = true
 exclude = ['examples/', "./src/encord_active/db/migrations/.*", "local_tests/.*", "venv/bin/.*"]
 
+[tool.vulture]
+exclude = []
+ignore_decorators = ["@router.get", "@router.post", "@router.put"]
+ignore_names = []
+make_whitelist = true
+min_confidence = 80
+paths = ["src"]
+sort_by_size = true
+verbose = true
+
 [tool.pylint.'MASTER']
 extension-pkg-allow-list = "cv2"
 ignore-paths = ['^examples/.*', "src/encord_active/db/migrations.*"]

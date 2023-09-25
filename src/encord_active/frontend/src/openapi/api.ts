@@ -530,7 +530,13 @@ export interface PredictionItem {
    * @type {{ [key: string]: Array<number> | undefined; }}
    * @memberof PredictionItem
    */
-  annotation_tp_bounds: { [key: string]: Array<number> | undefined };
+  annotation_iou_bounds: { [key: string]: Array<number> | undefined };
+  /**
+   *
+   * @type {Set<string>}
+   * @memberof PredictionItem
+   */
+  annotation_feature_mismatch: Set<string>;
   /**
    *
    * @type {Array<object>}
@@ -1857,10 +1863,3120 @@ export class DefaultApi extends BaseAPI {
 }
 
 /**
- * ProjectsV2Api - axios parameter creator
+ * PredictionApi - axios parameter creator
  * @export
  */
-export const ProjectsV2ApiAxiosParamCreator = function (
+export const PredictionApiAxiosParamCreator = function (
+  configuration?: Configuration
+) {
+  return {
+    /**
+     *
+     * @summary Route List Tags
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeListTagsApiProjectsV2ProjectHashTagsGet: async (
+      projectHash: string,
+      options: AxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'projectHash' is not null or undefined
+      assertParamExists(
+        "routeListTagsApiProjectsV2ProjectHashTagsGet",
+        "projectHash",
+        projectHash
+      );
+      const localVarPath = `/api/projects_v2/{project_hash}/tags/`.replace(
+        `{${"project_hash"}}`,
+        encodeURIComponent(String(projectHash))
+      );
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      };
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      };
+    },
+    /**
+     *
+     * @summary Route Prediction Data Item
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {string} dataItem
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        dataItem: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'dataItem' is not null or undefined
+        assertParamExists(
+          "routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet",
+          "dataItem",
+          dataItem
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/preview/{data_item}`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"data_item"}}`, encodeURIComponent(String(dataItem)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Distribution
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} group
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
+        iou: number,
+        group: string,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "domain",
+          domain
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "iou",
+          iou
+        );
+        // verify required parameter 'group' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet",
+          "group",
+          group
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/distribution`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (iou !== undefined) {
+          localVarQueryParameter["iou"] = iou;
+        }
+
+        if (group !== undefined) {
+          localVarQueryParameter["group"] = group;
+        }
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Distribution
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} group
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
+        iou: number,
+        group: string,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1",
+          "domain",
+          domain
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1",
+          "iou",
+          iou
+        );
+        // verify required parameter 'group' is not null or undefined
+        assertParamExists(
+          "routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1",
+          "group",
+          group
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/distribution`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (iou !== undefined) {
+          localVarQueryParameter["iou"] = iou;
+        }
+
+        if (group !== undefined) {
+          localVarQueryParameter["group"] = group;
+        }
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Metric Performance
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {number} iou
+     * @param {string} metricName
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        iou: number,
+        metricName: string,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
+          "iou",
+          iou
+        );
+        // verify required parameter 'metricName' is not null or undefined
+        assertParamExists(
+          "routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet",
+          "metricName",
+          metricName
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/metric_performance`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            );
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (iou !== undefined) {
+          localVarQueryParameter["iou"] = iou;
+        }
+
+        if (metricName !== undefined) {
+          localVarQueryParameter["metric_name"] = metricName;
+        }
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Reduction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {string} reductionHash
+     * @param {number} iou
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
+        reductionHash: string,
+        iou: number,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "domain",
+          domain
+        );
+        // verify required parameter 'reductionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "reductionHash",
+          reductionHash
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet",
+          "iou",
+          iou
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/reductions/{reduction_hash}/summary`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)))
+            .replace(
+              `{${"reduction_hash"}}`,
+              encodeURIComponent(String(reductionHash))
+            );
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (iou !== undefined) {
+          localVarQueryParameter["iou"] = iou;
+        }
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Reduction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {string} reductionHash
+     * @param {number} iou
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
+        reductionHash: string,
+        iou: number,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2",
+          "domain",
+          domain
+        );
+        // verify required parameter 'reductionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2",
+          "reductionHash",
+          reductionHash
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2",
+          "iou",
+          iou
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/reductions/{reduction_hash}/summary`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)))
+            .replace(
+              `{${"reduction_hash"}}`,
+              encodeURIComponent(String(reductionHash))
+            );
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (iou !== undefined) {
+          localVarQueryParameter["iou"] = iou;
+        }
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} xMetric
+     * @param {string} yMetric
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
+        iou: number,
+        xMetric: string,
+        yMetric: string,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "domain",
+          domain
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "iou",
+          iou
+        );
+        // verify required parameter 'xMetric' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "xMetric",
+          xMetric
+        );
+        // verify required parameter 'yMetric' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet",
+          "yMetric",
+          yMetric
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/scatter`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (iou !== undefined) {
+          localVarQueryParameter["iou"] = iou;
+        }
+
+        if (xMetric !== undefined) {
+          localVarQueryParameter["x_metric"] = xMetric;
+        }
+
+        if (yMetric !== undefined) {
+          localVarQueryParameter["y_metric"] = yMetric;
+        }
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} xMetric
+     * @param {string} yMetric
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
+        iou: number,
+        xMetric: string,
+        yMetric: string,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3",
+          "domain",
+          domain
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3",
+          "iou",
+          iou
+        );
+        // verify required parameter 'xMetric' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3",
+          "xMetric",
+          xMetric
+        );
+        // verify required parameter 'yMetric' is not null or undefined
+        assertParamExists(
+          "routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3",
+          "yMetric",
+          yMetric
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/scatter`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (iou !== undefined) {
+          localVarQueryParameter["iou"] = iou;
+        }
+
+        if (xMetric !== undefined) {
+          localVarQueryParameter["x_metric"] = xMetric;
+        }
+
+        if (yMetric !== undefined) {
+          localVarQueryParameter["y_metric"] = yMetric;
+        }
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Search
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
+     * @param {string} [orderBy]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
+        iou: number,
+        desc: boolean,
+        filters?: string,
+        orderBy?: string,
+        offset?: number,
+        limit?: number,
+        text?: string,
+        image?: File,
+        item?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
+          "domain",
+          domain
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
+          "iou",
+          iou
+        );
+        // verify required parameter 'desc' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
+          "desc",
+          desc
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/search`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "POST",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+        const localVarFormParams = new ((configuration &&
+          configuration.formDataCtor) ||
+          FormData)();
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        if (iou !== undefined) {
+          localVarFormParams.append("iou", iou as any);
+        }
+
+        if (orderBy !== undefined) {
+          localVarFormParams.append("order_by", orderBy as any);
+        }
+
+        if (desc !== undefined) {
+          localVarFormParams.append("desc", desc as any);
+        }
+
+        if (offset !== undefined) {
+          localVarFormParams.append("offset", offset as any);
+        }
+
+        if (limit !== undefined) {
+          localVarFormParams.append("limit", limit as any);
+        }
+
+        if (text !== undefined) {
+          localVarFormParams.append("text", text as any);
+        }
+
+        if (image !== undefined) {
+          localVarFormParams.append("image", image as any);
+        }
+
+        if (item !== undefined) {
+          localVarFormParams.append("item", item as any);
+        }
+
+        localVarHeaderParameter["Content-Type"] = "multipart/form-data";
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+        localVarRequestOptions.data = localVarFormParams;
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Search
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
+     * @param {string} [orderBy]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4:
+      async (
+        projectHash: string,
+        predictionHash: string,
+        domain: PredictionDomain,
+        iou: number,
+        desc: boolean,
+        filters?: string,
+        orderBy?: string,
+        offset?: number,
+        limit?: number,
+        text?: string,
+        image?: File,
+        item?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4",
+          "domain",
+          domain
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4",
+          "iou",
+          iou
+        );
+        // verify required parameter 'desc' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4",
+          "desc",
+          desc
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/search`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "POST",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+        const localVarFormParams = new ((configuration &&
+          configuration.formDataCtor) ||
+          FormData)();
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        if (iou !== undefined) {
+          localVarFormParams.append("iou", iou as any);
+        }
+
+        if (orderBy !== undefined) {
+          localVarFormParams.append("order_by", orderBy as any);
+        }
+
+        if (desc !== undefined) {
+          localVarFormParams.append("desc", desc as any);
+        }
+
+        if (offset !== undefined) {
+          localVarFormParams.append("offset", offset as any);
+        }
+
+        if (limit !== undefined) {
+          localVarFormParams.append("limit", limit as any);
+        }
+
+        if (text !== undefined) {
+          localVarFormParams.append("text", text as any);
+        }
+
+        if (image !== undefined) {
+          localVarFormParams.append("image", image as any);
+        }
+
+        if (item !== undefined) {
+          localVarFormParams.append("item", item as any);
+        }
+
+        localVarHeaderParameter["Content-Type"] = "multipart/form-data";
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+        localVarRequestOptions.data = localVarFormParams;
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Prediction Summary
+     * @param {string} predictionHash
+     * @param {string} projectHash
+     * @param {number} iou
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet:
+      async (
+        predictionHash: string,
+        projectHash: string,
+        iou: number,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'predictionHash' is not null or undefined
+        assertParamExists(
+          "routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet",
+          "predictionHash",
+          predictionHash
+        );
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'iou' is not null or undefined
+        assertParamExists(
+          "routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet",
+          "iou",
+          iou
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/summary`
+            .replace(
+              `{${"prediction_hash"}}`,
+              encodeURIComponent(String(predictionHash))
+            )
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            );
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (iou !== undefined) {
+          localVarQueryParameter["iou"] = iou;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Tag Items
+     * @param {string} projectHash
+     * @param {Array<ItemTags>} itemTags
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut: async (
+      projectHash: string,
+      itemTags: Array<ItemTags>,
+      options: AxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'projectHash' is not null or undefined
+      assertParamExists(
+        "routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut",
+        "projectHash",
+        projectHash
+      );
+      // verify required parameter 'itemTags' is not null or undefined
+      assertParamExists(
+        "routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut",
+        "itemTags",
+        itemTags
+      );
+      const localVarPath =
+        `/api/projects_v2/{project_hash}/tags/tag_items`.replace(
+          `{${"project_hash"}}`,
+          encodeURIComponent(String(projectHash))
+        );
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+
+      const localVarRequestOptions = {
+        method: "PUT",
+        ...baseOptions,
+        ...options,
+      };
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
+
+      localVarHeaderParameter["Content-Type"] = "application/json";
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        itemTags,
+        localVarRequestOptions,
+        configuration
+      );
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      };
+    },
+    /**
+     *
+     * @summary Route Tagged Items
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet: async (
+      projectHash: string,
+      options: AxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'projectHash' is not null or undefined
+      assertParamExists(
+        "routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet",
+        "projectHash",
+        projectHash
+      );
+      const localVarPath =
+        `/api/projects_v2/{project_hash}/tags/tagged_items`.replace(
+          `{${"project_hash"}}`,
+          encodeURIComponent(String(projectHash))
+        );
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      };
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      };
+    },
+  };
+};
+
+/**
+ * PredictionApi - functional programming interface
+ * @export
+ */
+export const PredictionApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator =
+    PredictionApiAxiosParamCreator(configuration);
+  return {
+    /**
+     *
+     * @summary Route List Tags
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeListTagsApiProjectsV2ProjectHashTagsGet(
+      projectHash: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<Array<ProjectTagEntry>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeListTagsApiProjectsV2ProjectHashTagsGet(
+          projectHash,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Data Item
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {string} dataItem
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+      projectHash: string,
+      predictionHash: string,
+      dataItem: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<PredictionItem>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+          projectHash,
+          predictionHash,
+          dataItem,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Distribution
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} group
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      group: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<QueryDistribution>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          group,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Distribution
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} group
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      group: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<QueryDistribution>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          group,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Metric Performance
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {number} iou
+     * @param {string} metricName
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+      projectHash: string,
+      predictionHash: string,
+      iou: number,
+      metricName: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<QueryMetricPerformance>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+          projectHash,
+          predictionHash,
+          iou,
+          metricName,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Reduction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {string} reductionHash
+     * @param {number} iou
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      reductionHash: string,
+      iou: number,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<PredictionQuery2DEmbedding>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+          projectHash,
+          predictionHash,
+          domain,
+          reductionHash,
+          iou,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Reduction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {string} reductionHash
+     * @param {number} iou
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      reductionHash: string,
+      iou: number,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<PredictionQuery2DEmbedding>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2(
+          projectHash,
+          predictionHash,
+          domain,
+          reductionHash,
+          iou,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} xMetric
+     * @param {string} yMetric
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      xMetric: string,
+      yMetric: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryScatter>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          xMetric,
+          yMetric,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} xMetric
+     * @param {string} yMetric
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      xMetric: string,
+      yMetric: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryScatter>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          xMetric,
+          yMetric,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Search
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
+     * @param {string} [orderBy]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      desc: boolean,
+      filters?: string,
+      orderBy?: string,
+      offset?: number,
+      limit?: number,
+      text?: string,
+      image?: File,
+      item?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnalysisSearch>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          desc,
+          filters,
+          orderBy,
+          offset,
+          limit,
+          text,
+          image,
+          item,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Search
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
+     * @param {string} [orderBy]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      desc: boolean,
+      filters?: string,
+      orderBy?: string,
+      offset?: number,
+      limit?: number,
+      text?: string,
+      image?: File,
+      item?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnalysisSearch>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          desc,
+          filters,
+          orderBy,
+          offset,
+          limit,
+          text,
+          image,
+          item,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Prediction Summary
+     * @param {string} predictionHash
+     * @param {string} projectHash
+     * @param {number} iou
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+      predictionHash: string,
+      projectHash: string,
+      iou: number,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<PredictionSummaryResult>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+          predictionHash,
+          projectHash,
+          iou,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Tag Items
+     * @param {string} projectHash
+     * @param {Array<ItemTags>} itemTags
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut(
+      projectHash: string,
+      itemTags: Array<ItemTags>,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut(
+          projectHash,
+          itemTags,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Tagged Items
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+      projectHash: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<{ [key: string]: GroupedTags | undefined }>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+          projectHash,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+  };
+};
+
+/**
+ * PredictionApi - factory interface
+ * @export
+ */
+export const PredictionApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance
+) {
+  const localVarFp = PredictionApiFp(configuration);
+  return {
+    /**
+     *
+     * @summary Route List Tags
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeListTagsApiProjectsV2ProjectHashTagsGet(
+      projectHash: string,
+      options?: any
+    ): AxiosPromise<Array<ProjectTagEntry>> {
+      return localVarFp
+        .routeListTagsApiProjectsV2ProjectHashTagsGet(projectHash, options)
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Data Item
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {string} dataItem
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+      projectHash: string,
+      predictionHash: string,
+      dataItem: string,
+      options?: any
+    ): AxiosPromise<PredictionItem> {
+      return localVarFp
+        .routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+          projectHash,
+          predictionHash,
+          dataItem,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Distribution
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} group
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      group: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<QueryDistribution> {
+      return localVarFp
+        .routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          group,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Distribution
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} group
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      group: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<QueryDistribution> {
+      return localVarFp
+        .routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          group,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Metric Performance
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {number} iou
+     * @param {string} metricName
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+      projectHash: string,
+      predictionHash: string,
+      iou: number,
+      metricName: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<QueryMetricPerformance> {
+      return localVarFp
+        .routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+          projectHash,
+          predictionHash,
+          iou,
+          metricName,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Reduction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {string} reductionHash
+     * @param {number} iou
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      reductionHash: string,
+      iou: number,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<PredictionQuery2DEmbedding> {
+      return localVarFp
+        .routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+          projectHash,
+          predictionHash,
+          domain,
+          reductionHash,
+          iou,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Reduction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {string} reductionHash
+     * @param {number} iou
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      reductionHash: string,
+      iou: number,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<PredictionQuery2DEmbedding> {
+      return localVarFp
+        .routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2(
+          projectHash,
+          predictionHash,
+          domain,
+          reductionHash,
+          iou,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} xMetric
+     * @param {string} yMetric
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      xMetric: string,
+      yMetric: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<QueryScatter> {
+      return localVarFp
+        .routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          xMetric,
+          yMetric,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Scatter
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {string} xMetric
+     * @param {string} yMetric
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      xMetric: string,
+      yMetric: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<QueryScatter> {
+      return localVarFp
+        .routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          xMetric,
+          yMetric,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Search
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
+     * @param {string} [orderBy]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      desc: boolean,
+      filters?: string,
+      orderBy?: string,
+      offset?: number,
+      limit?: number,
+      text?: string,
+      image?: File,
+      item?: string,
+      options?: any
+    ): AxiosPromise<AnalysisSearch> {
+      return localVarFp
+        .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          desc,
+          filters,
+          orderBy,
+          offset,
+          limit,
+          text,
+          image,
+          item,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Search
+     * @param {string} projectHash
+     * @param {string} predictionHash
+     * @param {PredictionDomain} domain
+     * @param {number} iou
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
+     * @param {string} [orderBy]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4(
+      projectHash: string,
+      predictionHash: string,
+      domain: PredictionDomain,
+      iou: number,
+      desc: boolean,
+      filters?: string,
+      orderBy?: string,
+      offset?: number,
+      limit?: number,
+      text?: string,
+      image?: File,
+      item?: string,
+      options?: any
+    ): AxiosPromise<AnalysisSearch> {
+      return localVarFp
+        .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4(
+          projectHash,
+          predictionHash,
+          domain,
+          iou,
+          desc,
+          filters,
+          orderBy,
+          offset,
+          limit,
+          text,
+          image,
+          item,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Prediction Summary
+     * @param {string} predictionHash
+     * @param {string} projectHash
+     * @param {number} iou
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+      predictionHash: string,
+      projectHash: string,
+      iou: number,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<PredictionSummaryResult> {
+      return localVarFp
+        .routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+          predictionHash,
+          projectHash,
+          iou,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Tag Items
+     * @param {string} projectHash
+     * @param {Array<ItemTags>} itemTags
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut(
+      projectHash: string,
+      itemTags: Array<ItemTags>,
+      options?: any
+    ): AxiosPromise<any> {
+      return localVarFp
+        .routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut(
+          projectHash,
+          itemTags,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Tagged Items
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+      projectHash: string,
+      options?: any
+    ): AxiosPromise<{ [key: string]: GroupedTags | undefined }> {
+      return localVarFp
+        .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+          projectHash,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+  };
+};
+
+/**
+ * PredictionApi - object-oriented interface
+ * @export
+ * @class PredictionApi
+ * @extends {BaseAPI}
+ */
+export class PredictionApi extends BaseAPI {
+  /**
+   *
+   * @summary Route List Tags
+   * @param {string} projectHash
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routeListTagsApiProjectsV2ProjectHashTagsGet(
+    projectHash: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routeListTagsApiProjectsV2ProjectHashTagsGet(projectHash, options)
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Data Item
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {string} dataItem
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+    projectHash: string,
+    predictionHash: string,
+    dataItem: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
+        projectHash,
+        predictionHash,
+        dataItem,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Distribution
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
+   * @param {number} iou
+   * @param {string} group
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+    projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
+    iou: number,
+    group: string,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+        projectHash,
+        predictionHash,
+        domain,
+        iou,
+        group,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Distribution
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
+   * @param {number} iou
+   * @param {string} group
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1(
+    projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
+    iou: number,
+    group: string,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet_1(
+        projectHash,
+        predictionHash,
+        domain,
+        iou,
+        group,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Metric Performance
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {number} iou
+   * @param {string} metricName
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+    projectHash: string,
+    predictionHash: string,
+    iou: number,
+    metricName: string,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
+        projectHash,
+        predictionHash,
+        iou,
+        metricName,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Reduction Scatter
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
+   * @param {string} reductionHash
+   * @param {number} iou
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+    projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
+    reductionHash: string,
+    iou: number,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
+        projectHash,
+        predictionHash,
+        domain,
+        reductionHash,
+        iou,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Reduction Scatter
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
+   * @param {string} reductionHash
+   * @param {number} iou
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2(
+    projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
+    reductionHash: string,
+    iou: number,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet_2(
+        projectHash,
+        predictionHash,
+        domain,
+        reductionHash,
+        iou,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Scatter
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
+   * @param {number} iou
+   * @param {string} xMetric
+   * @param {string} yMetric
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+    projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
+    iou: number,
+    xMetric: string,
+    yMetric: string,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
+        projectHash,
+        predictionHash,
+        domain,
+        iou,
+        xMetric,
+        yMetric,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Scatter
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
+   * @param {number} iou
+   * @param {string} xMetric
+   * @param {string} yMetric
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3(
+    projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
+    iou: number,
+    xMetric: string,
+    yMetric: string,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet_3(
+        projectHash,
+        predictionHash,
+        domain,
+        iou,
+        xMetric,
+        yMetric,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Search
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
+   * @param {number} iou
+   * @param {boolean} desc
+   * @param {string} [filters] Search Filters
+   * @param {string} [orderBy]
+   * @param {number} [offset]
+   * @param {number} [limit]
+   * @param {string} [text]
+   * @param {File} [image]
+   * @param {string} [item]
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
+    projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
+    iou: number,
+    desc: boolean,
+    filters?: string,
+    orderBy?: string,
+    offset?: number,
+    limit?: number,
+    text?: string,
+    image?: File,
+    item?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
+        projectHash,
+        predictionHash,
+        domain,
+        iou,
+        desc,
+        filters,
+        orderBy,
+        offset,
+        limit,
+        text,
+        image,
+        item,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Search
+   * @param {string} projectHash
+   * @param {string} predictionHash
+   * @param {PredictionDomain} domain
+   * @param {number} iou
+   * @param {boolean} desc
+   * @param {string} [filters] Search Filters
+   * @param {string} [orderBy]
+   * @param {number} [offset]
+   * @param {number} [limit]
+   * @param {string} [text]
+   * @param {File} [image]
+   * @param {string} [item]
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4(
+    projectHash: string,
+    predictionHash: string,
+    domain: PredictionDomain,
+    iou: number,
+    desc: boolean,
+    filters?: string,
+    orderBy?: string,
+    offset?: number,
+    limit?: number,
+    text?: string,
+    image?: File,
+    item?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost_4(
+        projectHash,
+        predictionHash,
+        domain,
+        iou,
+        desc,
+        filters,
+        orderBy,
+        offset,
+        limit,
+        text,
+        image,
+        item,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Prediction Summary
+   * @param {string} predictionHash
+   * @param {string} projectHash
+   * @param {number} iou
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+    predictionHash: string,
+    projectHash: string,
+    iou: number,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
+        predictionHash,
+        projectHash,
+        iou,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Tag Items
+   * @param {string} projectHash
+   * @param {Array<ItemTags>} itemTags
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut(
+    projectHash: string,
+    itemTags: Array<ItemTags>,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut(
+        projectHash,
+        itemTags,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Tagged Items
+   * @param {string} projectHash
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof PredictionApi
+   */
+  public routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+    projectHash: string,
+    options?: AxiosRequestConfig
+  ) {
+    return PredictionApiFp(this.configuration)
+      .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+        projectHash,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+}
+
+/**
+ * ProjectApi - axios parameter creator
+ * @export
+ */
+export const ProjectApiAxiosParamCreator = function (
   configuration?: Configuration
 ) {
   return {
@@ -1887,6 +5003,82 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         // verify required parameter 'createProjectSubsetPostAction' is not null or undefined
         assertParamExists(
           "routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost",
+          "createProjectSubsetPostAction",
+          createProjectSubsetPostAction
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/actions/create_project_subset`.replace(
+            `{${"project_hash"}}`,
+            encodeURIComponent(String(projectHash))
+          );
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "POST",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        localVarHeaderParameter["Content-Type"] = "application/json";
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+        localVarRequestOptions.data = serializeDataIfNeeded(
+          createProjectSubsetPostAction,
+          localVarRequestOptions,
+          configuration
+        );
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Action Create Project Subset
+     * @param {string} projectHash
+     * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1:
+      async (
+        projectHash: string,
+        createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'createProjectSubsetPostAction' is not null or undefined
+        assertParamExists(
+          "routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1",
           "createProjectSubsetPostAction",
           createProjectSubsetPostAction
         );
@@ -2018,6 +5210,82 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       },
     /**
      *
+     * @summary Route Action Upload Project To Encord
+     * @param {string} projectHash
+     * @param {UploadProjectToEncordPostAction} uploadProjectToEncordPostAction
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost_2:
+      async (
+        projectHash: string,
+        uploadProjectToEncordPostAction: UploadProjectToEncordPostAction,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost_2",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'uploadProjectToEncordPostAction' is not null or undefined
+        assertParamExists(
+          "routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost_2",
+          "uploadProjectToEncordPostAction",
+          uploadProjectToEncordPostAction
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/actions/upload_to_encord`.replace(
+            `{${"project_hash"}}`,
+            encodeURIComponent(String(projectHash))
+          );
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "POST",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        localVarHeaderParameter["Content-Type"] = "application/json";
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+        localVarRequestOptions.data = serializeDataIfNeeded(
+          uploadProjectToEncordPostAction,
+          localVarRequestOptions,
+          configuration
+        );
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
      * @summary Route List Projects
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -2078,6 +5346,65 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       // verify required parameter 'projectHash' is not null or undefined
       assertParamExists(
         "routeListTagsApiProjectsV2ProjectHashTagsGet",
+        "projectHash",
+        projectHash
+      );
+      const localVarPath = `/api/projects_v2/{project_hash}/tags/`.replace(
+        `{${"project_hash"}}`,
+        encodeURIComponent(String(projectHash))
+      );
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      };
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      };
+    },
+    /**
+     *
+     * @summary Route List Tags
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeListTagsApiProjectsV2ProjectHashTagsGet_3: async (
+      projectHash: string,
+      options: AxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'projectHash' is not null or undefined
+      assertParamExists(
+        "routeListTagsApiProjectsV2ProjectHashTagsGet_3",
         "projectHash",
         projectHash
       );
@@ -2692,28 +6019,28 @@ export const ProjectsV2ApiAxiosParamCreator = function (
      * @param {string} predictionHash
      * @param {PredictionDomain} domain
      * @param {number} iou
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
      * @param {string} [orderBy]
-     * @param {boolean} [desc]
      * @param {number} [offset]
      * @param {number} [limit]
-     * @param {string} [filters] Search Filters
      * @param {string} [text]
      * @param {File} [image]
      * @param {string} [item]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet:
+    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost:
       async (
         projectHash: string,
         predictionHash: string,
         domain: PredictionDomain,
         iou: number,
+        desc: boolean,
+        filters?: string,
         orderBy?: string,
-        desc?: boolean,
         offset?: number,
         limit?: number,
-        filters?: string,
         text?: string,
         image?: File,
         item?: string,
@@ -2721,27 +6048,33 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
         assertParamExists(
-          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
           "projectHash",
           projectHash
         );
         // verify required parameter 'predictionHash' is not null or undefined
         assertParamExists(
-          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
           "predictionHash",
           predictionHash
         );
         // verify required parameter 'domain' is not null or undefined
         assertParamExists(
-          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
           "domain",
           domain
         );
         // verify required parameter 'iou' is not null or undefined
         assertParamExists(
-          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet",
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
           "iou",
           iou
+        );
+        // verify required parameter 'desc' is not null or undefined
+        assertParamExists(
+          "routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost",
+          "desc",
+          desc
         );
         const localVarPath =
           `/api/projects_v2/{project_hash}/predictions/{prediction_hash}/analytics/{domain}/search`
@@ -2762,7 +6095,7 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         }
 
         const localVarRequestOptions = {
-          method: "GET",
+          method: "POST",
           ...baseOptions,
           ...options,
         };
@@ -2781,28 +6114,28 @@ export const ProjectsV2ApiAxiosParamCreator = function (
           configuration
         );
 
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
         if (iou !== undefined) {
-          localVarQueryParameter["iou"] = iou;
+          localVarFormParams.append("iou", iou as any);
         }
 
         if (orderBy !== undefined) {
-          localVarQueryParameter["order_by"] = orderBy;
+          localVarFormParams.append("order_by", orderBy as any);
         }
 
         if (desc !== undefined) {
-          localVarQueryParameter["desc"] = desc;
+          localVarFormParams.append("desc", desc as any);
         }
 
         if (offset !== undefined) {
-          localVarQueryParameter["offset"] = offset;
+          localVarFormParams.append("offset", offset as any);
         }
 
         if (limit !== undefined) {
-          localVarQueryParameter["limit"] = limit;
-        }
-
-        if (filters !== undefined) {
-          localVarQueryParameter["filters"] = filters;
+          localVarFormParams.append("limit", limit as any);
         }
 
         if (text !== undefined) {
@@ -3097,6 +6430,89 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       },
     /**
      *
+     * @summary Route Project Compare Metric Dissimilarity
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} compareProjectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4:
+      async (
+        projectHash: string,
+        domain: AnalysisDomain,
+        compareProjectHash: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4",
+          "domain",
+          domain
+        );
+        // verify required parameter 'compareProjectHash' is not null or undefined
+        assertParamExists(
+          "routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4",
+          "compareProjectHash",
+          compareProjectHash
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/analysis/{domain}/project_compare/metric_dissimilarity`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (compareProjectHash !== undefined) {
+          localVarQueryParameter["compare_project_hash"] = compareProjectHash;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
      * @summary Route Project Data Item
      * @param {string} projectHash
      * @param {string} dataItem
@@ -3196,6 +6612,101 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         // verify required parameter 'group' is not null or undefined
         assertParamExists(
           "routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet",
+          "group",
+          group
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/analysis/{domain}/distribution`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (group !== undefined) {
+          localVarQueryParameter["group"] = group;
+        }
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
+     * @summary Route Project Distribution
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} group
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5:
+      async (
+        projectHash: string,
+        domain: AnalysisDomain,
+        group: string,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5",
+          "domain",
+          domain
+        );
+        // verify required parameter 'group' is not null or undefined
+        assertParamExists(
+          "routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5",
           "group",
           group
         );
@@ -3701,6 +7212,101 @@ export const ProjectsV2ApiAxiosParamCreator = function (
       },
     /**
      *
+     * @summary Route Project Reduction Scatter
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} reductionHash
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6:
+      async (
+        projectHash: string,
+        domain: AnalysisDomain,
+        reductionHash: string,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6",
+          "domain",
+          domain
+        );
+        // verify required parameter 'reductionHash' is not null or undefined
+        assertParamExists(
+          "routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6",
+          "reductionHash",
+          reductionHash
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/analysis/{domain}/reductions/{reduction_hash}/summary`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)))
+            .replace(
+              `{${"reduction_hash"}}`,
+              encodeURIComponent(String(reductionHash))
+            );
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
      * @summary Route Project Scatter
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
@@ -3807,12 +7413,119 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     },
     /**
      *
+     * @summary Route Project Scatter
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} xMetric
+     * @param {string} yMetric
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7:
+      async (
+        projectHash: string,
+        domain: AnalysisDomain,
+        xMetric: string,
+        yMetric: string,
+        buckets?: AnalysisBuckets,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7",
+          "domain",
+          domain
+        );
+        // verify required parameter 'xMetric' is not null or undefined
+        assertParamExists(
+          "routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7",
+          "xMetric",
+          xMetric
+        );
+        // verify required parameter 'yMetric' is not null or undefined
+        assertParamExists(
+          "routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7",
+          "yMetric",
+          yMetric
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/analysis/{domain}/scatter`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (xMetric !== undefined) {
+          localVarQueryParameter["x_metric"] = xMetric;
+        }
+
+        if (yMetric !== undefined) {
+          localVarQueryParameter["y_metric"] = yMetric;
+        }
+
+        if (buckets !== undefined) {
+          localVarQueryParameter["buckets"] = buckets;
+        }
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
      * @summary Route Project Search
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
+     * @param {boolean} desc
      * @param {string} [filters] Search Filters
      * @param {string} [orderBy]
-     * @param {boolean} [desc]
      * @param {number} [offset]
      * @param {number} [limit]
      * @param {string} [text]
@@ -3824,9 +7537,9 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost: async (
       projectHash: string,
       domain: AnalysisDomain,
+      desc: boolean,
       filters?: string,
       orderBy?: string,
-      desc?: boolean,
       offset?: number,
       limit?: number,
       text?: string,
@@ -3845,6 +7558,12 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost",
         "domain",
         domain
+      );
+      // verify required parameter 'desc' is not null or undefined
+      assertParamExists(
+        "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost",
+        "desc",
+        desc
       );
       const localVarPath =
         `/api/projects_v2/{project_hash}/analysis/{domain}/search`
@@ -3931,6 +7650,137 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     },
     /**
      *
+     * @summary Route Project Search
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
+     * @param {string} [orderBy]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8:
+      async (
+        projectHash: string,
+        domain: AnalysisDomain,
+        desc: boolean,
+        filters?: string,
+        orderBy?: string,
+        offset?: number,
+        limit?: number,
+        text?: string,
+        image?: File,
+        item?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8",
+          "domain",
+          domain
+        );
+        // verify required parameter 'desc' is not null or undefined
+        assertParamExists(
+          "routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8",
+          "desc",
+          desc
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/analysis/{domain}/search`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "POST",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+        const localVarFormParams = new ((configuration &&
+          configuration.formDataCtor) ||
+          FormData)();
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        if (orderBy !== undefined) {
+          localVarFormParams.append("order_by", orderBy as any);
+        }
+
+        if (desc !== undefined) {
+          localVarFormParams.append("desc", desc as any);
+        }
+
+        if (offset !== undefined) {
+          localVarFormParams.append("offset", offset as any);
+        }
+
+        if (limit !== undefined) {
+          localVarFormParams.append("limit", limit as any);
+        }
+
+        if (text !== undefined) {
+          localVarFormParams.append("text", text as any);
+        }
+
+        if (image !== undefined) {
+          localVarFormParams.append("image", image as any);
+        }
+
+        if (item !== undefined) {
+          localVarFormParams.append("item", item as any);
+        }
+
+        localVarHeaderParameter["Content-Type"] = "multipart/form-data";
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+        localVarRequestOptions.data = localVarFormParams;
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
+    /**
+     *
      * @summary Route Project Summary
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
@@ -4005,6 +7855,83 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         options: localVarRequestOptions,
       };
     },
+    /**
+     *
+     * @summary Route Project Summary
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet_9:
+      async (
+        projectHash: string,
+        domain: AnalysisDomain,
+        filters?: string,
+        options: AxiosRequestConfig = {}
+      ): Promise<RequestArgs> => {
+        // verify required parameter 'projectHash' is not null or undefined
+        assertParamExists(
+          "routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet_9",
+          "projectHash",
+          projectHash
+        );
+        // verify required parameter 'domain' is not null or undefined
+        assertParamExists(
+          "routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet_9",
+          "domain",
+          domain
+        );
+        const localVarPath =
+          `/api/projects_v2/{project_hash}/analysis/{domain}/summary`
+            .replace(
+              `{${"project_hash"}}`,
+              encodeURIComponent(String(projectHash))
+            )
+            .replace(`{${"domain"}}`, encodeURIComponent(String(domain)));
+        // use dummy base URL string because the URL constructor only accepts absolute URLs.
+        const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+        let baseOptions;
+        if (configuration) {
+          baseOptions = configuration.baseOptions;
+        }
+
+        const localVarRequestOptions = {
+          method: "GET",
+          ...baseOptions,
+          ...options,
+        };
+        const localVarHeaderParameter = {} as any;
+        const localVarQueryParameter = {} as any;
+
+        // authentication OAuth2PasswordBearer required
+        // oauth required
+        await setOAuthToObject(
+          localVarHeaderParameter,
+          "OAuth2PasswordBearer",
+          [],
+          configuration
+        );
+
+        if (filters !== undefined) {
+          localVarQueryParameter["filters"] = filters;
+        }
+
+        setSearchParams(localVarUrlObj, localVarQueryParameter);
+        let headersFromBaseOptions =
+          baseOptions && baseOptions.headers ? baseOptions.headers : {};
+        localVarRequestOptions.headers = {
+          ...localVarHeaderParameter,
+          ...headersFromBaseOptions,
+          ...options.headers,
+        };
+
+        return {
+          url: toPathString(localVarUrlObj),
+          options: localVarRequestOptions,
+        };
+      },
     /**
      *
      * @summary Route Project Summary
@@ -4141,6 +8068,81 @@ export const ProjectsV2ApiAxiosParamCreator = function (
     },
     /**
      *
+     * @summary Route Tag Items
+     * @param {string} projectHash
+     * @param {Array<ItemTags>} itemTags
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut_10: async (
+      projectHash: string,
+      itemTags: Array<ItemTags>,
+      options: AxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'projectHash' is not null or undefined
+      assertParamExists(
+        "routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut_10",
+        "projectHash",
+        projectHash
+      );
+      // verify required parameter 'itemTags' is not null or undefined
+      assertParamExists(
+        "routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut_10",
+        "itemTags",
+        itemTags
+      );
+      const localVarPath =
+        `/api/projects_v2/{project_hash}/tags/tag_items`.replace(
+          `{${"project_hash"}}`,
+          encodeURIComponent(String(projectHash))
+        );
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+
+      const localVarRequestOptions = {
+        method: "PUT",
+        ...baseOptions,
+        ...options,
+      };
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
+
+      localVarHeaderParameter["Content-Type"] = "application/json";
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        itemTags,
+        localVarRequestOptions,
+        configuration
+      );
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      };
+    },
+    /**
+     *
      * @summary Route Tagged Items
      * @param {string} projectHash
      * @param {*} [options] Override http request option.
@@ -4199,16 +8201,75 @@ export const ProjectsV2ApiAxiosParamCreator = function (
         options: localVarRequestOptions,
       };
     },
+    /**
+     *
+     * @summary Route Tagged Items
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet_11: async (
+      projectHash: string,
+      options: AxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'projectHash' is not null or undefined
+      assertParamExists(
+        "routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet_11",
+        "projectHash",
+        projectHash
+      );
+      const localVarPath =
+        `/api/projects_v2/{project_hash}/tags/tagged_items`.replace(
+          `{${"project_hash"}}`,
+          encodeURIComponent(String(projectHash))
+        );
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      };
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
+
+      // authentication OAuth2PasswordBearer required
+      // oauth required
+      await setOAuthToObject(
+        localVarHeaderParameter,
+        "OAuth2PasswordBearer",
+        [],
+        configuration
+      );
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      };
+    },
   };
 };
 
 /**
- * ProjectsV2Api - functional programming interface
+ * ProjectApi - functional programming interface
  * @export
  */
-export const ProjectsV2ApiFp = function (configuration?: Configuration) {
-  const localVarAxiosParamCreator =
-    ProjectsV2ApiAxiosParamCreator(configuration);
+export const ProjectApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = ProjectApiAxiosParamCreator(configuration);
   return {
     /**
      *
@@ -4240,6 +8301,34 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     },
     /**
      *
+     * @summary Route Action Create Project Subset
+     * @param {string} projectHash
+     * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
+      projectHash: string,
+      createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
+          projectHash,
+          createProjectSubsetPostAction,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
      * @summary Route Action Upload Project To Encord
      * @param {string} projectHash
      * @param {UploadProjectToEncordPostAction} uploadProjectToEncordPostAction
@@ -4255,6 +8344,34 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
+          projectHash,
+          uploadProjectToEncordPostAction,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Action Upload Project To Encord
+     * @param {string} projectHash
+     * @param {UploadProjectToEncordPostAction} uploadProjectToEncordPostAction
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost_2(
+      projectHash: string,
+      uploadProjectToEncordPostAction: UploadProjectToEncordPostAction,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost_2(
           projectHash,
           uploadProjectToEncordPostAction,
           options
@@ -4309,6 +8426,34 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.routeListTagsApiProjectsV2ProjectHashTagsGet(
+          projectHash,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route List Tags
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeListTagsApiProjectsV2ProjectHashTagsGet_3(
+      projectHash: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<Array<ProjectTagEntry>>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeListTagsApiProjectsV2ProjectHashTagsGet_3(
           projectHash,
           options
         );
@@ -4538,27 +8683,27 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
      * @param {string} predictionHash
      * @param {PredictionDomain} domain
      * @param {number} iou
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
      * @param {string} [orderBy]
-     * @param {boolean} [desc]
      * @param {number} [offset]
      * @param {number} [limit]
-     * @param {string} [filters] Search Filters
      * @param {string} [text]
      * @param {File} [image]
      * @param {string} [item]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+    async routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
       iou: number,
+      desc: boolean,
+      filters?: string,
       orderBy?: string,
-      desc?: boolean,
       offset?: number,
       limit?: number,
-      filters?: string,
       text?: string,
       image?: File,
       item?: string,
@@ -4567,16 +8712,16 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
       (axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnalysisSearch>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+        await localVarAxiosParamCreator.routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
           projectHash,
           predictionHash,
           domain,
           iou,
-          orderBy,
           desc,
+          filters,
+          orderBy,
           offset,
           limit,
-          filters,
           text,
           image,
           item,
@@ -4693,6 +8838,40 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     },
     /**
      *
+     * @summary Route Project Compare Metric Dissimilarity
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} compareProjectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4(
+      projectHash: string,
+      domain: AnalysisDomain,
+      compareProjectHash: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<MetricDissimilarityResult>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4(
+          projectHash,
+          domain,
+          compareProjectHash,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
      * @summary Route Project Data Item
      * @param {string} projectHash
      * @param {string} dataItem
@@ -4745,6 +8924,46 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
+          projectHash,
+          domain,
+          group,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Project Distribution
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} group
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5(
+      projectHash: string,
+      domain: AnalysisDomain,
+      group: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<QueryDistribution>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5(
           projectHash,
           domain,
           group,
@@ -4959,6 +9178,46 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     },
     /**
      *
+     * @summary Route Project Reduction Scatter
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} reductionHash
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6(
+      projectHash: string,
+      domain: AnalysisDomain,
+      reductionHash: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<Query2DEmbedding>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6(
+          projectHash,
+          domain,
+          reductionHash,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
      * @summary Route Project Scatter
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
@@ -4999,12 +9258,52 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     },
     /**
      *
+     * @summary Route Project Scatter
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} xMetric
+     * @param {string} yMetric
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7(
+      projectHash: string,
+      domain: AnalysisDomain,
+      xMetric: string,
+      yMetric: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<QueryScatter>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7(
+          projectHash,
+          domain,
+          xMetric,
+          yMetric,
+          buckets,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
      * @summary Route Project Search
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
+     * @param {boolean} desc
      * @param {string} [filters] Search Filters
      * @param {string} [orderBy]
-     * @param {boolean} [desc]
      * @param {number} [offset]
      * @param {number} [limit]
      * @param {string} [text]
@@ -5016,9 +9315,9 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     async routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
       projectHash: string,
       domain: AnalysisDomain,
+      desc: boolean,
       filters?: string,
       orderBy?: string,
-      desc?: boolean,
       offset?: number,
       limit?: number,
       text?: string,
@@ -5032,9 +9331,61 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
         await localVarAxiosParamCreator.routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
           projectHash,
           domain,
+          desc,
           filters,
           orderBy,
+          offset,
+          limit,
+          text,
+          image,
+          item,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Project Search
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
+     * @param {string} [orderBy]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8(
+      projectHash: string,
+      domain: AnalysisDomain,
+      desc: boolean,
+      filters?: string,
+      orderBy?: string,
+      offset?: number,
+      limit?: number,
+      text?: string,
+      image?: File,
+      item?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<AnalysisSearch>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8(
+          projectHash,
+          domain,
           desc,
+          filters,
+          orderBy,
           offset,
           limit,
           text,
@@ -5068,6 +9419,37 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
+          projectHash,
+          domain,
+          filters,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
+     * @summary Route Project Summary
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet_9(
+      projectHash: string,
+      domain: AnalysisDomain,
+      filters?: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<QuerySummary>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet_9(
           projectHash,
           domain,
           filters,
@@ -5135,6 +9517,34 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
     },
     /**
      *
+     * @summary Route Tag Items
+     * @param {string} projectHash
+     * @param {Array<ItemTags>} itemTags
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut_10(
+      projectHash: string,
+      itemTags: Array<ItemTags>,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut_10(
+          projectHash,
+          itemTags,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
+    /**
+     *
      * @summary Route Tagged Items
      * @param {string} projectHash
      * @param {*} [options] Override http request option.
@@ -5161,19 +9571,47 @@ export const ProjectsV2ApiFp = function (configuration?: Configuration) {
         configuration
       );
     },
+    /**
+     *
+     * @summary Route Tagged Items
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet_11(
+      projectHash: string,
+      options?: AxiosRequestConfig
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string
+      ) => AxiosPromise<{ [key: string]: GroupedTags | undefined }>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet_11(
+          projectHash,
+          options
+        );
+      return createRequestFunction(
+        localVarAxiosArgs,
+        globalAxios,
+        BASE_PATH,
+        configuration
+      );
+    },
   };
 };
 
 /**
- * ProjectsV2Api - factory interface
+ * ProjectApi - factory interface
  * @export
  */
-export const ProjectsV2ApiFactory = function (
+export const ProjectApiFactory = function (
   configuration?: Configuration,
   basePath?: string,
   axios?: AxiosInstance
 ) {
-  const localVarFp = ProjectsV2ApiFp(configuration);
+  const localVarFp = ProjectApiFp(configuration);
   return {
     /**
      *
@@ -5198,6 +9636,27 @@ export const ProjectsV2ApiFactory = function (
     },
     /**
      *
+     * @summary Route Action Create Project Subset
+     * @param {string} projectHash
+     * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
+      projectHash: string,
+      createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+      options?: any
+    ): AxiosPromise<any> {
+      return localVarFp
+        .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
+          projectHash,
+          createProjectSubsetPostAction,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
      * @summary Route Action Upload Project To Encord
      * @param {string} projectHash
      * @param {UploadProjectToEncordPostAction} uploadProjectToEncordPostAction
@@ -5211,6 +9670,27 @@ export const ProjectsV2ApiFactory = function (
     ): AxiosPromise<any> {
       return localVarFp
         .routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
+          projectHash,
+          uploadProjectToEncordPostAction,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Action Upload Project To Encord
+     * @param {string} projectHash
+     * @param {UploadProjectToEncordPostAction} uploadProjectToEncordPostAction
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost_2(
+      projectHash: string,
+      uploadProjectToEncordPostAction: UploadProjectToEncordPostAction,
+      options?: any
+    ): AxiosPromise<any> {
+      return localVarFp
+        .routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost_2(
           projectHash,
           uploadProjectToEncordPostAction,
           options
@@ -5243,6 +9723,21 @@ export const ProjectsV2ApiFactory = function (
     ): AxiosPromise<Array<ProjectTagEntry>> {
       return localVarFp
         .routeListTagsApiProjectsV2ProjectHashTagsGet(projectHash, options)
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route List Tags
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeListTagsApiProjectsV2ProjectHashTagsGet_3(
+      projectHash: string,
+      options?: any
+    ): AxiosPromise<Array<ProjectTagEntry>> {
+      return localVarFp
+        .routeListTagsApiProjectsV2ProjectHashTagsGet_3(projectHash, options)
         .then((request) => request(axios, basePath));
     },
     /**
@@ -5420,43 +9915,43 @@ export const ProjectsV2ApiFactory = function (
      * @param {string} predictionHash
      * @param {PredictionDomain} domain
      * @param {number} iou
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
      * @param {string} [orderBy]
-     * @param {boolean} [desc]
      * @param {number} [offset]
      * @param {number} [limit]
-     * @param {string} [filters] Search Filters
      * @param {string} [text]
      * @param {File} [image]
      * @param {string} [item]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+    routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
       projectHash: string,
       predictionHash: string,
       domain: PredictionDomain,
       iou: number,
+      desc: boolean,
+      filters?: string,
       orderBy?: string,
-      desc?: boolean,
       offset?: number,
       limit?: number,
-      filters?: string,
       text?: string,
       image?: File,
       item?: string,
       options?: any
     ): AxiosPromise<AnalysisSearch> {
       return localVarFp
-        .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+        .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
           projectHash,
           predictionHash,
           domain,
           iou,
-          orderBy,
           desc,
+          filters,
+          orderBy,
           offset,
           limit,
-          filters,
           text,
           image,
           item,
@@ -5541,6 +10036,30 @@ export const ProjectsV2ApiFactory = function (
     },
     /**
      *
+     * @summary Route Project Compare Metric Dissimilarity
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} compareProjectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4(
+      projectHash: string,
+      domain: AnalysisDomain,
+      compareProjectHash: string,
+      options?: any
+    ): AxiosPromise<MetricDissimilarityResult> {
+      return localVarFp
+        .routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4(
+          projectHash,
+          domain,
+          compareProjectHash,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
      * @summary Route Project Data Item
      * @param {string} projectHash
      * @param {string} dataItem
@@ -5581,6 +10100,36 @@ export const ProjectsV2ApiFactory = function (
     ): AxiosPromise<QueryDistribution> {
       return localVarFp
         .routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
+          projectHash,
+          domain,
+          group,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Project Distribution
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} group
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5(
+      projectHash: string,
+      domain: AnalysisDomain,
+      group: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<QueryDistribution> {
+      return localVarFp
+        .routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5(
           projectHash,
           domain,
           group,
@@ -5733,6 +10282,36 @@ export const ProjectsV2ApiFactory = function (
     },
     /**
      *
+     * @summary Route Project Reduction Scatter
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} reductionHash
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6(
+      projectHash: string,
+      domain: AnalysisDomain,
+      reductionHash: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<Query2DEmbedding> {
+      return localVarFp
+        .routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6(
+          projectHash,
+          domain,
+          reductionHash,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
      * @summary Route Project Scatter
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
@@ -5766,12 +10345,45 @@ export const ProjectsV2ApiFactory = function (
     },
     /**
      *
+     * @summary Route Project Scatter
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} xMetric
+     * @param {string} yMetric
+     * @param {AnalysisBuckets} [buckets]
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7(
+      projectHash: string,
+      domain: AnalysisDomain,
+      xMetric: string,
+      yMetric: string,
+      buckets?: AnalysisBuckets,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<QueryScatter> {
+      return localVarFp
+        .routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7(
+          projectHash,
+          domain,
+          xMetric,
+          yMetric,
+          buckets,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
      * @summary Route Project Search
      * @param {string} projectHash
      * @param {AnalysisDomain} domain
+     * @param {boolean} desc
      * @param {string} [filters] Search Filters
      * @param {string} [orderBy]
-     * @param {boolean} [desc]
      * @param {number} [offset]
      * @param {number} [limit]
      * @param {string} [text]
@@ -5783,9 +10395,9 @@ export const ProjectsV2ApiFactory = function (
     routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
       projectHash: string,
       domain: AnalysisDomain,
+      desc: boolean,
       filters?: string,
       orderBy?: string,
-      desc?: boolean,
       offset?: number,
       limit?: number,
       text?: string,
@@ -5797,9 +10409,54 @@ export const ProjectsV2ApiFactory = function (
         .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
           projectHash,
           domain,
+          desc,
           filters,
           orderBy,
+          offset,
+          limit,
+          text,
+          image,
+          item,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Project Search
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {boolean} desc
+     * @param {string} [filters] Search Filters
+     * @param {string} [orderBy]
+     * @param {number} [offset]
+     * @param {number} [limit]
+     * @param {string} [text]
+     * @param {File} [image]
+     * @param {string} [item]
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8(
+      projectHash: string,
+      domain: AnalysisDomain,
+      desc: boolean,
+      filters?: string,
+      orderBy?: string,
+      offset?: number,
+      limit?: number,
+      text?: string,
+      image?: File,
+      item?: string,
+      options?: any
+    ): AxiosPromise<AnalysisSearch> {
+      return localVarFp
+        .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8(
+          projectHash,
+          domain,
           desc,
+          filters,
+          orderBy,
           offset,
           limit,
           text,
@@ -5826,6 +10483,30 @@ export const ProjectsV2ApiFactory = function (
     ): AxiosPromise<QuerySummary> {
       return localVarFp
         .routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
+          projectHash,
+          domain,
+          filters,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
+     * @summary Route Project Summary
+     * @param {string} projectHash
+     * @param {AnalysisDomain} domain
+     * @param {string} [filters] Search Filters
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet_9(
+      projectHash: string,
+      domain: AnalysisDomain,
+      filters?: string,
+      options?: any
+    ): AxiosPromise<QuerySummary> {
+      return localVarFp
+        .routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet_9(
           projectHash,
           domain,
           filters,
@@ -5874,6 +10555,27 @@ export const ProjectsV2ApiFactory = function (
     },
     /**
      *
+     * @summary Route Tag Items
+     * @param {string} projectHash
+     * @param {Array<ItemTags>} itemTags
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut_10(
+      projectHash: string,
+      itemTags: Array<ItemTags>,
+      options?: any
+    ): AxiosPromise<any> {
+      return localVarFp
+        .routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut_10(
+          projectHash,
+          itemTags,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
+    /**
+     *
      * @summary Route Tagged Items
      * @param {string} projectHash
      * @param {*} [options] Override http request option.
@@ -5890,16 +10592,34 @@ export const ProjectsV2ApiFactory = function (
         )
         .then((request) => request(axios, basePath));
     },
+    /**
+     *
+     * @summary Route Tagged Items
+     * @param {string} projectHash
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet_11(
+      projectHash: string,
+      options?: any
+    ): AxiosPromise<{ [key: string]: GroupedTags | undefined }> {
+      return localVarFp
+        .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet_11(
+          projectHash,
+          options
+        )
+        .then((request) => request(axios, basePath));
+    },
   };
 };
 
 /**
- * ProjectsV2Api - object-oriented interface
+ * ProjectApi - object-oriented interface
  * @export
- * @class ProjectsV2Api
+ * @class ProjectApi
  * @extends {BaseAPI}
  */
-export class ProjectsV2Api extends BaseAPI {
+export class ProjectApi extends BaseAPI {
   /**
    *
    * @summary Route Action Create Project Subset
@@ -5907,15 +10627,38 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
     projectHash: string,
     createProjectSubsetPostAction: CreateProjectSubsetPostAction,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
+        projectHash,
+        createProjectSubsetPostAction,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Action Create Project Subset
+   * @param {string} projectHash
+   * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
+    projectHash: string,
+    createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
         projectHash,
         createProjectSubsetPostAction,
         options
@@ -5930,15 +10673,38 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {UploadProjectToEncordPostAction} uploadProjectToEncordPostAction
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
     projectHash: string,
     uploadProjectToEncordPostAction: UploadProjectToEncordPostAction,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
+        projectHash,
+        uploadProjectToEncordPostAction,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Action Upload Project To Encord
+   * @param {string} projectHash
+   * @param {UploadProjectToEncordPostAction} uploadProjectToEncordPostAction
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost_2(
+    projectHash: string,
+    uploadProjectToEncordPostAction: UploadProjectToEncordPostAction,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost_2(
         projectHash,
         uploadProjectToEncordPostAction,
         options
@@ -5951,10 +10717,10 @@ export class ProjectsV2Api extends BaseAPI {
    * @summary Route List Projects
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeListProjectsApiProjectsV2Get(options?: AxiosRequestConfig) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeListProjectsApiProjectsV2Get(options)
       .then((request) => request(this.axios, this.basePath));
   }
@@ -5965,14 +10731,31 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} projectHash
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeListTagsApiProjectsV2ProjectHashTagsGet(
     projectHash: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeListTagsApiProjectsV2ProjectHashTagsGet(projectHash, options)
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route List Tags
+   * @param {string} projectHash
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeListTagsApiProjectsV2ProjectHashTagsGet_3(
+    projectHash: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeListTagsApiProjectsV2ProjectHashTagsGet_3(projectHash, options)
       .then((request) => request(this.axios, this.basePath));
   }
 
@@ -5984,7 +10767,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} dataItem
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
     projectHash: string,
@@ -5992,7 +10775,7 @@ export class ProjectsV2Api extends BaseAPI {
     dataItem: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
         projectHash,
         predictionHash,
@@ -6014,7 +10797,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
     projectHash: string,
@@ -6026,7 +10809,7 @@ export class ProjectsV2Api extends BaseAPI {
     filters?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
         projectHash,
         predictionHash,
@@ -6051,7 +10834,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
     projectHash: string,
@@ -6062,7 +10845,7 @@ export class ProjectsV2Api extends BaseAPI {
     filters?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routePredictionMetricPerformanceApiProjectsV2ProjectHashPredictionsPredictionHashMetricPerformanceGet(
         projectHash,
         predictionHash,
@@ -6087,7 +10870,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
     projectHash: string,
@@ -6099,7 +10882,7 @@ export class ProjectsV2Api extends BaseAPI {
     filters?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
         projectHash,
         predictionHash,
@@ -6126,7 +10909,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
     projectHash: string,
@@ -6139,7 +10922,7 @@ export class ProjectsV2Api extends BaseAPI {
     filters?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routePredictionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainScatterGet(
         projectHash,
         predictionHash,
@@ -6161,44 +10944,44 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} predictionHash
    * @param {PredictionDomain} domain
    * @param {number} iou
+   * @param {boolean} desc
+   * @param {string} [filters] Search Filters
    * @param {string} [orderBy]
-   * @param {boolean} [desc]
    * @param {number} [offset]
    * @param {number} [limit]
-   * @param {string} [filters] Search Filters
    * @param {string} [text]
    * @param {File} [image]
    * @param {string} [item]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
-  public routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+  public routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
     projectHash: string,
     predictionHash: string,
     domain: PredictionDomain,
     iou: number,
+    desc: boolean,
+    filters?: string,
     orderBy?: string,
-    desc?: boolean,
     offset?: number,
     limit?: number,
-    filters?: string,
     text?: string,
     image?: File,
     item?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
-      .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+    return ProjectApiFp(this.configuration)
+      .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
         projectHash,
         predictionHash,
         domain,
         iou,
-        orderBy,
         desc,
+        filters,
+        orderBy,
         offset,
         limit,
-        filters,
         text,
         image,
         item,
@@ -6216,7 +10999,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
     predictionHash: string,
@@ -6225,7 +11008,7 @@ export class ProjectsV2Api extends BaseAPI {
     filters?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routePredictionSummaryApiProjectsV2ProjectHashPredictionsPredictionHashSummaryGet(
         predictionHash,
         projectHash,
@@ -6244,7 +11027,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {Array<string>} requestBody
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost(
     projectHash: string,
@@ -6252,7 +11035,7 @@ export class ProjectsV2Api extends BaseAPI {
     requestBody: Array<string>,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectActionTagItemsApiProjectsV2ProjectHashCreateTagPost(
         projectHash,
         tagName,
@@ -6270,7 +11053,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} compareProjectHash
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
     projectHash: string,
@@ -6278,8 +11061,34 @@ export class ProjectsV2Api extends BaseAPI {
     compareProjectHash: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
+        projectHash,
+        domain,
+        compareProjectHash,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Project Compare Metric Dissimilarity
+   * @param {string} projectHash
+   * @param {AnalysisDomain} domain
+   * @param {string} compareProjectHash
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4(
+    projectHash: string,
+    domain: AnalysisDomain,
+    compareProjectHash: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet_4(
         projectHash,
         domain,
         compareProjectHash,
@@ -6295,14 +11104,14 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} dataItem
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
     projectHash: string,
     dataItem: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
         projectHash,
         dataItem,
@@ -6321,7 +11130,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
     projectHash: string,
@@ -6331,8 +11140,40 @@ export class ProjectsV2Api extends BaseAPI {
     filters?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet(
+        projectHash,
+        domain,
+        group,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Project Distribution
+   * @param {string} projectHash
+   * @param {AnalysisDomain} domain
+   * @param {string} group
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5(
+    projectHash: string,
+    domain: AnalysisDomain,
+    group: string,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeProjectDistributionApiProjectsV2ProjectHashAnalysisDomainDistributionGet_5(
         projectHash,
         domain,
         group,
@@ -6349,13 +11190,13 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} projectHash
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
     projectHash: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
         projectHash,
         options
@@ -6372,7 +11213,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum} [orderBy]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet(
     projectHash: string,
@@ -6381,7 +11222,7 @@ export class ProjectsV2Api extends BaseAPI {
     orderBy?: RouteProjectListPredictionsApiProjectsV2ProjectHashPredictionsGetOrderByEnum,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet(
         projectHash,
         offset,
@@ -6398,13 +11239,13 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} projectHash
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
     projectHash: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
         projectHash,
         options
@@ -6418,13 +11259,13 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} projectHash
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(
     projectHash: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(
         projectHash,
         options
@@ -6442,7 +11283,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [ifModifiedSince]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet(
     projectHash: string,
@@ -6452,7 +11293,7 @@ export class ProjectsV2Api extends BaseAPI {
     ifModifiedSince?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectRawFileApiProjectsV2ProjectHashFilesDuHashFrameGet(
         projectHash,
         duHash,
@@ -6474,7 +11315,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
     projectHash: string,
@@ -6484,8 +11325,40 @@ export class ProjectsV2Api extends BaseAPI {
     filters?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet(
+        projectHash,
+        domain,
+        reductionHash,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Project Reduction Scatter
+   * @param {string} projectHash
+   * @param {AnalysisDomain} domain
+   * @param {string} reductionHash
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6(
+    projectHash: string,
+    domain: AnalysisDomain,
+    reductionHash: string,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeProjectReductionScatterApiProjectsV2ProjectHashAnalysisDomainReductionsReductionHashSummaryGet_6(
         projectHash,
         domain,
         reductionHash,
@@ -6507,7 +11380,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet(
     projectHash: string,
@@ -6518,8 +11391,43 @@ export class ProjectsV2Api extends BaseAPI {
     filters?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet(
+        projectHash,
+        domain,
+        xMetric,
+        yMetric,
+        buckets,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Project Scatter
+   * @param {string} projectHash
+   * @param {AnalysisDomain} domain
+   * @param {string} xMetric
+   * @param {string} yMetric
+   * @param {AnalysisBuckets} [buckets]
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7(
+    projectHash: string,
+    domain: AnalysisDomain,
+    xMetric: string,
+    yMetric: string,
+    buckets?: AnalysisBuckets,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet_7(
         projectHash,
         domain,
         xMetric,
@@ -6536,9 +11444,9 @@ export class ProjectsV2Api extends BaseAPI {
    * @summary Route Project Search
    * @param {string} projectHash
    * @param {AnalysisDomain} domain
+   * @param {boolean} desc
    * @param {string} [filters] Search Filters
    * @param {string} [orderBy]
-   * @param {boolean} [desc]
    * @param {number} [offset]
    * @param {number} [limit]
    * @param {string} [text]
@@ -6546,14 +11454,14 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [item]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
     projectHash: string,
     domain: AnalysisDomain,
+    desc: boolean,
     filters?: string,
     orderBy?: string,
-    desc?: boolean,
     offset?: number,
     limit?: number,
     text?: string,
@@ -6561,13 +11469,60 @@ export class ProjectsV2Api extends BaseAPI {
     item?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
         projectHash,
         domain,
+        desc,
         filters,
         orderBy,
+        offset,
+        limit,
+        text,
+        image,
+        item,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Project Search
+   * @param {string} projectHash
+   * @param {AnalysisDomain} domain
+   * @param {boolean} desc
+   * @param {string} [filters] Search Filters
+   * @param {string} [orderBy]
+   * @param {number} [offset]
+   * @param {number} [limit]
+   * @param {string} [text]
+   * @param {File} [image]
+   * @param {string} [item]
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8(
+    projectHash: string,
+    domain: AnalysisDomain,
+    desc: boolean,
+    filters?: string,
+    orderBy?: string,
+    offset?: number,
+    limit?: number,
+    text?: string,
+    image?: File,
+    item?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost_8(
+        projectHash,
+        domain,
         desc,
+        filters,
+        orderBy,
         offset,
         limit,
         text,
@@ -6586,7 +11541,7 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} [filters] Search Filters
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
     projectHash: string,
@@ -6594,8 +11549,34 @@ export class ProjectsV2Api extends BaseAPI {
     filters?: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
+        projectHash,
+        domain,
+        filters,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Project Summary
+   * @param {string} projectHash
+   * @param {AnalysisDomain} domain
+   * @param {string} [filters] Search Filters
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet_9(
+    projectHash: string,
+    domain: AnalysisDomain,
+    filters?: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet_9(
         projectHash,
         domain,
         filters,
@@ -6610,13 +11591,13 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} projectHash
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(
     projectHash: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(
         projectHash,
         options
@@ -6631,15 +11612,38 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {Array<ItemTags>} itemTags
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut(
     projectHash: string,
     itemTags: Array<ItemTags>,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut(
+        projectHash,
+        itemTags,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Tag Items
+   * @param {string} projectHash
+   * @param {Array<ItemTags>} itemTags
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut_10(
+    projectHash: string,
+    itemTags: Array<ItemTags>,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut_10(
         projectHash,
         itemTags,
         options
@@ -6653,14 +11657,34 @@ export class ProjectsV2Api extends BaseAPI {
    * @param {string} projectHash
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof ProjectsV2Api
+   * @memberof ProjectApi
    */
   public routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
     projectHash: string,
     options?: AxiosRequestConfig
   ) {
-    return ProjectsV2ApiFp(this.configuration)
+    return ProjectApiFp(this.configuration)
       .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
+        projectHash,
+        options
+      )
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  /**
+   *
+   * @summary Route Tagged Items
+   * @param {string} projectHash
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof ProjectApi
+   */
+  public routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet_11(
+    projectHash: string,
+    options?: AxiosRequestConfig
+  ) {
+    return ProjectApiFp(this.configuration)
+      .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet_11(
         projectHash,
         options
       )

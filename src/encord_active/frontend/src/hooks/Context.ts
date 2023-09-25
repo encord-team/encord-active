@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { ProjectsV2ApiFactory } from "../openapi/api";
+import { ProjectApiFactory, PredictionApiFactory } from "../openapi/api";
 import { Configuration } from "../openapi/configuration";
 
 export class Querier {
@@ -7,7 +7,9 @@ export class Querier {
 
   public readonly usesAuth: boolean;
 
-  private readonly projectV2: ReturnType<typeof ProjectsV2ApiFactory>;
+  private readonly project: ReturnType<typeof ProjectApiFactory>;
+
+  private readonly prediction: ReturnType<typeof PredictionApiFactory>;
 
   constructor(baseUrl: string, token: string | null) {
     this.baseUrl = baseUrl;
@@ -19,11 +21,16 @@ export class Querier {
         accessToken: token,
       });
     }
-    this.projectV2 = ProjectsV2ApiFactory(configuration, this.baseUrl);
+    this.project = ProjectApiFactory(configuration, this.baseUrl);
+    this.prediction = PredictionApiFactory(configuration, this.baseUrl);
   }
 
-  getProjectV2API(): ReturnType<typeof ProjectsV2ApiFactory> {
-    return this.projectV2;
+  getProjectAPI(): ReturnType<typeof ProjectApiFactory> {
+    return this.project;
+  }
+
+  getPredictionAPI(): ReturnType<typeof PredictionApiFactory> {
+    return this.prediction;
   }
 }
 

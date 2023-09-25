@@ -34,6 +34,7 @@ from .project_prediction_data_unit_metadata import *
 from .project_tag import *
 from .project_tagged_annotation import *
 from .project_tagged_data import *
+from .project_tagged_prediction import *
 
 # FIXME: metrics should be inline predictions or separate (need same keys for easy comparison)??
 

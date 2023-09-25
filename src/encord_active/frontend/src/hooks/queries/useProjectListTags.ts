@@ -15,7 +15,7 @@ export function useProjectListTags(
     ["useProjectListTags", querier.baseUrl, projectHash],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeListTagsApiProjectsV2ProjectHashTagsGet(projectHash)
         .then((r) => r.data),
     {

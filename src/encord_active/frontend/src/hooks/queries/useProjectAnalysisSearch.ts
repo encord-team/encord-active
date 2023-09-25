@@ -35,13 +35,13 @@ export function useProjectAnalysisSearch(
     ],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
           projectHash,
           domain,
+          orderByDesc,
           filters !== undefined ? JSON.stringify(filters) : undefined,
           orderBy,
-          orderByDesc,
           offset,
           limit,
           similarityText,

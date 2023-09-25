@@ -34,9 +34,11 @@ from encord_active.server.routers.queries.metric_query import literal_bucket_dep
 from encord_active.server.routers.queries.search_query import (
     SearchFiltersFastAPIDepends,
 )
+from encord_active.server.routers.route_tags import RouteTag, AnalysisDomain
 
 router = APIRouter(
     prefix="/{project_hash}/analysis/{domain}",
+    tags=[RouteTag.PROJECT],
 )
 
 MODERATE_IQR_SCALE = 1.5
@@ -163,7 +165,7 @@ def route_project_search(
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
     order_by: Optional[str] = Form(None),
-    desc: bool = Form(False),
+    desc: bool = Form(),
     offset: int = Form(0, ge=0),
     limit: int = Form(1000, le=1000),
     engine: Engine = Depends(dep_engine_readonly),

@@ -48,9 +48,11 @@ from encord_active.server.dependencies import dep_database_dir, dep_engine, dep_
 from encord_active.server.routers.queries import search_query
 from encord_active.server.routers.queries.domain_query import TABLES_DATA
 from encord_active.server.routers.queries.search_query import SearchFilters
+from encord_active.server.routers.route_tags import RouteTag
 
 router = APIRouter(
     prefix="/{project_hash}/actions",
+    tags=[RouteTag.PROJECT],
 )
 
 

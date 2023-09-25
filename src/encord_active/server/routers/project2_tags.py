@@ -13,9 +13,11 @@ from encord_active.db.models import (
     ProjectTaggedDataUnit,
 )
 from encord_active.server.dependencies import dep_engine, dep_engine_readonly
+from encord_active.server.routers.route_tags import RouteTag
 
 router = APIRouter(
     prefix="/{project_hash}/tags",
+    tags=[RouteTag.PROJECT, RouteTag.PREDICTION],
 )
 
 

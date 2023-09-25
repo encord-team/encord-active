@@ -10,7 +10,7 @@ export function useProjectMutationUploadToEncord(projectHash: string) {
     ["useProjectMutationCreateSubset", querier.baseUrl, projectHash],
     (uploadEncordAction: UploadProjectToEncordPostAction) =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
           projectHash,
           uploadEncordAction

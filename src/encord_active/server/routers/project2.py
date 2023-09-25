@@ -65,11 +65,12 @@ from encord_active.server.routers import (
 )
 from encord_active.server.routers.project2_prediction import AnnotationEnumItem
 from encord_active.server.routers.queries.metric_query import sql_count
+from encord_active.server.routers.route_tags import RouteTag
 from encord_active.server.settings import Settings
 
 router = APIRouter(
     prefix="/projects_v2",
-    tags=["projects_v2"],
+    tags=[RouteTag.PROJECT],
 )
 router.include_router(project2_analysis.router)
 router.include_router(project2_prediction.router)

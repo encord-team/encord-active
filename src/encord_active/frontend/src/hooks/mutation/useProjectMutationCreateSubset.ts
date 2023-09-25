@@ -10,7 +10,7 @@ export function useProjectMutationCreateSubset(projectHash: string) {
     ["useProjectMutationCreateSubset", querier.baseUrl, projectHash],
     (createSubsetAction: CreateProjectSubsetPostAction) =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
           projectHash,
           createSubsetAction

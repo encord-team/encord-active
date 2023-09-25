@@ -1,9 +1,14 @@
-import Icon, { CloseOutlined, FullscreenOutlined } from "@ant-design/icons";
+import Icon, {
+  CheckOutlined,
+  CloseOutlined,
+  FullscreenOutlined,
+  StopOutlined,
+} from "@ant-design/icons";
 import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
 import { Button, Card, Checkbox, Row, Tag, Typography } from "antd";
-import { memo, useMemo } from "react";
+import React, { memo, useMemo } from "react";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { AnnotatedImage } from "./AnnotatedImage";
@@ -18,8 +23,29 @@ import {
   toDataItemID,
   toPredictionTy,
 } from "../util/ItemIdUtil";
+import { calculateTruePositiveSet } from "../util/PredictionUtil";
 
 export const GalleryCard = memo(GalleryCardRaw);
+
+function getPredictionIcon(ty: "TP" | "FP" | "FN"): React.ReactNode {
+  if (ty === "TP") {
+    return <CheckOutlined />;
+  } else if (ty === "FP") {
+    return <CloseOutlined />;
+  } else {
+    return <StopOutlined />;
+  }
+}
+
+function getPredictionName(ty: "TP" | "FP" | "FN"): string {
+  if (ty === "TP") {
+    return "True Positive";
+  } else if (ty === "FP") {
+    return "False Positive";
+  } else {
+    return "False Negative";
+  }
+}
 
 function GalleryCardRaw(props: {
   projectHash: string;
@@ -73,22 +99,23 @@ function GalleryCardRaw(props: {
     usePredictionItem(projectHash, predictionHash ?? "", dataId, {
       enabled: !projectItem,
     });
-  const preview: PredictionItem | ProjectItem | undefined = useMemo(() => {
-    if (projectItem) {
-      return previewProject;
-    } else if (
-      previewProject !== undefined &&
-      previewPrediction !== undefined
-    ) {
-      // Set values not set by prediction using values from preview project.
-      return {
-        ...previewProject,
-        ...previewPrediction,
-      } satisfies PredictionItem;
-    } else {
-      return undefined;
-    }
-  }, [previewProject, previewPrediction, projectItem]);
+  const preview: (PredictionItem & ProjectItem) | ProjectItem | undefined =
+    useMemo(() => {
+      if (projectItem) {
+        return previewProject;
+      } else if (
+        previewProject !== undefined &&
+        previewPrediction !== undefined
+      ) {
+        // Set values not set by prediction using values from preview project.
+        return {
+          ...previewProject,
+          ...previewPrediction,
+        } satisfies PredictionItem & ProjectItem;
+      } else {
+        return undefined;
+      }
+    }, [previewProject, previewPrediction, projectItem]);
 
   // Load project summary state for extra metadata
   const { data: projectSummary } = useProjectSummary(projectHash);
@@ -209,16 +236,8 @@ function GalleryCardRaw(props: {
   const predictionTruePositive: ReadonlySet<string> | undefined = useMemo(():
     | ReadonlySet<string>
     | undefined => {
-    if (preview !== undefined && "annotation_tp_bounds" in preview) {
-      const tpSet = new Set();
-      Object.entries(preview.annotation_tp_bounds ?? {}).forEach(
-        ([key, [keyIOU, keyIOUBound]]) => {
-          if (keyIOU >= iou && keyIOUBound < iou) {
-            tpSet.add(key);
-          }
-        }
-      );
-      return new Set(tpSet) as ReadonlySet<string>;
+    if (preview !== undefined && "annotation_iou_bounds" in preview) {
+      return calculateTruePositiveSet(preview as any, iou); // FIXME: type properly?
     }
     return undefined;
   }, [preview, iou]);
@@ -384,6 +403,16 @@ function GalleryCardRaw(props: {
               </Row>
             </Tag>
           </Row>
+          {predictionTy != null ? (
+            <Row className="mt-1">
+              <Tag bordered={false} color="volcano" className="rounded-xl">
+                {getPredictionIcon(predictionTy)}
+                <Typography.Text className="ml-1" color={labelObjectColor}>
+                  {getPredictionName(predictionTy)}
+                </Typography.Text>
+              </Tag>
+            </Row>
+          ) : null}
           <Row className="mt-1">
             <Tag bordered={false} color="cyan" className="rounded-xl">
               <Icon component={RiUserLine} />

@@ -9,7 +9,7 @@ export function useProjectTaggedItems(projectHash: string) {
     ["useTaggedItems", querier.baseUrl, projectHash],
     async () => {
       const { data } = await querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeTaggedItemsApiProjectsV2ProjectHashTagsTaggedItemsGet(
           projectHash
         );

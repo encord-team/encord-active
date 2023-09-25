@@ -1,6 +1,8 @@
 import uuid
+from typing import Tuple
 
 from sqlmodel import select
+from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from encord_active.db.models import (
     ProjectTag,
@@ -9,7 +11,7 @@ from encord_active.db.models import (
 )
 
 
-def select_frame_data_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def select_frame_data_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int) -> "SelectOfScalar[ProjectTag]":
     return (
         select(ProjectTag)
         .join(ProjectTaggedDataUnit)
@@ -22,7 +24,9 @@ def select_frame_data_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: i
     )
 
 
-def select_frame_label_tags_distinct(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def select_frame_label_tags_distinct(
+    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int
+) -> "SelectOfScalar[ProjectTag]":
     return (
         select(ProjectTag)
         .join(ProjectTaggedAnnotation)
@@ -36,7 +40,9 @@ def select_frame_label_tags_distinct(project_hash: uuid.UUID, du_hash: uuid.UUID
     )
 
 
-def select_frame_label_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int):
+def select_frame_label_tags(
+    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int
+) -> "Select[Tuple[ProjectTag, str]]":
     return (
         select(ProjectTag, ProjectTaggedAnnotation.annotation_hash)
         .join(ProjectTaggedAnnotation)
@@ -49,7 +55,9 @@ def select_frame_label_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: 
     )
 
 
-def select_annotation_label_tags(project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: str):
+def select_annotation_label_tags(
+    project_hash: uuid.UUID, du_hash: uuid.UUID, frame: int, object_hash: str
+) -> "SelectOfScalar[ProjectTag]":
     return (
         select(ProjectTag)
         .join(ProjectTaggedAnnotation)

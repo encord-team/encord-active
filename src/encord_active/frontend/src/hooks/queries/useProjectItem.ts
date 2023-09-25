@@ -13,7 +13,7 @@ export function useProjectItem(
     ["useProjectItem", querier.baseUrl, projectHash, dataItem],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
           projectHash,
           dataItem

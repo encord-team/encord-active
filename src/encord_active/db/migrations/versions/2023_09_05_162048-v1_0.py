@@ -21,6 +21,7 @@ from sqlmodel.sql.sqltypes import GUID, AutoString
 from tqdm import tqdm
 
 from encord_active.db.util.char8 import Char8
+from encord_active.db.util.encrypted_annotation_json import EncryptedAnnotationJSON
 from encord_active.db.util.encrypted_str import EncryptedStr
 from encord_active.db.util.pgvector import PGVector
 from encord_active.db.util.strdict import StrDict
@@ -90,7 +91,7 @@ def upgrade() -> None:
         "project_collaborator",
         sa.Column("project_hash", GUID(), nullable=False),
         sa.Column("user_id", sa.BigInteger(), nullable=False),
-        sa.Column("user_email", AutoString(), nullable=False),
+        sa.Column("user_email", EncryptedStr(), nullable=False),
         sa.ForeignKeyConstraint(
             ["project_hash"],
             ["project.project_hash"],
@@ -190,6 +191,8 @@ def upgrade() -> None:
         sa.Column("project_hash", GUID(), nullable=False),
         sa.Column("annotation_type", sa.SMALLINT(), nullable=False),
         sa.Column("annotation_invalid", sa.Boolean(), nullable=False),
+        sa.Column("annotation_manual", sa.Boolean(), nullable=False),
+        sa.Column("annotation_user_id", sa.Integer(), nullable=True),
         sa.Column("match_annotation_hash", Char8(), nullable=True),
         sa.Column("match_feature_hash", Char8(), nullable=True),
         sa.Column("match_duplicate_iou", sa.REAL(), nullable=False),
@@ -262,6 +265,13 @@ def upgrade() -> None:
             ["prediction_hash", "project_hash"],
             ["prediction.prediction_hash", "prediction.project_hash"],
             name="fk_prediction_analytics",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_hash", "annotation_user_id"],
+            ["project_collaborator.project_hash", "project_collaborator.user_id"],
+            name="fk_prediction_analytics_annotation_user_id",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
@@ -410,8 +420,8 @@ def upgrade() -> None:
         sa.Column("data_uri_is_video", sa.Boolean(), nullable=False),
         sa.Column("data_title", AutoString(), nullable=False),
         sa.Column("data_type", AutoString(), nullable=False),
-        sa.Column("objects", sa.JSON(), nullable=False),
-        sa.Column("classifications", sa.JSON(), nullable=False),
+        sa.Column("objects", EncryptedAnnotationJSON(), nullable=False),
+        sa.Column("classifications", EncryptedAnnotationJSON(), nullable=False),
         sa.CheckConstraint("frame >= 0", name="project_data_units_frame"),
         sa.ForeignKeyConstraint(
             ["project_hash", "data_hash"],
@@ -550,8 +560,8 @@ def upgrade() -> None:
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("project_hash", GUID(), nullable=False),
         sa.Column("data_hash", GUID(), nullable=False),
-        sa.Column("objects", sa.JSON(), nullable=False),
-        sa.Column("classifications", sa.JSON(), nullable=False),
+        sa.Column("objects", EncryptedAnnotationJSON(), nullable=False),
+        sa.Column("classifications", EncryptedAnnotationJSON(), nullable=False),
         sa.CheckConstraint("frame >= 0", name="prediction_data_units_frame"),
         sa.ForeignKeyConstraint(
             ["prediction_hash", "data_hash"],
@@ -922,6 +932,43 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "project_tagged_prediction",
+        sa.Column("prediction_hash", GUID(), nullable=False),
+        sa.Column("du_hash", GUID(), nullable=False),
+        sa.Column("frame", sa.Integer(), nullable=False),
+        sa.Column("annotation_hash", Char8(), nullable=False),
+        sa.Column("tag_hash", GUID(), nullable=False),
+        sa.Column("project_hash", GUID(), nullable=False),
+        sa.CheckConstraint("frame >= 0", name="project_tagged_prediction_frame"),
+        sa.ForeignKeyConstraint(
+            ["prediction_hash", "du_hash", "frame", "annotation_hash"],
+            [
+                "prediction_analytics.prediction_hash",
+                "prediction_analytics.du_hash",
+                "prediction_analytics.frame",
+                "prediction_analytics.annotation_hash",
+            ],
+            name="fk_project_tagged_prediction",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_hash", "prediction_hash"],
+            ["prediction.project_hash", "prediction.prediction_hash"],
+            name="fk_project_tagged_prediction_project",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tag_hash"],
+            ["project_tags.tag_hash"],
+            name="fk_project_tagged_prediction_tag",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("prediction_hash", "du_hash", "frame", "annotation_hash", "tag_hash"),
+    )
+    op.create_table(
         "prediction_analytics_fn",
         sa.Column("prediction_hash", GUID(), nullable=False),
         sa.Column("du_hash", GUID(), nullable=False),
@@ -1205,6 +1252,7 @@ def downgrade() -> None:
     op.drop_table("project_analytics_annotation_derived")
     op.drop_index("fk_prediction_analytics_fn_feature_hash", table_name="prediction_analytics_fn")
     op.drop_table("prediction_analytics_fn")
+    op.drop_table("project_tagged_prediction")
     op.drop_index("ix_project_analytics_data_ph_mtc_width", table_name="project_analytics_data")
     op.drop_index("ix_project_analytics_data_ph_mtc_sharpness", table_name="project_analytics_data")
     op.drop_index("ix_project_analytics_data_ph_mtc_red", table_name="project_analytics_data")
@@ -1528,13 +1576,17 @@ def migrate_sqlite_database_to_new_schema():
     )
     ph_to_emails_set: Dict[str, List[str]] = {}
     for ph, email in all_emails:
-        ph_email_list = ph_to_emails_set.setdefault(ph, ["robot@encord.com"])
-        if email == "robot@encord.com":
+        ph_email_list = ph_to_emails_set.setdefault(ph, ["robot@encord.com", "prediction-import@encord.com"])
+        if email == "robot@encord.com" or email == "prediction-import@encord.com":
             continue
         ph_email_list.append(email)
     ph_to_user_id_lookup = {
         (ph, email): user_id for ph, email_list in ph_to_emails_set.items() for user_id, email in enumerate(email_list)
     }
+
+    # Always set (see default, 0=robot@encord.com, 1=prediction-import@encord.com).
+    prediction_import_user_id: int = 1
+
     op.get_bind().execute("DELETE FROM project_collaborator")
     op.get_bind().execute("COMMIT")
     key = os.environ.get("FERNET_SECRET", None)
@@ -1815,6 +1867,8 @@ def migrate_sqlite_database_to_new_schema():
 
     def _set_analytics_constants(value: dict) -> None:
         value["annotation_invalid"] = False
+        value["annotation_manual"] = False
+        value["annotation_user_id"] = prediction_import_user_id
 
     _sqlite_migrate(
         "active_project_prediction_analytics",

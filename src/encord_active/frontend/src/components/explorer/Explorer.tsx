@@ -225,6 +225,7 @@ export function Explorer({
     filters.predictionOutcome,
     filters.iou,
     filters.orderBy,
+    filters.analysisDomain === "data",
     filters.desc,
     0,
     1000,
@@ -448,10 +449,15 @@ export function Explorer({
                 ),
               },
               {
-                label: "Annotation Metrics",
+                label:
+                  predictionHash === undefined
+                    ? "Annotation Metrics"
+                    : "Prediction Metrics",
                 options: Object.entries(annotationMetricsSummary.metrics).map(
                   ([metricKey, metric]) => ({
-                    label: `A: ${metric?.title ?? metricKey}`,
+                    label: `${predictionHash === undefined ? "A" : "P"}: ${
+                      metric?.title ?? metricKey
+                    }`,
                     value: `annotation-${metricKey}`,
                   })
                 ),

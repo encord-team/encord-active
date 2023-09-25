@@ -33,7 +33,7 @@ export function usePredictionAnalysisReducedEmbeddings(
     ],
     () =>
       querier
-        .getProjectV2API()
+        .getPredictionAPI()
         .routePredictionReductionScatterApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainReductionsReductionHashSummaryGet(
           projectHash,
           predictionHash,

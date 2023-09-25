@@ -31,7 +31,7 @@ export function useProjectAnalysisMetricScatter(
     ],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeProjectScatterApiProjectsV2ProjectHashAnalysisDomainScatterGet(
           projectHash,
           domain,

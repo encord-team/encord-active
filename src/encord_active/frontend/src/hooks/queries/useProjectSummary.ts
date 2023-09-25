@@ -12,7 +12,7 @@ export function useProjectSummary(
     ["useProjectSummary", querier.baseUrl, projectHash],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(projectHash)
         .then((r) => r.data),
     {

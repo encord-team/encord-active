@@ -15,7 +15,7 @@ export function useProjectListReductions(
     ["useProjectListReductions", querier.baseUrl, projectHash],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
           projectHash
         )

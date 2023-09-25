@@ -15,7 +15,7 @@ export function useProjectListPredictions(
     ["useProjectListPredictions", querier.baseUrl, projectHash],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeProjectListPredictionsApiProjectsV2ProjectHashPredictionsGet(
           projectHash
         )

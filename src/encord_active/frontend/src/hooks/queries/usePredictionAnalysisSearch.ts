@@ -9,6 +9,7 @@ export function usePredictionAnalysisSearch(
   domain: PredictionDomain,
   iou: number,
   orderBy: string,
+  orderByData: boolean,
   orderByDesc: boolean,
   offset: number,
   limit: number,
@@ -29,6 +30,7 @@ export function usePredictionAnalysisSearch(
       domain,
       iou,
       orderBy,
+      orderByData,
       orderByDesc,
       offset,
       limit,
@@ -39,17 +41,17 @@ export function usePredictionAnalysisSearch(
     ],
     () =>
       querier
-        .getProjectV2API()
-        .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchGet(
+        .getPredictionAPI()
+        .routePredictionSearchApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainSearchPost(
           projectHash,
           predictionHash,
           domain,
           iou,
-          orderBy,
           orderByDesc,
+          filters !== undefined ? JSON.stringify(filters) : undefined,
+          orderBy,
           offset,
           limit,
-          filters !== undefined ? JSON.stringify(filters) : undefined,
           similarityText,
           similarityImage,
           similarityItem

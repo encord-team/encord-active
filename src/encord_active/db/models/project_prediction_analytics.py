@@ -10,6 +10,7 @@ from encord_active.db.metrics import (
     assert_cls_metrics_match,
     define_metric_indices,
 )
+from encord_active.db.models import ProjectCollaborator
 from encord_active.db.models.project_prediction import ProjectPrediction
 from encord_active.db.util.fields import (
     check_annotation_type,
@@ -38,6 +39,8 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
     # Prediction data for display.
     annotation_type: AnnotationType = field_annotation_type()
     annotation_invalid: bool = field_bool()
+    annotation_manual: bool = field_bool()
+    annotation_user_id: Optional[int] = field_int(nullable=True)
 
     # Prediction metadata: (for iou dependent TP vs FP split & feature hash grouping)
     match_annotation_hash: Optional[str] = field_char8(nullable=True)
@@ -84,6 +87,12 @@ class ProjectPredictionAnalytics(SQLModel, table=True):
         AnnotationMetrics,
         [
             fk_constraint(["prediction_hash", "project_hash"], ProjectPrediction, "fk_prediction_analytics"),
+            fk_constraint(
+                ["project_hash", "annotation_user_id"],
+                ProjectCollaborator,
+                "fk_prediction_analytics_annotation_user_id",
+                ["project_hash", "user_id"],
+            ),
             Index(
                 "ix_prediction_analytics_ph_fh_mtc_confidence",
                 "prediction_hash",

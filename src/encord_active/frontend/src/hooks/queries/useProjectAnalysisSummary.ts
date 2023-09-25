@@ -21,7 +21,7 @@ export function useProjectAnalysisSummary(
     ],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
           projectHash,
           domain,

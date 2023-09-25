@@ -12,7 +12,7 @@ export function useProjectMetadata(
     ["useProjectMetadata", querier.baseUrl, projectHash],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(projectHash)
         .then((r) => r.data),
     {

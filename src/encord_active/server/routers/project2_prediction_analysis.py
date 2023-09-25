@@ -33,6 +33,7 @@ from encord_active.server.routers.queries.metric_query import literal_bucket_dep
 from encord_active.server.routers.queries.search_query import (
     SearchFiltersFastAPIDepends,
 )
+from encord_active.server.routers.route_tags import RouteTag, AnalysisDomain
 
 
 class PredictionDomain(Enum):
@@ -91,6 +92,7 @@ def _tp_int(iou: float) -> int:
 
 router = APIRouter(
     prefix="/analytics/{domain}",
+    tags=[RouteTag.PREDICTION],
 )
 
 
@@ -336,17 +338,17 @@ def route_prediction_scatter(
         raise RuntimeError("Bug in prediction distribution")
 
 
-@router.get("/search")
+@router.post("/search")
 def route_prediction_search(
     project_hash: uuid.UUID,
     prediction_hash: uuid.UUID,
     domain: PredictionDomain,
-    iou: float,
+    iou: float = Form(),
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
-    order_by: Optional[str] = None,
-    desc: bool = False,
-    offset: int = Query(0, ge=0),
-    limit: int = Query(1000, le=1000),
+    order_by: Optional[str] = Form(None),
+    desc: bool = Form(),
+    offset: int = Form(0, ge=0),
+    limit: int = Form(1000, le=1000),
     engine: Engine = Depends(dep_engine_readonly),
     similarity_item: Optional[DataOrAnnotateItem] = Depends(parse_optional_data_or_annotate_item),
     text: Annotated[Optional[str], Form()] = None,

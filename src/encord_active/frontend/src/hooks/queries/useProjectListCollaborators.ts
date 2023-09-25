@@ -15,7 +15,7 @@ export function useProjectListCollaborators(
     ["useProjectListCollaborators", querier.baseUrl, projectHash],
     () =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
           projectHash
         )

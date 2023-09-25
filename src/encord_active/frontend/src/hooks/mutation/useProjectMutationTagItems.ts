@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQuerier } from "../Context";
-import { ProjectsV2Api } from "../../openapi/api";
+import { ProjectApi } from "../../openapi/api";
 import { useProjectTaggedItems } from "../queries/useProjectTaggedItems";
 
 export function useProjectMutationTagItems(projectHash: string) {
@@ -11,11 +11,11 @@ export function useProjectMutationTagItems(projectHash: string) {
     ["useProjectMutationUpdateItemTags", querier.baseUrl, projectHash],
     (
       itemTags: Parameters<
-        ProjectsV2Api["routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut"]
+        ProjectApi["routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut"]
       >[1]
     ) =>
       querier
-        .getProjectV2API()
+        .getProjectAPI()
         .routeTagItemsApiProjectsV2ProjectHashTagsTagItemsPut(
           projectHash,
           itemTags

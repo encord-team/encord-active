@@ -1,6 +1,6 @@
 import math
 import uuid
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple, Set
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException
@@ -48,6 +48,7 @@ from encord_active.server.routers.queries.metric_query import (
 from encord_active.server.routers.queries.search_query import (
     SearchFiltersFastAPIDepends,
 )
+from encord_active.server.routers.route_tags import RouteTag
 
 
 def dep_check_project_prediction_hash_match(
@@ -69,6 +70,7 @@ def dep_check_project_prediction_hash_match(
 router = APIRouter(
     prefix="/{project_hash}/predictions/{prediction_hash}",
     dependencies=[Depends(dep_check_project_prediction_hash_match)],
+    tags=[RouteTag.PREDICTION],
 )
 router.include_router(project2_prediction_analysis.router)
 
@@ -467,6 +469,7 @@ def route_prediction_summary(
         importance_data = sess.exec(importance_data_query).fetchall()
         if len(importance_data) == 0:
             continue
+        # FIXME: use sql implementation if possible
         importance_regression = sklearn_mutual_info_regression(
             np.nan_to_num(np.array([float(d[1]) for d in importance_data]).reshape(-1, 1)),
             np.nan_to_num(np.array([float(d[0]) for d in importance_data])),
@@ -637,7 +640,8 @@ class AnnotationEnumItem(BaseModel):
 class PredictionItem(BaseModel):
     annotation_metrics: Dict[str, Dict[str, Optional[float]]]
     annotation_enums: Dict[str, AnnotationEnumItem]
-    annotation_tp_bounds: Dict[str, List[float]]
+    annotation_iou_bounds: Dict[str, List[float]]
+    annotation_feature_mismatch: Set[str]
     objects: list[dict]
     classifications: list[dict]
     object_answers: Dict[str, dict]
@@ -701,17 +705,19 @@ def route_prediction_data_item(
         },
         annotation_enums={
             annotation_analytics.annotation_hash: {
-                k: getattr(annotation_analytics, k)
-                for k in AnnotationEnums
-                if k not in {"tags", "annotation_manual", "annotation_user_id"}
+                k: getattr(annotation_analytics, k) for k in AnnotationEnums if k != "tags"
             }
-            # FIXME: replace this if these enum components get added to prediction analytics
-            | {"annotation_manual": False, "annotation_user_id": -1}
             for annotation_analytics in annotation_analytics_list
         },
-        annotation_tp_bounds={
+        annotation_iou_bounds={
             annotation_analytics.annotation_hash: [annotation_analytics.iou, annotation_analytics.match_duplicate_iou]
             for annotation_analytics in annotation_analytics_list
+        },
+        annotation_feature_mismatch={
+            annotation_analytics.annotation_hash
+            for annotation_analytics in annotation_analytics_list
+            if annotation_analytics.match_feature_hash is not None
+            and annotation_analytics.feature_hash != annotation_analytics.match_feature_hash
         },
         objects=du_meta.objects,
         classifications=du_meta.classifications,
