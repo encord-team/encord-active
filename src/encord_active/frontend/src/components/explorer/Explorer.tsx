@@ -679,29 +679,27 @@ function PredictionFilters({
       />
 
       {!isClassificationOnly && (
-        <>
-          <div
-            className={classy(
-              "box-border h-10 w-80 rounded-r-lg border-r border-b border-t border-solid border-gray-200",
-              "flex items-center gap-1 px-2"
-            )}
-          >
-            <Typography.Text strong className="min-w-fit">
-              IOU:
-            </Typography.Text>
-            <Slider
-              className="w-full"
-              tooltip={{
-                formatter: (val: number | undefined) => `${val}`,
-              }}
-              value={iou}
-              onChange={setIou}
-              min={0}
-              max={1}
-              step={0.01}
-            />
-          </div>
-        </>
+        <div
+          className={classy(
+            "box-border h-10 w-80 rounded-r-lg border-r border-b border-t border-solid border-gray-200",
+            "flex items-center gap-1 px-2"
+          )}
+        >
+          <Typography.Text strong className="min-w-fit">
+            IOU:
+          </Typography.Text>
+          <Slider
+            className="w-full"
+            tooltip={{
+              formatter: (val: number | undefined) => `${val}`,
+            }}
+            value={iou}
+            onChange={setIou}
+            min={0}
+            max={1}
+            step={0.01}
+          />
+        </div>
       )}
     </Space.Compact>
   );

@@ -10,7 +10,7 @@ repos:
 
       - id: eslint
         name: eslint
-        entry: python pre-commit-npm.py run lint:es:fix
+        entry: python pre-commit-npm.py run lint:es
         types_or: [javascript, json]
         language: system
         pass_filenames: false

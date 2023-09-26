@@ -1,6 +1,6 @@
 import math
 import uuid
-from typing import Dict, List, Literal, Optional, Tuple, Set
+from typing import Dict, List, Literal, Optional, Set, Tuple
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException

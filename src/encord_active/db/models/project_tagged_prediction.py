@@ -3,8 +3,9 @@ from uuid import UUID
 from sqlmodel import CheckConstraint, SQLModel
 
 from encord_active.db.models import ProjectPrediction
-from encord_active.db.models.project_prediction_analytics import ProjectPredictionAnalytics
-
+from encord_active.db.models.project_prediction_analytics import (
+    ProjectPredictionAnalytics,
+)
 from encord_active.db.models.project_tag import ProjectTag
 from encord_active.db.util.fields import (
     field_char8,

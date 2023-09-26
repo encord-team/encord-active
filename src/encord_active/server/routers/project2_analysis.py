@@ -1,7 +1,6 @@
 import functools
 import io
 import uuid
-from enum import Enum
 from typing import Annotated, Dict, List, Literal, Optional, Tuple
 
 import numpy as np
@@ -34,7 +33,7 @@ from encord_active.server.routers.queries.metric_query import literal_bucket_dep
 from encord_active.server.routers.queries.search_query import (
     SearchFiltersFastAPIDepends,
 )
-from encord_active.server.routers.route_tags import RouteTag, AnalysisDomain
+from encord_active.server.routers.route_tags import AnalysisDomain, RouteTag
 
 router = APIRouter(
     prefix="/{project_hash}/analysis/{domain}",
@@ -43,11 +42,6 @@ router = APIRouter(
 
 MODERATE_IQR_SCALE = 1.5
 SEVERE_IQR_SCALE = 2.5
-
-
-class AnalysisDomain(Enum):
-    Data = "data"
-    Annotation = "annotation"
 
 
 def _get_metric_domain_tables(domain: AnalysisDomain) -> Tables:

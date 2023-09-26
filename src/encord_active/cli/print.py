@@ -1,7 +1,7 @@
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, Optional, Set, Union
 
 import rich
 import typer
@@ -156,7 +156,7 @@ def print_system_info():
 
     import psutil
 
-    def get_size(byte_count: int, suffix: str = "B") -> str:
+    def get_size(byte_count: Union[int, float], suffix: str = "B") -> str:
         """
         Scale bytes to its proper format
         e.g:

@@ -3,7 +3,7 @@ import uuid
 from enum import Enum
 from typing import Annotated, Dict, List, Literal, Optional, Tuple, Type, Union
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import Integer
 from sqlalchemy import desc as desc_fn
@@ -33,7 +33,7 @@ from encord_active.server.routers.queries.metric_query import literal_bucket_dep
 from encord_active.server.routers.queries.search_query import (
     SearchFiltersFastAPIDepends,
 )
-from encord_active.server.routers.route_tags import RouteTag, AnalysisDomain
+from encord_active.server.routers.route_tags import RouteTag
 
 
 class PredictionDomain(Enum):
