@@ -286,101 +286,113 @@ def upgrade() -> None:
     op.create_index(
         "ix_prediction_analytics_ph_mtc_annotation_quality",
         "prediction_analytics",
-        ["project_hash", "metric_annotation_quality"],
+        ["prediction_hash", "metric_annotation_quality"],
         unique=False,
     )
     op.create_index(
-        "ix_prediction_analytics_ph_mtc_area", "prediction_analytics", ["project_hash", "metric_area"], unique=False
+        "ix_prediction_analytics_ph_mtc_area", "prediction_analytics", ["prediction_hash", "metric_area"], unique=False
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_area_relative",
         "prediction_analytics",
-        ["project_hash", "metric_area_relative"],
+        ["prediction_hash", "metric_area_relative"],
         unique=False,
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_aspect_ratio",
         "prediction_analytics",
-        ["project_hash", "metric_aspect_ratio"],
+        ["prediction_hash", "metric_aspect_ratio"],
         unique=False,
     )
     op.create_index(
-        "ix_prediction_analytics_ph_mtc_blue", "prediction_analytics", ["project_hash", "metric_blue"], unique=False
+        "ix_prediction_analytics_ph_mtc_blue", "prediction_analytics", ["prediction_hash", "metric_blue"], unique=False
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_border_relative",
         "prediction_analytics",
-        ["project_hash", "metric_border_relative"],
+        ["prediction_hash", "metric_border_relative"],
         unique=False,
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_brightness",
         "prediction_analytics",
-        ["project_hash", "metric_brightness"],
+        ["prediction_hash", "metric_brightness"],
         unique=False,
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_confidence",
         "prediction_analytics",
-        ["project_hash", "metric_confidence"],
+        ["prediction_hash", "metric_confidence"],
         unique=False,
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_contrast",
         "prediction_analytics",
-        ["project_hash", "metric_contrast"],
+        ["prediction_hash", "metric_contrast"],
         unique=False,
     )
     op.create_index(
-        "ix_prediction_analytics_ph_mtc_green", "prediction_analytics", ["project_hash", "metric_green"], unique=False
+        "ix_prediction_analytics_ph_mtc_green",
+        "prediction_analytics",
+        ["prediction_hash", "metric_green"],
+        unique=False,
     )
     op.create_index(
-        "ix_prediction_analytics_ph_mtc_height", "prediction_analytics", ["project_hash", "metric_height"], unique=False
+        "ix_prediction_analytics_ph_mtc_height",
+        "prediction_analytics",
+        ["prediction_hash", "metric_height"],
+        unique=False,
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_inconsistent_class",
         "prediction_analytics",
-        ["project_hash", "metric_inconsistent_class"],
+        ["prediction_hash", "metric_inconsistent_class"],
         unique=False,
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_max_iou",
         "prediction_analytics",
-        ["project_hash", "metric_max_iou"],
+        ["prediction_hash", "metric_max_iou"],
         unique=False,
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_missing_or_broken_track",
         "prediction_analytics",
-        ["project_hash", "metric_missing_or_broken_track"],
+        ["prediction_hash", "metric_missing_or_broken_track"],
         unique=False,
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_polygon_similarity",
         "prediction_analytics",
-        ["project_hash", "metric_polygon_similarity"],
+        ["prediction_hash", "metric_polygon_similarity"],
         unique=False,
     )
     op.create_index(
-        "ix_prediction_analytics_ph_mtc_random", "prediction_analytics", ["project_hash", "metric_random"], unique=False
+        "ix_prediction_analytics_ph_mtc_random",
+        "prediction_analytics",
+        ["prediction_hash", "metric_random"],
+        unique=False,
     )
     op.create_index(
-        "ix_prediction_analytics_ph_mtc_red", "prediction_analytics", ["project_hash", "metric_red"], unique=False
+        "ix_prediction_analytics_ph_mtc_red", "prediction_analytics", ["prediction_hash", "metric_red"], unique=False
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_shape_outlier",
         "prediction_analytics",
-        ["project_hash", "metric_shape_outlier"],
+        ["prediction_hash", "metric_shape_outlier"],
         unique=False,
     )
     op.create_index(
         "ix_prediction_analytics_ph_mtc_sharpness",
         "prediction_analytics",
-        ["project_hash", "metric_sharpness"],
+        ["prediction_hash", "metric_sharpness"],
         unique=False,
     )
     op.create_index(
-        "ix_prediction_analytics_ph_mtc_width", "prediction_analytics", ["project_hash", "metric_width"], unique=False
+        "ix_prediction_analytics_ph_mtc_width",
+        "prediction_analytics",
+        ["prediction_hash", "metric_width"],
+        unique=False,
     )
     op.create_table(
         "prediction_data",
