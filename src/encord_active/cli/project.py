@@ -175,7 +175,7 @@ def serialize_project(
     project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
     export_folder_name: str = typer.Option(
         None,
-        "--export_folder-name",
+        "--export-folder-name",
         "-e",
         help="Export folder name",
     ),
@@ -193,3 +193,25 @@ def serialize_project(
 
     export_folder = Path.cwd() / (export_folder_name if export_folder_name is not None else f"export-{project_hash}")
     serialize_whole_project_state(engine, database_dir, project_hash, export_folder)
+
+
+@project_cli.command("deserialize")
+def deserialize_project(
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
+    export_folder_name: Path = typer.Option(
+        ...,
+        "--export-folder-name",
+        "-e",
+        help="Export folder name",
+    ),
+) -> None:
+    """
+    Serialize the whole project state
+    """
+    from encord_active.db.models import get_engine
+    from encord_active.imports.sandbox.deserialize import import_serialized_project
+
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+
+    import_serialized_project(engine, export_folder_name / "db.json")
