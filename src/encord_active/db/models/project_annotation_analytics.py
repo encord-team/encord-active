@@ -89,5 +89,4 @@ class ProjectAnnotationAnalytics(SQLModel, table=True):
             CheckConstraint("frame >= 0", name="project_analytics_annotation_frame"),
             check_annotation_type("project_analytics_annotation"),
         ],
-        grouping="prediction_hash",
     )
