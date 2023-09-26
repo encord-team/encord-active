@@ -94,10 +94,12 @@ alembic = "^1.12.0"
 cachetools = "^5.3.1"
 types-cachetools = "^5.3.0.6"
 python-multipart = "^0.0.6"
-psycopg2 = "^2.9.7"
+psycopg2 = { version = "^2.9.7", optional = true }
+psycopg2-binary = { version = "^2.9.7", optional = true }
 
 [tool.poetry.extras]
 notebooks = ["jupyterlab", "ipywidgets"]
+psycopg2 = ["psycopg2", "psycopg2-binary"]
 
 
 [tool.poetry.dev-dependencies]
