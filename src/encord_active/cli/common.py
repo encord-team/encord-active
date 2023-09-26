@@ -39,9 +39,9 @@ def select_project_hash_from_name(database_dir: Path, project_name: str) -> uuid
     with Session(engine) as sess:
         # Exact search
         unique_project = sess.exec(select(Project.project_hash).where(Project.name == project_name)).fetchall()
-        if len(unique_project) == 1:
+        if len(unique_project) == 1 and len(project_name) > 0:
             return unique_project[0]
-        elif len(unique_project) > 1:
+        elif len(unique_project) >= 1:
             from InquirerPy import inquirer as i
 
             project_uuid_str = i.select(
@@ -61,9 +61,9 @@ def select_project_hash_from_name(database_dir: Path, project_name: str) -> uuid
                 Project.name.like("%" + project_name + "%")  # type: ignore
             )
         ).fetchall()
-        if len(fuzzy_project) == 1:
+        if len(fuzzy_project) == 1 and len(project_name) > 0:
             return fuzzy_project[0][1]
-        elif len(fuzzy_project) > 1:
+        elif len(fuzzy_project) >= 1:
             from InquirerPy import inquirer as i
 
             project_name_uuid_str = i.select(

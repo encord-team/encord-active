@@ -44,28 +44,28 @@ from encord_active.db.models import (
 
 class WholeProjectModelV1(BaseModel):
     version: Literal["v1"]
-    prediction: List[ProjectPrediction]
-    prediction_analytics: List[ProjectPredictionAnalytics]
-    prediction_analytics_derived: List[ProjectPredictionAnalyticsDerived]
-    prediction_analytics_extra: List[ProjectPredictionAnalyticsExtra]
-    prediction_analytics_fn: List[ProjectPredictionAnalyticsFalseNegatives]
-    prediction_analytics_reduced: List[ProjectPredictionAnalyticsReduced]
-    prediction_data: List[ProjectPredictionDataMetadata]
-    prediction_data_units: List[ProjectPredictionDataUnitMetadata]
-    project: List[Project]
-    project_analytics_annotation: List[ProjectAnnotationAnalytics]
-    project_analytics_annotation_derived: List[ProjectAnnotationAnalyticsDerived]
-    project_analytics_annotation_extra: List[ProjectAnnotationAnalyticsExtra]
-    project_analytics_annotation_reduced: List[ProjectAnnotationAnalyticsReduced]
-    project_analytics_data: List[ProjectDataAnalytics]
-    project_analytics_data_derived: List[ProjectDataAnalyticsDerived]
-    project_analytics_data_extra: List[ProjectDataAnalyticsExtra]
-    project_analytics_data_reduced: List[ProjectDataAnalyticsReduced]
-    project_collaborator: List[ProjectCollaborator]
-    project_data: List[ProjectDataMetadata]
-    project_data_units: List[ProjectDataUnitMetadata]
-    project_embedding_index: List[ProjectEmbeddingIndex]
-    project_embedding_reduction: List[ProjectEmbeddingReduction]
+    prediction: List[ProjectPrediction] = Field(default=[])
+    prediction_analytics: List[ProjectPredictionAnalytics] = Field(default=[])
+    prediction_analytics_derived: List[ProjectPredictionAnalyticsDerived] = Field(default=[])
+    prediction_analytics_extra: List[ProjectPredictionAnalyticsExtra] = Field(default=[])
+    prediction_analytics_fn: List[ProjectPredictionAnalyticsFalseNegatives] = Field(default=[])
+    prediction_analytics_reduced: List[ProjectPredictionAnalyticsReduced] = Field(default=[])
+    prediction_data: List[ProjectPredictionDataMetadata] = Field(default=[])
+    prediction_data_units: List[ProjectPredictionDataUnitMetadata] = Field(default=[])
+    project: List[Project] = Field(default=[])
+    project_analytics_annotation: List[ProjectAnnotationAnalytics] = Field(default=[])
+    project_analytics_annotation_derived: List[ProjectAnnotationAnalyticsDerived] = Field(default=[])
+    project_analytics_annotation_extra: List[ProjectAnnotationAnalyticsExtra] = Field(default=[])
+    project_analytics_annotation_reduced: List[ProjectAnnotationAnalyticsReduced] = Field(default=[])
+    project_analytics_data: List[ProjectDataAnalytics] = Field(default=[])
+    project_analytics_data_derived: List[ProjectDataAnalyticsDerived] = Field(default=[])
+    project_analytics_data_extra: List[ProjectDataAnalyticsExtra] = Field(default=[])
+    project_analytics_data_reduced: List[ProjectDataAnalyticsReduced] = Field(default=[])
+    project_collaborator: List[ProjectCollaborator] = Field(default=[])
+    project_data: List[ProjectDataMetadata] = Field(default=[])
+    project_data_units: List[ProjectDataUnitMetadata] = Field(default=[])
+    project_embedding_index: List[ProjectEmbeddingIndex] = Field(default=[])
+    project_embedding_reduction: List[ProjectEmbeddingReduction] = Field(default=[])
     project_import: List[ProjectImportMetadata] = Field(default=[])
     project_tagged_annotation: List[ProjectTaggedAnnotation] = Field(default=[])
     project_tagged_data: List[ProjectTaggedDataUnit] = Field(default=[])
@@ -186,4 +186,12 @@ def serialize_whole_project_state(engine: Engine, database_dir: Path, project_ha
         shutil.copyfile(old_uri_path, folder / str(new_uuid))
 
     # Serialize whole state
-    (folder / "db.json").write_text(whole_project_table.json(encoder=serialize_encoder, indent=1), "utf-8")
+    (folder / "db.json").write_text(
+        whole_project_table.json(
+            encoder=serialize_encoder,
+            indent=1,
+            exclude_defaults=True,
+            allow_nan=True,
+        ),
+        "utf-8",
+    )

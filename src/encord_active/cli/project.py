@@ -1,3 +1,4 @@
+import shutil
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -198,20 +199,29 @@ def serialize_project(
 @project_cli.command("deserialize")
 def deserialize_project(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
-    export_folder_name: Path = typer.Option(
+    export_folder: Path = typer.Option(
         ...,
-        "--export-folder-name",
+        "--export-folder",
         "-e",
         help="Export folder name",
     ),
 ) -> None:
-    """
-    Serialize the whole project state
-    """
     from encord_active.db.models import get_engine
     from encord_active.imports.sandbox.deserialize import import_serialized_project
 
+    #
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
 
-    import_serialized_project(engine, export_folder_name / "db.json")
+    store_folder = database_dir / "local-data" / export_folder.name
+    db_json_file = store_folder / "db.json"
+    if store_folder.exists():
+        res = typer.confirm("Project folder already present in local-data, try import anyway?")
+        if not res:
+            return
+        shutil.copytree(export_folder, store_folder, dirs_exist_ok=True)
+    else:
+        shutil.copytree(export_folder, store_folder)
+
+    import_serialized_project(engine, db_json_file)
+    db_json_file.unlink(missing_ok=False)

@@ -166,14 +166,18 @@ def fetch_prebuild_project(project_hash: uuid.UUID, engine: Engine, database_dir
             f"Missing valid dev-mode prebuilt for project: {quickstart_folder}"
             f"(exists={quickstart_folder.exists()}, is_dir={quickstart_folder.is_dir()})"
         )
+    db_json_file = store_folder / "db.json"
     if store_folder.exists():
         re_download = typer.confirm("Do you want to re-download the project?")
         if not re_download:
             return
-        # FIXME: delete from database!!!
-    shutil.copytree(quickstart_folder, store_folder)
-    import_serialized_project(engine, store_folder / "db.json")
-    (store_folder / "db.json").unlink(missing_ok=False)
+        if db_json_file.exists():
+            db_json_file.unlink(missing_ok=False)
+        shutil.copytree(quickstart_folder, store_folder, dirs_exist_ok=True)
+    else:
+        shutil.copytree(quickstart_folder, store_folder)
+    import_serialized_project(engine, db_json_file)
+    db_json_file.unlink(missing_ok=False)
 
 
 """

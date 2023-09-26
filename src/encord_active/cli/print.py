@@ -156,7 +156,7 @@ def print_system_info():
 
     import psutil
 
-    def get_size(bytes, suffix="B"):
+    def get_size(byte_count: int, suffix: str = "B") -> str:
         """
         Scale bytes to its proper format
         e.g:
@@ -165,9 +165,10 @@ def print_system_info():
         """
         factor = 1024
         for unit in ["", "K", "M", "G", "T", "P"]:
-            if bytes < factor:
-                return f"{bytes:.2f}{unit}{suffix}"
-            bytes /= factor
+            if byte_count < factor:
+                return f"{byte_count:.2f}{unit}{suffix}"
+            byte_count /= factor
+        return f"{byte_count:.2f}E{suffix}"
 
     print("System Information:")
     uname = platform.uname()

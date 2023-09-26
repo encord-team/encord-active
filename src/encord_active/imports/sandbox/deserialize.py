@@ -17,15 +17,15 @@ def import_serialized_project(engine: Engine, db_json: Path) -> None:
             return None
         return base64.b85decode(encoded)
 
-    for elem in raw_json["project_analytics_data_extra"]:
+    for elem in raw_json.get("project_analytics_data_extra", []):
         elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
-    for elem in raw_json["project_analytics_annotation_extra"]:
-        elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
-        elem["embedding_hu"] = decode_bytes(elem["embedding_hu"])
-    for elem in raw_json["prediction_analytics_extra"]:
+    for elem in raw_json.get("project_analytics_annotation_extra", []):
         elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
         elem["embedding_hu"] = decode_bytes(elem["embedding_hu"])
-    for elem in raw_json["project_embedding_reduction"]:
+    for elem in raw_json.get("prediction_analytics_extra", []):
+        elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
+        elem["embedding_hu"] = decode_bytes(elem["embedding_hu"])
+    for elem in raw_json.get("project_embedding_reduction", []):
         elem["reduction_bytes"] = decode_bytes(elem["reduction_bytes"])
     whole_project_json = WholeProjectModelV1.parse_obj(raw_json)
 
