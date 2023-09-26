@@ -244,7 +244,9 @@ export function ChartDistributionBar(props: {
             }
             padding="no-gap"
             label={{
-              value: "Metrics",
+              value:
+                allProperties.find((v) => v.value == selectedProperty)?.label ??
+                "Group",
               angle: 0,
               position: "insideBottom",
               offset: -3,
