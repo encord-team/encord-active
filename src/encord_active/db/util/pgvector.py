@@ -1,7 +1,10 @@
+import typing
 from typing import Optional, Union
 
 import numpy as np
-from psycopg2.extensions import Binary
+
+if typing.TYPE_CHECKING:
+    from psycopg2.extensions import Binary
 from sqlalchemy import Float, TypeDecorator
 from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.type_api import TypeEngine
@@ -85,7 +88,7 @@ class PGVector(TypeDecorator):
     def result_processor(self, dialect: Dialect, coltype):
         result_processor = BINARY().result_processor(dialect, coltype)
 
-        def process(value: Union[np.ndarray, str, bytes, Binary, None]) -> Optional[bytes]:
+        def process(value: Union[np.ndarray, str, bytes, "Binary", None]) -> Optional[bytes]:
             if value is None:
                 return None
             if isinstance(value, str):

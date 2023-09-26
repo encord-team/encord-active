@@ -1,7 +1,10 @@
+import typing
 from typing import Union
 
 import numpy as np
-from psycopg2.extensions import Binary
+
+if typing.TYPE_CHECKING:
+    from psycopg2.extensions import Binary
 from sqlalchemy import BigInteger, TypeDecorator
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import Dialect
@@ -60,7 +63,7 @@ class Char8List(TypeDecorator):
     def result_processor(self, dialect: Dialect, coltype):
         result_processor = BINARY().result_processor(dialect, coltype)
 
-        def process(value: Union[np.ndarray, str, bytes, Binary]) -> bytes:
+        def process(value: Union[np.ndarray, str, bytes, "Binary"]) -> bytes:
             if isinstance(value, str):
                 np_value = np.array(value[1:-1].split(","), dtype=np.float64)
             elif isinstance(value, np.ndarray):
