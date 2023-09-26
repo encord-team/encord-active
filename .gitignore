@@ -349,6 +349,8 @@ Sessionx.vim
 .idea
 
 /local_tests/
+/ea-venv/
+/.venv/
 
 imports.prof
 ci-tests
