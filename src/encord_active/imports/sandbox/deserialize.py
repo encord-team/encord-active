@@ -18,15 +18,21 @@ def import_serialized_project(engine: Engine, db_json: Path) -> None:
         return base64.b85decode(encoded)
 
     for elem in raw_json.get("project_analytics_data_extra", []):
-        elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
+        if "embedding_clip" in elem:
+            elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
     for elem in raw_json.get("project_analytics_annotation_extra", []):
-        elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
-        elem["embedding_hu"] = decode_bytes(elem["embedding_hu"])
+        if "embedding_clip" in elem:
+            elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
+        if "embedding_hu" in elem:
+            elem["embedding_hu"] = decode_bytes(elem["embedding_hu"])
     for elem in raw_json.get("prediction_analytics_extra", []):
-        elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
-        elem["embedding_hu"] = decode_bytes(elem["embedding_hu"])
+        if "embedding_clip" in elem:
+            elem["embedding_clip"] = decode_bytes(elem["embedding_clip"])
+        if "embedding_hu" in elem:
+            elem["embedding_hu"] = decode_bytes(elem["embedding_hu"])
     for elem in raw_json.get("project_embedding_reduction", []):
-        elem["reduction_bytes"] = decode_bytes(elem["reduction_bytes"])
+        if "reduction_bytes" in elem:
+            elem["reduction_bytes"] = decode_bytes(elem["reduction_bytes"])
     whole_project_json = WholeProjectModelV1.parse_obj(raw_json)
 
     with Session(engine) as sess:
