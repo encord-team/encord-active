@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -258,6 +259,12 @@ export function ChartDistributionBar(props: {
             }}
           />
           <Tooltip formatter={formatTooltip} />
+          <Legend
+            payload={[
+              { value: "Standard", color: "#ffa600" },
+              { value: "Outlier", color: "#ef4444" },
+            ]}
+          />
           <Bar dataKey="count" isAnimationActive={false} />
           {metadata === undefined || !showQuartiles
             ? null
