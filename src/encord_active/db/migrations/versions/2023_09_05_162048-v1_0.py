@@ -1,6 +1,6 @@
 """v1_0
 
-Revision ID: 1
+Revision ID: 20230905162048
 Revises: bcfdfc2f498a
 Create Date: 2023-09-05 14:26:50.014633+01:00
 
@@ -101,6 +101,9 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("project_hash", "user_id"),
     )
+    op.create_index(
+        "uq_project_collaborator_email", "project_collaborator", ["project_hash", "user_email"], unique=True
+    )
     op.create_table(
         "project_data",
         sa.Column("project_hash", GUID(), nullable=False),
@@ -158,7 +161,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("reduction_hash"),
     )
     op.create_index(
-        "ix_project_embedding_reduction", "project_embedding_reduction", ["project_hash", "reduction_hash"], unique=True
+        "uq_project_embedding_reduction", "project_embedding_reduction", ["project_hash", "reduction_hash"], unique=True
     )
     op.create_table(
         "project_import",
@@ -1342,10 +1345,11 @@ def downgrade() -> None:
     op.drop_table("prediction_analytics")
     op.drop_table("project_tags")
     op.drop_table("project_import")
-    op.drop_index("ix_project_embedding_reduction", table_name="project_embedding_reduction")
+    op.drop_index("uq_project_embedding_reduction", table_name="project_embedding_reduction")
     op.drop_table("project_embedding_reduction")
     op.drop_table("project_embedding_index")
     op.drop_table("project_data")
+    op.drop_index("uq_project_collaborator_email", table_name="project_collaborator")
     op.drop_table("project_collaborator")
     op.drop_index("uq_project_prediction", table_name="prediction")
     op.drop_table("prediction")
@@ -1589,7 +1593,7 @@ def migrate_sqlite_database_to_new_schema():
     ph_to_emails_set: Dict[str, List[str]] = {}
     for ph, email in all_emails:
         ph_email_list = ph_to_emails_set.setdefault(ph, ["robot@encord.com", "prediction-import@encord.com"])
-        if email == "robot@encord.com" or email == "prediction-import@encord.com":
+        if email in ph_email_list:
             continue
         ph_email_list.append(email)
     ph_to_user_id_lookup = {

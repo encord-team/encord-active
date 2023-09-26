@@ -25,5 +25,5 @@ class ProjectEmbeddingReduction(SQLModel, table=True):
 
     __table_args__ = (
         fk_constraint(["project_hash"], Project, "fk_project_embedding_reduction"),
-        Index("ix_project_embedding_reduction", "project_hash", "reduction_hash", unique=True),
+        Index("uq_project_embedding_reduction", "project_hash", "reduction_hash", unique=True),
     )

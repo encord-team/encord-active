@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Index
 
 from encord_active.db.models.project import Project
 from encord_active.db.util.fields import (
@@ -17,4 +17,7 @@ class ProjectCollaborator(SQLModel, table=True):
     user_id: int = field_big_int(primary_key=True)
     user_email: str = field_encrypted_text()
 
-    __table_args__ = (fk_constraint(["project_hash"], Project, "fk_project_collaborator"),)
+    __table_args__ = (
+        fk_constraint(["project_hash"], Project, "fk_project_collaborator"),
+        Index("uq_project_collaborator_email", "project_hash", "user_email", unique=True),
+    )
