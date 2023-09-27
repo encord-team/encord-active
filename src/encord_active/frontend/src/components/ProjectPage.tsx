@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { Spin, Tabs } from "antd";
+import { CSSProperties, useEffect, useMemo } from "react";
+import { Button, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
 import {
   FeatureHashMap,
@@ -11,7 +11,7 @@ import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 import { ProjectSelector } from "./ProjectSelector";
 import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 import { Explorer } from "./explorer";
-import { SummaryView } from "./tabs/SummaryView";
+import { SummaryView } from "./tabs/AnalyticsView";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
@@ -104,27 +104,25 @@ export function ProjectPage(props: {
   }
 
   const remoteProject = !projectSummary.local_project;
-
+  const tabBarStyle: CSSProperties = {
+    background: "#FAFAFA",
+    margin: 0,
+  };
   return (
     <Tabs
-      tabBarExtraContent={
-        <ProjectSelector
-          selectedProjectHash={projectHash}
-          setSelectedProjectHash={setSelectedProjectHash}
-        />
-      }
+      className="h-full"
+      size="large"
+      tabBarStyle={tabBarStyle}
+      centered
+      tabBarExtraContent={{
+        left: (
+          <ProjectSelector
+            selectedProjectHash={projectHash}
+            setSelectedProjectHash={setSelectedProjectHash}
+          />
+        ),
+      }}
       items={[
-        {
-          label: "Summary",
-          key: "summary",
-          children: (
-            <SummaryView
-              projectHash={projectHash}
-              projectSummary={projectSummary}
-              featureHashMap={featureHashMap}
-            />
-          ),
-        },
         {
           label: "Explorer",
           key: "explorer",
@@ -142,19 +140,17 @@ export function ProjectPage(props: {
           ),
         },
         {
-          label: "Predictions",
-          key: "predictions",
+          label: "Analytics",
+          key: "analytics",
           children: (
-            <PredictionsTab
+            <SummaryView
               projectHash={projectHash}
-              annotationMetricsSummary={projectSummary.annotation}
-              dataMetricsSummary={projectSummary.data}
+              projectSummary={projectSummary}
               featureHashMap={featureHashMap}
-              setSelectedProjectHash={setSelectedProjectHash}
-              remoteProject={remoteProject}
             />
           ),
         },
+
         {
           label: "Project Comparison",
           key: "comparison",

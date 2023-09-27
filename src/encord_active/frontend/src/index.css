@@ -30,3 +30,29 @@ body {
   @apply m-0 flex h-screen min-w-[320px] place-items-center px-4;
   padding: unset;
 }
+
+/* width */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 5px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Ant Design Override */
+.ant-tabs-content,
+.ant-tabs-tabpane {
+  height: 100%;
+}

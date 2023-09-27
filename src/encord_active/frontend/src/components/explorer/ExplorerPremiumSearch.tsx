@@ -34,20 +34,15 @@ export function ExplorerPremiumSearch(props: {
 
   // FIXME: re-add snippet (probably query json - with option to set current filter state to match??)
   return (
-    <Space.Compact size="large">
+    <div className="mr-4 flex">
       <Tooltip overlay="Text Search">
         <Search
-          placeholder="Text Search"
+          placeholder="Search Anything"
           onSearch={(value) => setSearch(value || undefined)}
           allowClear
           loading={searchLoading}
           defaultValue={typeof search === "string" ? search : search?.name}
           value={typeof search !== "string" ? search?.name : undefined}
-          enterButton={
-            <Button className="bg-white px-4">
-              <FaMagic color="black" className="bg-white" />
-            </Button>
-          }
           suffix={
             search === undefined ? null : (
               <Tooltip
@@ -67,7 +62,7 @@ export function ExplorerPremiumSearch(props: {
           beforeUpload={() => false}
           showUploadList={false}
         >
-          <Button icon={<UploadOutlined />}>By Image</Button>
+          <Button className="border-none" icon={<UploadOutlined />} />
         </Upload>
       </Tooltip>
       {/* <Select */}
@@ -87,6 +82,6 @@ export function ExplorerPremiumSearch(props: {
       {/*     }, */}
       {/*   ]} */}
       {/* /> */}
-    </Space.Compact>
+    </div>
   );
 }

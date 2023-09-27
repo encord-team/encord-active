@@ -4,13 +4,19 @@ import { MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
+import TableIcon from "../../../assets/table.svg";
+import EmbeddingsIcon from "../../../assets/dot-chart.svg";
 import {
   Button,
+  Col,
   Modal,
   Popover,
+  Row,
+  Segmented,
   Select,
   Slider,
   Space,
+  Tabs,
   Tooltip,
   Typography,
 } from "antd";
@@ -48,6 +54,9 @@ import { useProjectListCollaborators } from "../../hooks/queries/useProjectListC
 import { useProjectListTags } from "../../hooks/queries/useProjectListTags";
 import { FeatureHashMap } from "../Types";
 import { classy } from "../../helpers/classy";
+import { Content } from "antd/es/layout/layout";
+import Icon from "@ant-design/icons/lib/components/Icon";
+import { InfoCircleOutlined } from "@ant-design/icons";
 
 export type Props = {
   projectHash: string;
@@ -357,7 +366,7 @@ export function Explorer({
   const close = () => setOpen(undefined);
 
   return (
-    <div>
+    <div className="h-full">
       <CreateSubsetModal
         open={open === "subset"}
         close={close}
@@ -385,15 +394,6 @@ export function Explorer({
         You have selected items from the previous domain, do you want to clear
         the selection?
       </Modal>
-      <ExplorerEmbeddings
-        projectHash={projectHash}
-        predictionHash={predictionHash}
-        reductionHash={reductionHash}
-        reductionHashLoading={reductionHashLoading}
-        filters={filters}
-        setEmbeddingSelection={setEmbeddingFilter}
-        featureHashMap={featureHashMap}
-      />
       <ItemPreviewModal
         projectHash={projectHash}
         predictionHash={predictionHash}
@@ -405,276 +405,344 @@ export function Explorer({
         }
         editUrl={editUrl}
       />
-      <ExplorerDistribution
-        projectHash={projectHash}
-        predictionHash={predictionHash}
-        filters={filters}
-        addFilter={(domain, metric, min, max) => {
-          const setFilters =
-            domain === "data" ? setDataFilters : setAnnotationFilters;
-          setFilters((filters) => {
-            if (metric in filters.metricFilters) {
-              return {
-                ...filters,
-                metricFilters: {
-                  ...filters.metricFilters,
-                  [metric]: [min, max],
-                },
-              };
-            } else {
-              return {
-                ...filters,
-                metricFilters: {
-                  [metric]: [min, max],
-                  ...filters.metricFilters,
-                },
-                ordering: [...filters.ordering, metric],
-              };
-            }
-          });
-        }}
-      />
-      <Space wrap>
-        {predictionHash !== undefined && (
-          <PredictionFilters
-            disabled={!!similarityItem}
-            iou={iou}
-            setIou={setIou}
-            predictionOutcome={predictionOutcome}
-            isClassificationOnly={false}
-            setPredictionOutcome={setPredictionOutcome}
-          />
-        )}
-        <Space.Compact size="large">
-          <Select
-            value={`${selectedMetric.domain}-${selectedMetric.metric_key}`}
-            onChange={(strKey: string) => {
-              const [domain, metric_key] = strKey.split("-");
-              setSelectedMetric({
-                domain: domain as "data" | "annotation",
-                metric_key,
-              });
+      <Row className="h-full">
+        <Col span={18} className="h-full">
+          <Tabs
+            style={{
+              height: "100%",
             }}
-            className="w-80"
-            options={[
+            className="h-full"
+            tabBarStyle={{
+              margin: 0,
+            }}
+            tabBarExtraContent={{
+              left: (
+                <ExplorerPremiumSearch
+                  premiumSearchState={{
+                    ...premiumSearchState,
+                    setSearch: (args) => {
+                      setSimilarityItem(undefined);
+                      premiumSearchState.setSearch(args);
+                    },
+                  }}
+                />
+              ),
+              right: (
+                <Segmented
+                  className="mr-4"
+                  selected
+                  options={["Data", "Labels"]}
+                />
+              ),
+            }}
+            items={[
               {
-                label: "Data Metrics",
-                options: Object.entries(dataMetricsSummary.metrics)
-                  .map(([metricKey, metric]) => ({
-                    label: `D: ${metric?.title ?? metricKey}`,
-                    value: `data-${metricKey}`,
-                  }))
-                  .sort((a, b) => (a.label > b.label ? 1 : -1)),
+                label: (
+                  <span className="flex items-center gap-2">
+                    <img src={TableIcon} alt="grid" className="h-4 w-4" />
+                    Grid View
+                  </span>
+                ),
+                key: "gridView",
+                children: (
+                  <div className="flex h-full flex-col bg-gray-100">
+                    <Space
+                      style={{
+                        flex: "0 1 0",
+                        height: "100%",
+                      }}
+                      wrap
+                    >
+                      {predictionHash !== undefined && (
+                        <PredictionFilters
+                          disabled={!!similarityItem}
+                          iou={iou}
+                          setIou={setIou}
+                          predictionOutcome={predictionOutcome}
+                          isClassificationOnly={false}
+                          setPredictionOutcome={setPredictionOutcome}
+                        />
+                      )}
+                      <Space.Compact size="large">
+                        <Select
+                          value={`${selectedMetric.domain}-${selectedMetric.metric_key}`}
+                          onChange={(strKey: string) => {
+                            const [domain, metric_key] = strKey.split("-");
+                            setSelectedMetric({
+                              domain: domain as "data" | "annotation",
+                              metric_key,
+                            });
+                          }}
+                          className="w-80"
+                          options={[
+                            {
+                              label: "Data Metrics",
+                              options: Object.entries(
+                                dataMetricsSummary.metrics
+                              ).map(([metricKey, metric]) => ({
+                                label: `D: ${metric?.title ?? metricKey}`,
+                                value: `data-${metricKey}`,
+                              })),
+                            },
+                            {
+                              label:
+                                predictionHash === undefined
+                                  ? "Annotation Metrics"
+                                  : "Prediction Metrics",
+                              options: Object.entries(
+                                annotationMetricsSummary.metrics
+                              ).map(([metricKey, metric]) => ({
+                                label: `${
+                                  predictionHash === undefined ? "A" : "P"
+                                }: ${metric?.title ?? metricKey}`,
+                                value: `annotation-${metricKey}`,
+                              })),
+                            },
+                          ]}
+                        />
+                        <Button
+                          disabled={!isSortedByMetric}
+                          onClick={() => setIsAscending(!isAscending)}
+                          icon={
+                            isAscending ? (
+                              <TbSortAscending />
+                            ) : (
+                              <TbSortDescending />
+                            )
+                          }
+                        />
+                        <Button onClick={toggleShowAnnotations}>
+                          {`${
+                            showAnnotations ? "Show" : "hide"
+                          } all annotations`}
+                        </Button>
+                        <Popover
+                          placement="bottomLeft"
+                          content={
+                            <MetricFilter
+                              filters={dataFilters}
+                              setFilters={setDataFilters}
+                              metricsSummary={dataMetricsSummary}
+                              metricRanges={dataMetricRanges?.metrics}
+                              featureHashMap={featureHashMap}
+                              tags={tags ?? []}
+                              collaborators={collaborators ?? []}
+                            />
+                          }
+                          trigger="click"
+                        >
+                          <Button>
+                            Data Filters
+                            {` (${dataFilters.ordering.length})`}
+                          </Button>
+                        </Popover>
+                        <Popover
+                          placement="bottomLeft"
+                          content={
+                            <MetricFilter
+                              filters={annotationFilters}
+                              setFilters={setAnnotationFilters}
+                              metricsSummary={annotationMetricsSummary}
+                              metricRanges={annotationMetricRanges?.metrics}
+                              featureHashMap={featureHashMap}
+                              tags={tags ?? []}
+                              collaborators={collaborators ?? []}
+                            />
+                          }
+                          trigger="click"
+                        >
+                          <Button>
+                            Annotation Filters
+                            {` (${annotationFilters.ordering.length})`}
+                          </Button>
+                        </Popover>
+                        {/* <Button
+                          disabled={!canResetFilters}
+                          onClick={() => reset()}
+                          icon={<MdFilterAltOff />}
+                        >
+                          Reset filters
+                        </Button> */}
+                      </Space.Compact>
+                      <Space.Compact size="large">
+                        <Popover
+                          placement="bottomRight"
+                          content={
+                            <BulkTaggingForm
+                              items={[...selectedItems]}
+                              allowTaggingAnnotations={allowTaggingAnnotations}
+                            />
+                          }
+                          trigger="click"
+                        >
+                          <Tooltip
+                            title={
+                              !selectedItems.size
+                                ? "Select items to tag first"
+                                : ""
+                            }
+                          >
+                            <Button
+                              icon={<HiOutlineTag />}
+                              disabled={!selectedItems.size}
+                            >
+                              Tag
+                            </Button>
+                          </Tooltip>
+                        </Popover>
+                        <Button
+                          disabled={!selectedItems.size}
+                          onClick={() => setSelectedItems(new Set())}
+                          icon={<VscClearAll />}
+                        >
+                          Clear selection ({selectedItems.size})
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            setSelectedItems(new Set(itemsToRender))
+                          }
+                          disabled={itemsToRender.length === 0}
+                          icon={<BiSelectMultiple />}
+                        >
+                          Select all ({itemsToRender.length})
+                        </Button>
+                      </Space.Compact>
+                      {env !== "sandbox" && !(remoteProject || !local) ? (
+                        <Space.Compact size="large">
+                          <Button
+                            onClick={() => setOpen("subset")}
+                            disabled={!canResetFilters}
+                            icon={<BiWindows />}
+                          >
+                            Create Project subset
+                          </Button>
+                          <Button
+                            onClick={() => setOpen("upload")}
+                            disabled={!!canResetFilters}
+                            icon={<BiCloudUpload />}
+                          >
+                            Upload project
+                          </Button>
+                        </Space.Compact>
+                      ) : (
+                        <>
+                          <Button
+                            onClick={() => setOpen("subset")}
+                            disabled={!canResetFilters}
+                            hidden={env === "sandbox"}
+                            icon={<BiWindows />}
+                            size="large"
+                          >
+                            Create Project subset
+                          </Button>
+                          <Button
+                            onClick={() => setOpen("upload")}
+                            disabled={!!canResetFilters}
+                            hidden={remoteProject || !local}
+                            icon={<BiCloudUpload />}
+                            size="large"
+                          >
+                            Upload project
+                          </Button>
+                        </>
+                      )}
+                    </Space>
+                    <div
+                      style={{
+                        flex: "1 1 auto",
+                        height: "100%",
+                      }}
+                    >
+                      <ExplorerSearchResults
+                        projectHash={projectHash}
+                        predictionHash={predictionHash}
+                        itemsToRender={itemsToRender}
+                        itemSimilarities={itemSimilarities}
+                        itemSimilarityItemAtIndex0={similarityItem != null}
+                        truncated={itemTruncated}
+                        loadingDescription={loadingDescription}
+                        selectedMetric={selectedMetric}
+                        toggleImageSelection={toggleImageSelection}
+                        setPreviewedItem={setPreviewedItem}
+                        setSimilaritySearch={setSimilaritySearch}
+                        selectedItems={selectedItems}
+                        showAnnotations={showAnnotations}
+                        featureHashMap={featureHashMap}
+                        iou={iou}
+                      />
+                    </div>
+                  </div>
+                ),
               },
               {
-                label:
-                  predictionHash === undefined
-                    ? "Annotation Metrics"
-                    : "Prediction Metrics",
-                options: Object.entries(annotationMetricsSummary.metrics)
-                  .map(([metricKey, metric]) => ({
-                    label: `${predictionHash === undefined ? "A" : "P"}: ${
-                      metric?.title ?? metricKey
-                    }`,
-                    value: `annotation-${metricKey}`,
-                  }))
-                  .sort((a, b) => (a.label > b.label ? 1 : -1)),
+                label: (
+                  <span className="flex items-center gap-2">
+                    <img src={EmbeddingsIcon} alt="grid" className="h-4 w-4" />
+                    Embeddings View
+                  </span>
+                ),
+                key: "embeddingsView",
+                children: (
+                  <ExplorerEmbeddings
+                    projectHash={projectHash}
+                    predictionHash={predictionHash}
+                    reductionHash={reductionHash}
+                    reductionHashLoading={reductionHashLoading}
+                    filters={filters}
+                    setEmbeddingSelection={setEmbeddingFilter}
+                    featureHashMap={featureHashMap}
+                  />
+                ),
               },
             ]}
           />
-          <Button
-            disabled={!isSortedByMetric}
-            onClick={() => setIsAscending(!isAscending)}
-            icon={isAscending ? <TbSortAscending /> : <TbSortDescending />}
+        </Col>
+        <Col span={6} className=" border-l border-l-gray-200 px-2">
+          <Tabs
+            items={[
+              {
+                label: "Overview",
+                key: "overview",
+                children: (
+                  <Space direction="vertical" size="large" className="p-4">
+                    <div className="gap-f flex flex-col">
+                      <div className="text-base text-gray-500">
+                        Total No. of frames
+                      </div>
+                      <div className="text-2xl">48,326</div>
+                    </div>
+                    <Space size="small" direction="vertical">
+                      <div className="text-base text-gray-500">
+                        Data Quality Score <InfoCircleOutlined />
+                      </div>
+                      <div className="text-2xl">50</div>
+                    </Space>
+                    <Space size="small" direction="vertical">
+                      <div className="text-base text-gray-500">
+                        Issue Types <InfoCircleOutlined />
+                      </div>
+                      <div className="text-sm">Duplicate</div>
+                      <div className="text-sm">Blur</div>
+                      <div className="text-sm">Dark</div>
+                      <div className="text-sm">Bright</div>
+                    </Space>
+                  </Space>
+                ),
+              },
+              {
+                label: "Filter",
+                key: "filter",
+                children: <>Filters come here</>,
+              },
+              {
+                label: "Display",
+                key: "display",
+                children: <>This is display for something for sure</>,
+              },
+            ]}
           />
-          <Button onClick={toggleShowAnnotations}>
-            {`${showAnnotations ? "Show" : "hide"} all annotations`}
-          </Button>
-          <Popover
-            placement="bottomLeft"
-            content={
-              <MetricFilter
-                filters={dataFilters}
-                setFilters={setDataFilters}
-                metricsSummary={dataMetricsSummary}
-                metricRanges={dataMetricRanges?.metrics}
-                featureHashMap={featureHashMap}
-                tags={tags ?? []}
-                collaborators={collaborators ?? []}
-              />
-            }
-            trigger="click"
-          >
-            <Button>
-              Data Filters
-              {` (${dataFilters.ordering.length})`}
-            </Button>
-          </Popover>
-          <Popover
-            placement="bottomLeft"
-            content={
-              <MetricFilter
-                filters={annotationFilters}
-                setFilters={setAnnotationFilters}
-                metricsSummary={annotationMetricsSummary}
-                metricRanges={annotationMetricRanges?.metrics}
-                featureHashMap={featureHashMap}
-                tags={tags ?? []}
-                collaborators={collaborators ?? []}
-              />
-            }
-            trigger="click"
-          >
-            <Button>
-              Annotation Filters
-              {` (${annotationFilters.ordering.length})`}
-            </Button>
-          </Popover>
-          <Button
-            disabled={!canResetFilters}
-            onClick={() => reset()}
-            icon={<MdFilterAltOff />}
-          >
-            Reset filters
-          </Button>
-        </Space.Compact>
-        <Space.Compact size="large">
-          <Popover
-            placement="bottomRight"
-            content={
-              <BulkTaggingForm
-                projectHash={projectHash}
-                selectedItems={selectedItems}
-                filtersDomain={filters.analysisDomain}
-                filters={filters.filters}
-                allowTaggingAnnotations={allowTaggingAnnotations}
-              />
-            }
-            trigger="click"
-          >
-            <Tooltip
-              title={
-                selectedItems !== "ALL" && !selectedItems.size
-                  ? "Select items to tag first"
-                  : ""
-              }
-            >
-              <Button
-                icon={<HiOutlineTag />}
-                disabled={selectedItems !== "ALL" && !selectedItems.size}
-              >
-                Tag
-              </Button>
-            </Tooltip>
-          </Popover>
-          <Button
-            disabled={selectedItems !== "ALL" && !selectedItems.size}
-            onClick={() => setSelectedItems(new Set())}
-            icon={<VscClearAll />}
-          >
-            Clear selection (
-            {selectedItems === "ALL" ? "All" : selectedItems.size})
-          </Button>
-          <Button
-            disabled={selectedItems === "ALL"}
-            onClick={() =>
-              setSelectedItems((oldState) => {
-                if (oldState === "ALL") {
-                  return "ALL";
-                }
-                return new Set([
-                  ...oldState,
-                  ...itemsToRender.slice(
-                    (page - 1) * pageSize,
-                    page * pageSize
-                  ),
-                ]);
-              })
-            }
-            icon={<BiSelectMultiple />}
-          >
-            Select page (
-            {itemsToRender.slice((page - 1) * pageSize, page * pageSize).length}
-            )
-          </Button>
-          <Button
-            onClick={() => setSelectedItems("ALL")}
-            disabled={selectedItems === "ALL"}
-            icon={<BiSelectMultiple />}
-          >
-            Select All
-          </Button>
-        </Space.Compact>
-        {env !== "sandbox" && !(remoteProject || !local) ? (
-          <Space.Compact size="large">
-            <Button
-              onClick={() => setOpen("subset")}
-              disabled={!canResetFilters}
-              icon={<BiWindows />}
-            >
-              Create Project subset
-            </Button>
-            <Button
-              onClick={() => setOpen("upload")}
-              disabled={!!canResetFilters}
-              icon={<BiCloudUpload />}
-            >
-              Upload project
-            </Button>
-          </Space.Compact>
-        ) : (
-          <>
-            <Button
-              onClick={() => setOpen("subset")}
-              disabled={!canResetFilters}
-              hidden={env === "sandbox"}
-              icon={<BiWindows />}
-              size="large"
-            >
-              Create Project subset
-            </Button>
-            <Button
-              onClick={() => setOpen("upload")}
-              disabled={!!canResetFilters}
-              hidden={remoteProject || !local}
-              icon={<BiCloudUpload />}
-              size="large"
-            >
-              Upload project
-            </Button>
-          </>
-        )}
-        <ExplorerPremiumSearch
-          premiumSearchState={{
-            ...premiumSearchState,
-            setSearch: (args) => {
-              setSimilarityItem(undefined);
-              premiumSearchState.setSearch(args);
-            },
-          }}
-        />
-      </Space>
-      <ExplorerSearchResults
-        projectHash={projectHash}
-        predictionHash={predictionHash}
-        itemsToRender={itemsToRender}
-        itemSimilarities={itemSimilarities}
-        itemSimilarityItemAtIndex0={similarityItem != null}
-        truncated={itemTruncated}
-        loadingDescription={loadingDescription}
-        selectedMetric={selectedMetric}
-        toggleImageSelection={toggleImageSelection}
-        setPreviewedItem={setPreviewedItem}
-        setSimilaritySearch={setSimilaritySearch}
-        selectedItems={selectedItems}
-        showAnnotations={showAnnotations}
-        featureHashMap={featureHashMap}
-        iou={iou}
-        page={page}
-        pageSize={pageSize}
-        setPage={setPage}
-        setPageSize={setPageSize}
-      />
+        </Col>
+      </Row>
     </div>
   );
 }

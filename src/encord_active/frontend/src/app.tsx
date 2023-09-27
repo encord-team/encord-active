@@ -12,7 +12,7 @@ export function App() {
     navigate(projectHash ? `/projects/${projectHash}` : "/");
 
   return (
-    <div className="bg-white p-12">
+    <div className="flex h-full flex-col">
       <Routes>
         <Route
           path="/"
@@ -20,7 +20,7 @@ export function App() {
         />
         <Route
           path="/projects/:projectHash"
-          element={<Navigate to="./summary" replace />}
+          element={<Navigate to="./explorer" replace />}
         />
         <Route
           path="/projects/:projectHash/:tab/:previewItem?"

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs } from "antd";
-import { SummaryTab } from "./SummaryTab";
+import { SummaryTab } from "./AnalyticsTab";
 import { ProjectSummary } from "../../openapi/api";
 import { FeatureHashMap } from "../Types";
 
