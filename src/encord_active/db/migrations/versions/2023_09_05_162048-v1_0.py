@@ -184,6 +184,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("tag_hash"),
     )
+    op.create_index("uq_project_tags_name", "project_tags", ["project_hash", "name"], unique=True)
     op.create_table(
         "prediction_analytics",
         sa.Column("prediction_hash", GUID(), nullable=False),
@@ -1343,6 +1344,7 @@ def downgrade() -> None:
     op.drop_index("ix_prediction_analytics_ph_mtc_annotation_quality", table_name="prediction_analytics")
     op.drop_index("ix_prediction_analytics_ph_fh_mtc_confidence", table_name="prediction_analytics")
     op.drop_table("prediction_analytics")
+    op.drop_index("uq_project_tags_name", table_name="project_tags")
     op.drop_table("project_tags")
     op.drop_table("project_import")
     op.drop_index("uq_project_embedding_reduction", table_name="project_embedding_reduction")
