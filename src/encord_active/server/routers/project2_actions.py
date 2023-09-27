@@ -175,7 +175,8 @@ def route_action_create_project_subset(
     engine: Engine = Depends(dep_engine),
     database_dir: Path = Depends(dep_database_dir),
     ssh_key: str = Depends(dep_ssh_key),
-) -> None:
+    remote_only: bool = True,
+) -> uuid.UUID:
     with Session(engine) as sess:
         current_project = sess.exec(select(Project).where(Project.project_hash == project_hash)).first()
         if current_project is None:
@@ -245,6 +246,9 @@ def route_action_create_project_subset(
                 dataset_description=item.dataset_description,
             )
             new_project.project_hash = new_local_project_hash
+
+        if remote_only:
+            return new_project.project_hash
 
         # Use this info to generate NEW values to insert
         metric_engine = SimpleExecutor(create_analysis(default_torch_device()))
@@ -369,6 +373,8 @@ def route_action_create_project_subset(
             _update_label_hashes(sess, project_hash, remap_label_hashes)
 
         sess.commit()
+
+    return new_project.project_hash
 
 
 def _file_path_for_upload(
