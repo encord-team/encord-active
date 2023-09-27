@@ -1411,11 +1411,11 @@ def _transform_embedding_clip(value: Optional[bytes]) -> Optional[bytes]:
     elif len(value) == 512 * 8:
         np_array = np.frombuffer(value, dtype=np.float64)
     elif len(value) >= 512 * 8:
-        np_array = np.frombuffer(value[:512 * 8], dtype=np.float64)
+        np_array = np.frombuffer(value[: 512 * 8], dtype=np.float64)
     elif len(value) >= 512 * 4:
-        np_array = np.frombuffer(value[:512 * 4], dtype=np.float32)
+        np_array = np.frombuffer(value[: 512 * 4], dtype=np.float32)
     elif len(value) >= 512 * 2:
-        np_array = np.frombuffer(value[:512 * 2], dtype=np.float16)
+        np_array = np.frombuffer(value[: 512 * 2], dtype=np.float16)
     else:
         raise ValueError(f"Invalid embedding clip byte length: {len(value)} not in {{2,4,8}} X 512")
 

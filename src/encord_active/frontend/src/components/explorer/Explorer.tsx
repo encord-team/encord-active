@@ -101,7 +101,9 @@ export function Explorer({
   );
 
   // Selection
-  const [selectedItems, setSelectedItems] = useState(new Set<string>());
+  const [selectedItems, setSelectedItems] = useState<
+    ReadonlySet<string> | "ALL"
+  >(new Set<string>());
   const [selectedMetric, setSelectedMetric] = useState<{
     domain: "data" | "annotation";
     metric_key: string;
@@ -109,7 +111,7 @@ export function Explorer({
     domain: "data",
     metric_key: "metric_random",
   });
-  const hasSelectedItems = selectedItems.size > 0;
+  const hasSelectedItems = selectedItems === "ALL" || selectedItems.size > 0;
   const [clearSelectionModalVisible, setClearSelectionModalVisible] =
     useState(false);
   useEffect(() => {
@@ -278,6 +280,9 @@ export function Explorer({
     }
   };
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   const itemsToRender: readonly string[] = useMemo(() => {
     if (sortedItems == null) {
       return [];
@@ -301,6 +306,9 @@ export function Explorer({
 
   const toggleImageSelection = useCallback((id: string) => {
     setSelectedItems((prev) => {
+      if (prev === "ALL") {
+        return "ALL";
+      }
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -535,33 +543,66 @@ export function Explorer({
             placement="bottomRight"
             content={
               <BulkTaggingForm
-                items={[...selectedItems]}
+                projectHash={projectHash}
+                selectedItems={selectedItems}
+                filtersDomain={filters.analysisDomain}
+                filters={filters.filters}
                 allowTaggingAnnotations={allowTaggingAnnotations}
               />
             }
             trigger="click"
           >
             <Tooltip
-              title={!selectedItems.size ? "Select items to tag first" : ""}
+              title={
+                selectedItems !== "ALL" && !selectedItems.size
+                  ? "Select items to tag first"
+                  : ""
+              }
             >
-              <Button icon={<HiOutlineTag />} disabled={!selectedItems.size}>
+              <Button
+                icon={<HiOutlineTag />}
+                disabled={selectedItems !== "ALL" && !selectedItems.size}
+              >
                 Tag
               </Button>
             </Tooltip>
           </Popover>
           <Button
-            disabled={!selectedItems.size}
+            disabled={selectedItems !== "ALL" && !selectedItems.size}
             onClick={() => setSelectedItems(new Set())}
             icon={<VscClearAll />}
           >
-            Clear selection ({selectedItems.size})
+            Clear selection (
+            {selectedItems === "ALL" ? "All" : selectedItems.size})
           </Button>
           <Button
-            onClick={() => setSelectedItems(new Set(itemsToRender))}
-            disabled={itemsToRender.length === 0}
+            disabled={selectedItems === "ALL"}
+            onClick={() =>
+              setSelectedItems((oldState) => {
+                if (oldState === "ALL") {
+                  return "ALL";
+                }
+                return new Set([
+                  ...oldState,
+                  ...itemsToRender.slice(
+                    (page - 1) * pageSize,
+                    page * pageSize
+                  ),
+                ]);
+              })
+            }
             icon={<BiSelectMultiple />}
           >
-            Select all ({itemsToRender.length})
+            Select page (
+            {itemsToRender.slice((page - 1) * pageSize, page * pageSize).length}
+            )
+          </Button>
+          <Button
+            onClick={() => setSelectedItems("ALL")}
+            disabled={selectedItems === "ALL"}
+            icon={<BiSelectMultiple />}
+          >
+            Select All
           </Button>
         </Space.Compact>
         {env !== "sandbox" && !(remoteProject || !local) ? (
@@ -629,6 +670,10 @@ export function Explorer({
         showAnnotations={showAnnotations}
         featureHashMap={featureHashMap}
         iou={iou}
+        page={page}
+        pageSize={pageSize}
+        setPage={setPage}
+        setPageSize={setPageSize}
       />
     </div>
   );

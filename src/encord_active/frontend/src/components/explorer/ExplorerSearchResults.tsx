@@ -35,10 +35,14 @@ function ExplorerSearchResultsRaw(props: {
   toggleImageSelection: (itemId: string) => void;
   setPreviewedItem: (itemId: string) => void;
   setSimilaritySearch: (itemId: string | undefined) => void;
-  selectedItems: ReadonlySet<string>;
+  selectedItems: ReadonlySet<string> | "ALL";
   showAnnotations: boolean;
   featureHashMap: FeatureHashMap;
   iou: number;
+  setPage: (page: number) => void;
+  page: number;
+  setPageSize: (pageSize: number) => void;
+  pageSize: number;
 }) {
   const {
     projectHash,
@@ -56,6 +60,10 @@ function ExplorerSearchResultsRaw(props: {
     featureHashMap,
     iou,
     truncated,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
   } = props;
 
   const loading = useMemo(
@@ -94,9 +102,17 @@ function ExplorerSearchResultsRaw(props: {
       grid={ExplorerSearchGrid}
       loading={loading}
       locale={ExplorerSearchLocale}
-      pagination={
-        truncated ? ExplorerSearchPaginationTruncated : ExplorerSearchPagination
-      }
+      pagination={{
+        pageSize,
+        current: page,
+        onChange: (page, pageSize) => {
+          setPage(page);
+          setPageSize(pageSize);
+        },
+        ...(truncated
+          ? ExplorerSearchPaginationTruncated
+          : ExplorerSearchPagination),
+      }}
       renderItem={({ item, similarity, similaritySearchCard }) => (
         <GalleryCard
           projectHash={projectHash}
@@ -109,7 +125,7 @@ function ExplorerSearchResultsRaw(props: {
           setSelectedToggle={toggleImageSelection}
           setItemPreview={setPreviewedItem}
           setSimilaritySearch={setSimilaritySearch}
-          selected={selectedItems.has(item)}
+          selected={selectedItems === "ALL" || selectedItems.has(item)}
           hideExtraAnnotations={showAnnotations}
           featureHashMap={featureHashMap}
           iou={iou}

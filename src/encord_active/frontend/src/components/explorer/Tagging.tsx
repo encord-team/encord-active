@@ -1,215 +1,187 @@
-import { Select, SelectProps, Spin, Tag } from "antd";
-import { useMemo, useRef, useState } from "react";
+import { Select, Tabs, Tag } from "antd";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdOutlineImage } from "react-icons/md";
 import { TbPolygon } from "react-icons/tb";
 
-import { classy } from "../../helpers/classy";
-import { loadingIndicator } from "../Spin";
-import { useProjectTaggedItems } from "../../hooks/queries/useProjectTaggedItems";
-import { useProjectHash } from "../../hooks/useProjectHash";
-import { useProjectMutationTagItems } from "../../hooks/mutation/useProjectMutationTagItems";
-import { GroupedTags, ProjectItemTags, ProjectTag } from "../../openapi/api";
+import Icon from "@ant-design/icons";
+import { useProjectMutationItemsAddTag } from "../../hooks/mutation/useProjectMutationItemsAddTag";
+import {
+  AllTagsResult,
+  AnalysisDomain,
+  ProjectItemTags,
+  ProjectTag,
+  SearchFilters,
+} from "../../openapi/api";
+import { useProjectMutationItemsRemoveTag } from "../../hooks/mutation/useProjectMutationItemsRemoveTag";
+import { useProjectMutationFiltersAddTag } from "../../hooks/mutation/useProjectMutationFiltersAddTag";
+import { useProjectMutationFiltersRemoveTag } from "../../hooks/mutation/useProjectMutationFiltersRemoveTag";
+import { useProjectListTags } from "../../hooks/queries/useProjectListTags";
+import { useProjectItemsListTags } from "../../hooks/queries/useProjectItemsListTags";
+import { useProjectMutationCreateTag } from "../../hooks/mutation/useProjectMutationCreateTag";
 import { toDataItemID } from "../util/ItemIdUtil";
+import { useProjectFilterListTags } from "../../hooks/queries/useProjectFilterListTags";
 
-const TAG_GROUPS = [
-  { value: "data", label: "Data", Icon: MdOutlineImage },
-  { value: "label", label: "Label", Icon: TbPolygon },
-] as const;
-
-const defaultTags = { data: [], label: [] };
-
-export const useAllTags = (projectHash: string, itemSet?: Set<string>) => {
-  const { isLoading, data: taggedItems } = useProjectTaggedItems(projectHash);
-  const defaultAllTags = {
-    allDataTags: new Set<string>(),
-    allLabelTags: new Set<string>(),
-    selectedTags: { data: new Set<string>(), label: new Set<string>() },
-    isLoading,
-    taggedItems,
-  };
-
-  const dataItemSet = useMemo(
-    () => new Set([...(itemSet || [])].map((id) => toDataItemID(id))),
-    [itemSet]
-  );
-
-  if (isLoading || !taggedItems) {
-    return {
-      ...defaultAllTags,
-      selectedTags: {
-        data: [...defaultAllTags.selectedTags.data],
-        label: [...defaultAllTags.selectedTags.label],
-      },
-    };
-  }
-
-  const allTags = [...taggedItems].reduce((result, [id, { data, label }]) => {
-    data.forEach(result.allDataTags.add, result.allDataTags);
-    label.forEach(result.allLabelTags.add, result.allLabelTags);
-
-    if (itemSet?.has(id)) {
-      label.forEach(result.selectedTags.label.add, result.selectedTags.label);
-    }
-    if (dataItemSet.has(id)) {
-      data.forEach(result.selectedTags.data.add, result.selectedTags.data);
-    }
-
-    return result;
-  }, defaultAllTags);
-
-  const selectedTags = {
-    data: [...allTags.selectedTags.data],
-    label: [...allTags.selectedTags.label],
-  };
-
-  return { ...allTags, selectedTags };
-};
-
-export function BulkTaggingForm({
-  items,
-  allowTaggingAnnotations,
-}: {
-  items: string[];
+export function BulkTaggingForm(props: {
+  projectHash: string;
+  selectedItems: ReadonlySet<string> | "ALL";
+  filtersDomain: AnalysisDomain;
+  filters: SearchFilters;
   allowTaggingAnnotations: boolean;
 }) {
-  const projectHash = useProjectHash();
-  const { selectedTags, isLoading, taggedItems } = useAllTags(
+  const {
     projectHash,
-    new Set(items)
+    selectedItems,
+    filtersDomain,
+    filters,
+    allowTaggingAnnotations,
+  } = props;
+  const [domain, setDomain] = useState<"data" | "annotation">("data");
+  useEffect(() => {
+    if (domain === "annotation" && !allowTaggingAnnotations) {
+      setDomain("data");
+    }
+  }, [allowTaggingAnnotations, domain]);
+
+  // Lookup state
+  const { data: projectTags = [] } = useProjectListTags(projectHash);
+  const selectOptions = useMemo(
+    () => projectTags.map(({ hash, name }) => ({ label: name, value: hash })),
+    [projectTags]
   );
-  const { mutate, isLoading: isMutating } =
-    useProjectMutationTagItems(projectHash);
+  const selectedItemsList: string[] = useMemo(
+    () => (selectedItems === "ALL" ? [] : [...selectedItems]),
+    [selectedItems]
+  );
+  const { data: itemsTags } = useProjectItemsListTags(
+    projectHash,
+    selectedItemsList,
+    { enabled: selectedItemsList.length > 0 }
+  );
+  const { data: filterTags } = useProjectFilterListTags(
+    projectHash,
+    filtersDomain,
+    filters,
+    {
+      enabled: selectedItems === "ALL",
+    }
+  );
+
+  const selectedTagsGroup: AllTagsResult = useMemo(() => {
+    if (selectedItems === "ALL") {
+      return filterTags ?? { data: [], annotation: [] };
+    } else {
+      return itemsTags ?? { data: [], annotation: [] };
+    }
+  }, [selectedItems, itemsTags, filterTags]);
+  const selectedTags = selectedTagsGroup[domain];
+  const selectValue = useMemo(
+    () => selectedTags.map(({ hash }) => hash),
+    [selectedTags]
+  );
+
+  // All mutations
+  const { mutateAsync: createTag, isLoading: isMutatingCreateTag } =
+    useProjectMutationCreateTag(projectHash);
+  const { mutate: itemsAddTags, isLoading: isMutatingItemsAdd } =
+    useProjectMutationItemsAddTag(projectHash);
+  const { mutate: itemsRemoveTags, isLoading: isMutatingItemsRemove } =
+    useProjectMutationItemsRemoveTag(projectHash);
+  const { mutate: filtersAddTags, isLoading: isMutatingFiltersAdd } =
+    useProjectMutationFiltersAddTag(projectHash);
+  const { mutate: filtersRemoveTags, isLoading: isMutatingFiltersRemove } =
+    useProjectMutationFiltersRemoveTag(projectHash);
+  const isMutating =
+    isMutatingCreateTag ||
+    isMutatingItemsAdd ||
+    isMutatingItemsRemove ||
+    isMutatingFiltersAdd ||
+    isMutatingFiltersRemove;
+
+  const getDomainItems = useCallback(
+    (items: ReadonlySet<string>): string[] => {
+      if (domain === "data") {
+        const dataItems = new Set([...items].map(toDataItemID));
+
+        return [...dataItems];
+      } else {
+        return [...items];
+      }
+    },
+    [domain]
+  );
+
+  const onSelect = async (
+    tagName: string,
+    option: { label?: string; value?: string }
+  ) => {
+    let tagHash = option.value;
+    if (tagHash === undefined) {
+      const tagDict = await createTag([tagName]);
+      const newTagHash = tagDict[tagName];
+      if (newTagHash === undefined) {
+        return;
+      }
+      tagHash = newTagHash;
+    }
+    if (selectedItems === "ALL") {
+      filtersAddTags({ domain, filters, tags: [tagHash] });
+    } else {
+      itemsAddTags({ items: getDomainItems(selectedItems), tags: [tagHash] });
+    }
+  };
+  const onDeselect = (tagHash: string) => {
+    if (selectedItems === "ALL") {
+      filtersRemoveTags({ domain, filters, tags: [tagHash] });
+    } else {
+      itemsRemoveTags({
+        items: getDomainItems(selectedItems),
+        tags: [tagHash],
+      });
+    }
+  };
 
   return (
-    <TaggingForm
-      loading={isLoading || isMutating}
-      controlled
-      allowClear={false}
-      allowTaggingAnnotations={allowTaggingAnnotations}
-      onSelect={(scope, selected) =>
-        mutate(
-          items.map((id) => {
-            const { label } = taggedItems?.get(id) || defaultTags;
-            const { data } = taggedItems?.get(toDataItemID(id)) || defaultTags;
-
-            const groupedTags = { data, label };
-
-            return {
-              id,
-              grouped_tags: {
-                ...groupedTags,
-                [scope]: [...groupedTags[scope], selected],
-              },
-            };
-          })
-        )
-      }
-      onDeselect={(scope, deselected) =>
-        mutate(
-          items.reduce((payload, id) => {
-            const itemPreviousTags = taggedItems?.get(id);
-            if (
-              itemPreviousTags &&
-              itemPreviousTags[scope].includes(deselected)
-            ) {
-              payload.push({
-                id,
-                grouped_tags: {
-                  ...itemPreviousTags,
-                  [scope]: itemPreviousTags[scope].filter(
-                    (tag) => tag !== deselected
-                  ),
-                },
-              });
-            }
-            return payload;
-          }, [] as Parameters<typeof mutate>[0])
-        )
-      }
-      selectedTags={selectedTags}
-    />
-  );
-}
-
-export function TaggingForm({
-  selectedTags,
-  className,
-  controlled = false,
-  loading = false,
-  onChange,
-  onSelect,
-  onDeselect,
-  allowClear = true,
-  allowTaggingAnnotations: allowTaggingAnnotatoins = false,
-}: {
-  selectedTags: GroupedTags;
-  controlled?: boolean;
-  loading?: boolean;
-  onChange?: (tags: GroupedTags) => void;
-  onDeselect?: (scope: keyof GroupedTags, tag: string) => void;
-  onSelect?: (scope: keyof GroupedTags, tag: string) => void;
-  allowClear?: SelectProps["allowClear"];
-  allowTaggingAnnotations?: boolean;
-} & Pick<JSX.IntrinsicElements["div"], "className">) {
-  const projectHash = useProjectHash();
-  const { allDataTags, allLabelTags } = useAllTags(projectHash);
-  const allTags = { data: [...allDataTags], label: [...allLabelTags] };
-
-  const [selectedTab, setTab] = useState<(typeof TAG_GROUPS)[number]>(
-    TAG_GROUPS[0]
-  );
-
-  // NOTE: hack to prevent loosing focus when loading
-  const ref = useRef<HTMLDivElement>(null);
-  if (loading) {
-    ref.current && ref.current.focus();
-  }
-
-  return (
-    <div
-      className={classy(
-        "card dropdown-content card-compact w-64 bg-base-100 p-2 text-primary-content shadow",
-        className
-      )}
-    >
-      <div className="tabs flex justify-center bg-base-100">
-        {TAG_GROUPS.map((group) => (
-          <button
-            type="button"
-            key={group.value}
-            className={classy("tab tab-bordered gap-2", {
-              "tab-active": selectedTab.label === group.label,
-            })}
-            onClick={() => setTab(group)}
-          >
-            <group.Icon className="text-base" />
-            {group.label}
-          </button>
-        ))}
-      </div>
-      <div ref={ref} className="card-body">
-        {loading && <Spin indicator={loadingIndicator} />}
-        {TAG_GROUPS.map(({ value }) => (
-          <Select
-            key={value}
-            className={classy({
-              "!hidden": value !== selectedTab.value,
-            })}
-            disabled={value === "label" && !allowTaggingAnnotatoins}
-            mode="tags"
-            placeholder="Tags"
-            allowClear={allowClear}
-            onChange={(tags) => onChange?.({ ...selectedTags, [value]: tags })}
-            onDeselect={(tag) => onDeselect?.(selectedTab.value, tag)}
-            onSelect={(tag) => onSelect?.(selectedTab.value, tag)}
-            options={allTags[value].map((tag) => ({ value: tag }))}
-            {...(controlled
-              ? { value: selectedTags[value] }
-              : { defaultValue: selectedTags[value] })}
-          />
-        ))}
-      </div>
-    </div>
+    <>
+      <Tabs
+        className="w-72"
+        centered
+        items={[
+          {
+            label: (
+              <span>
+                <Icon component={MdOutlineImage} />
+                Data
+              </span>
+            ),
+            key: "data",
+          },
+          {
+            label: (
+              <span>
+                <Icon component={TbPolygon} />
+                Annotation
+              </span>
+            ),
+            key: "annotation",
+            disabled: !allowTaggingAnnotations,
+          },
+        ]}
+        onChange={setDomain as (key: string) => void}
+        activeKey={domain}
+      />
+      <Select
+        className="w-full"
+        mode="tags"
+        placeholder="Tags"
+        allowClear
+        disabled={domain === "annotation" && !allowTaggingAnnotations}
+        value={selectValue}
+        options={selectOptions}
+        loading={isMutating}
+        onSelect={isMutating ? undefined : onSelect}
+        onDeselect={isMutating ? undefined : onDeselect}
+      />
+    </>
   );
 }
 
