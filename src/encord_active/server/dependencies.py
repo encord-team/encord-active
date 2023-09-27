@@ -68,10 +68,12 @@ def dep_settings() -> Settings:
 
 
 def dep_ssh_key(settings: Annotated[Settings, Depends(dep_settings)]) -> str:
-    opt_ssh_key = settings.SSH_KEY_PATH or app_config.get_ssh_key()
-    if opt_ssh_key is None:
+    if settings.SSH_KEY:
+        return settings.SSH_KEY
+    ssh_key_path = app_config.get_ssh_key()
+    if ssh_key_path is None:
         raise RuntimeError("Cannot run operation as ssh key is missing")
-    return opt_ssh_key.read_text("utf-8")
+    return ssh_key_path.read_text("utf-8")
 
 
 def dep_database_dir(settings: Annotated[Settings, Depends(dep_settings)]) -> Path:

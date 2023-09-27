@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     JWT_SECRET: Optional[str] = None
     SERVER_START_PATH: Path
     AVAILABLE_SANDBOX_PROJECTS: AvailableSandboxProjects = AvailableSandboxProjects.ALL
-    SSH_KEY_PATH: Optional[Path] = None
+    SSH_KEY: Optional[str] = None
 
     class Config:
         env_file = ".env"
