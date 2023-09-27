@@ -96,56 +96,24 @@ function ExplorerSearchResultsRaw(props: {
   }, [itemsToRender, itemSimilarities, itemSimilarityItemAtIndex0]);
 
   return (
-<<<<<<< HEAD
-    <List
-      className="mt-2.5"
-      dataSource={dataSource}
-      grid={ExplorerSearchGrid}
-      loading={loading}
-      locale={ExplorerSearchLocale}
-      pagination={{
-        pageSize,
-        current: page,
-        onChange: (page, pageSize) => {
-          setPage(page);
-          setPageSize(pageSize);
-        },
-        ...(truncated
-          ? ExplorerSearchPaginationTruncated
-          : ExplorerSearchPagination),
-      }}
-      renderItem={({ item, similarity, similaritySearchCard }) => (
-        <GalleryCard
-          projectHash={projectHash}
-          predictionHash={predictionHash}
-          selectedMetric={selectedMetric}
-          key={item}
-          itemId={item}
-          itemSimilarity={similarity}
-          similaritySearchCard={similaritySearchCard ?? false}
-          setSelectedToggle={toggleImageSelection}
-          setItemPreview={setPreviewedItem}
-          setSimilaritySearch={setSimilaritySearch}
-          selected={selectedItems === "ALL" || selectedItems.has(item)}
-          hideExtraAnnotations={showAnnotations}
-          featureHashMap={featureHashMap}
-          iou={iou}
-        />
-      )}
-    />
-=======
     <div className="relative h-full overflow-auto">
       <List
-        className="absolute mt-2.5"
+        className="absolute mt-2.5 px-2"
         dataSource={dataSource}
         grid={ExplorerSearchGrid}
         loading={loading}
         locale={ExplorerSearchLocale}
-        pagination={
-          truncated
+        pagination={{
+          pageSize,
+          current: page,
+          onChange: (page, pageSize) => {
+            setPage(page);
+            setPageSize(pageSize);
+          },
+          ...(truncated
             ? ExplorerSearchPaginationTruncated
-            : ExplorerSearchPagination
-        }
+            : ExplorerSearchPagination),
+        }}
         renderItem={({ item, similarity, similaritySearchCard }) => (
           <GalleryCard
             projectHash={projectHash}
@@ -158,7 +126,7 @@ function ExplorerSearchResultsRaw(props: {
             setSelectedToggle={toggleImageSelection}
             setItemPreview={setPreviewedItem}
             setSimilaritySearch={setSimilaritySearch}
-            selected={selectedItems.has(item)}
+            selected={selectedItems === "ALL" || selectedItems.has(item)}
             hideExtraAnnotations={showAnnotations}
             featureHashMap={featureHashMap}
             iou={iou}
@@ -167,6 +135,5 @@ function ExplorerSearchResultsRaw(props: {
       />
       <div className="hidden h-full">1</div>
     </div>
->>>>>>> fdbaeda3 (🚀 Inital redesign)
   );
 }

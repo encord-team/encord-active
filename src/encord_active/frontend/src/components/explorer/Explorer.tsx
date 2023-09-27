@@ -57,6 +57,12 @@ import { classy } from "../../helpers/classy";
 import { Content } from "antd/es/layout/layout";
 import Icon from "@ant-design/icons/lib/components/Icon";
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { Filters } from "./filters/FIlters";
+
+export type Metric = {
+  domain: "data" | "annotation";
+  metric_key: string;
+};
 
 export type Props = {
   projectHash: string;
@@ -110,6 +116,7 @@ export function Explorer({
   );
 
   // Selection
+<<<<<<< HEAD
   const [selectedItems, setSelectedItems] = useState<
     ReadonlySet<string> | "ALL"
   >(new Set<string>());
@@ -117,6 +124,10 @@ export function Explorer({
     domain: "data" | "annotation";
     metric_key: string;
   }>({
+=======
+  const [selectedItems, setSelectedItems] = useState(new Set<string>());
+  const [selectedMetric, setSelectedMetric] = useState<Metric>({
+>>>>>>> 53096317 (🚀 move filters to new component)
     domain: "data",
     metric_key: "metric_random",
   });
@@ -203,10 +214,6 @@ export function Explorer({
   ]);
 
   const filters: ExplorerFilterState = useDebounce(rawFilters, 500);
-
-  // Load all collaborators & tags -> needed to support filters
-  const { data: collaborators } = useProjectListCollaborators(projectHash);
-  const { data: tags } = useProjectListTags(projectHash);
 
   // Load metric ranges
   const { data: dataMetricRanges, isLoading: isLoadingDataMetrics } =
@@ -414,6 +421,7 @@ export function Explorer({
             className="h-full"
             tabBarStyle={{
               margin: 0,
+              padding: "0px 10px",
             }}
             tabBarExtraContent={{
               left: (
@@ -427,13 +435,7 @@ export function Explorer({
                   }}
                 />
               ),
-              right: (
-                <Segmented
-                  className="mr-4"
-                  selected
-                  options={["Data", "Labels"]}
-                />
-              ),
+              right: <Segmented selected options={["Data", "Labels"]} />,
             }}
             items={[
               {
@@ -445,7 +447,7 @@ export function Explorer({
                 ),
                 key: "gridView",
                 children: (
-                  <div className="flex h-full flex-col bg-gray-100">
+                  <div className="flex h-full flex-col items-center bg-gray-100 py-2">
                     <Space
                       style={{
                         flex: "0 1 0",
@@ -463,107 +465,7 @@ export function Explorer({
                           setPredictionOutcome={setPredictionOutcome}
                         />
                       )}
-                      <Space.Compact size="large">
-                        <Select
-                          value={`${selectedMetric.domain}-${selectedMetric.metric_key}`}
-                          onChange={(strKey: string) => {
-                            const [domain, metric_key] = strKey.split("-");
-                            setSelectedMetric({
-                              domain: domain as "data" | "annotation",
-                              metric_key,
-                            });
-                          }}
-                          className="w-80"
-                          options={[
-                            {
-                              label: "Data Metrics",
-                              options: Object.entries(
-                                dataMetricsSummary.metrics
-                              ).map(([metricKey, metric]) => ({
-                                label: `D: ${metric?.title ?? metricKey}`,
-                                value: `data-${metricKey}`,
-                              })),
-                            },
-                            {
-                              label:
-                                predictionHash === undefined
-                                  ? "Annotation Metrics"
-                                  : "Prediction Metrics",
-                              options: Object.entries(
-                                annotationMetricsSummary.metrics
-                              ).map(([metricKey, metric]) => ({
-                                label: `${
-                                  predictionHash === undefined ? "A" : "P"
-                                }: ${metric?.title ?? metricKey}`,
-                                value: `annotation-${metricKey}`,
-                              })),
-                            },
-                          ]}
-                        />
-                        <Button
-                          disabled={!isSortedByMetric}
-                          onClick={() => setIsAscending(!isAscending)}
-                          icon={
-                            isAscending ? (
-                              <TbSortAscending />
-                            ) : (
-                              <TbSortDescending />
-                            )
-                          }
-                        />
-                        <Button onClick={toggleShowAnnotations}>
-                          {`${
-                            showAnnotations ? "Show" : "hide"
-                          } all annotations`}
-                        </Button>
-                        <Popover
-                          placement="bottomLeft"
-                          content={
-                            <MetricFilter
-                              filters={dataFilters}
-                              setFilters={setDataFilters}
-                              metricsSummary={dataMetricsSummary}
-                              metricRanges={dataMetricRanges?.metrics}
-                              featureHashMap={featureHashMap}
-                              tags={tags ?? []}
-                              collaborators={collaborators ?? []}
-                            />
-                          }
-                          trigger="click"
-                        >
-                          <Button>
-                            Data Filters
-                            {` (${dataFilters.ordering.length})`}
-                          </Button>
-                        </Popover>
-                        <Popover
-                          placement="bottomLeft"
-                          content={
-                            <MetricFilter
-                              filters={annotationFilters}
-                              setFilters={setAnnotationFilters}
-                              metricsSummary={annotationMetricsSummary}
-                              metricRanges={annotationMetricRanges?.metrics}
-                              featureHashMap={featureHashMap}
-                              tags={tags ?? []}
-                              collaborators={collaborators ?? []}
-                            />
-                          }
-                          trigger="click"
-                        >
-                          <Button>
-                            Annotation Filters
-                            {` (${annotationFilters.ordering.length})`}
-                          </Button>
-                        </Popover>
-                        {/* <Button
-                          disabled={!canResetFilters}
-                          onClick={() => reset()}
-                          icon={<MdFilterAltOff />}
-                        >
-                          Reset filters
-                        </Button> */}
-                      </Space.Compact>
+
                       <Space.Compact size="large">
                         <Popover
                           placement="bottomRight"
@@ -614,7 +516,7 @@ export function Explorer({
                             disabled={!canResetFilters}
                             icon={<BiWindows />}
                           >
-                            Create Project subset
+                            Create Project Subset
                           </Button>
                           <Button
                             onClick={() => setOpen("upload")}
@@ -651,6 +553,7 @@ export function Explorer({
                       style={{
                         flex: "1 1 auto",
                         height: "100%",
+                        width: "100%",
                       }}
                     >
                       <ExplorerSearchResults
@@ -732,7 +635,28 @@ export function Explorer({
               {
                 label: "Filter",
                 key: "filter",
-                children: <>Filters come here</>,
+                children: (
+                  <Filters
+                    projectHash={projectHash}
+                    selectedMetric={selectedMetric}
+                    isSortedByMetric={isSortedByMetric}
+                    predictionHash={predictionHash}
+                    dataMetricsSummary={dataMetricsSummary}
+                    annotationMetricsSummary={annotationMetricsSummary}
+                    setSelectedMetric={setSelectedMetric}
+                    isAscending={isAscending}
+                    setIsAscending={setIsAscending}
+                    annotationFilters={annotationFilters}
+                    setAnnotationFilters={setAnnotationFilters}
+                    dataFilters={dataFilters}
+                    setDataFilters={setDataFilters}
+                    featureHashMap={featureHashMap}
+                    reset={reset}
+                    canResetFilters={canResetFilters}
+                    showAnnotations={showAnnotations}
+                    toggleShowAnnotations={toggleShowAnnotations}
+                  />
+                ),
               },
               {
                 label: "Display",
