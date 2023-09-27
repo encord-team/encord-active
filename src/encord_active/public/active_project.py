@@ -53,8 +53,40 @@ class ActiveAnnotatedFrame:
         self._data = data
 
     @property
+    def du_hash(self) -> uuid.UUID:
+        return self._data_unit.du_hash
+
+    @property
+    def data_hash(self) -> uuid.UUID:
+        return self._data_unit.data_hash
+
+    @property
+    def frame(self) -> int:
+        return self._data_unit.frame
+
+    @property
     def image(self) -> Image.Image:
         return self._image
+
+    @property
+    def data_type(self) -> str:
+        return self._data.data_type
+
+    @property
+    def dataset_hash(self) -> uuid.UUID:
+        return self._data.dataset_hash
+
+    @property
+    def label_hash(self) -> uuid.UUID:
+        return self._data.label_hash
+
+    @property
+    def width(self) -> int:
+        return self._data_unit.width
+
+    @property
+    def height(self) -> int:
+        return self._data_unit.height
 
     @property
     def objects(self) -> list:
@@ -105,6 +137,10 @@ class ActiveProject:
     def ontology(self) -> OntologyStructure:
         return OntologyStructure.from_dict(copy.deepcopy(self._project.ontology))
 
+    @property
+    def ontology_dict(self) -> dict:
+        return copy.deepcopy(self._project.ontology)
+
     def _lookup_encord_url(
         self,
         data_hash: uuid.UUID,
@@ -145,7 +181,7 @@ class ActiveProject:
             data_unit = next(data_unit_iter)
             url = self._lookup_url(data_unit.data_hash, data_unit.du_hash, data_unit.data_uri)
             if data_unit.data_uri_is_video:
-                with av.open(url) as container:
+                with av.open(str(url), mode="r") as container:
                     video_decode_iter = iter(container.decode(video=0))
                     frame0 = next(video_decode_iter)
                     if frame0.frame != 0:
@@ -185,7 +221,7 @@ class ActiveContext:
 
     def __init__(self, path: Path, ssh_key: Optional[str] = None) -> None:
         self._database_dir = path
-        self._engine = get_engine(path / "encord_active.sqlite")
+        self._engine = get_engine(path / "encord-active.sqlite")
         if ssh_key is None:
             self._ssh_key = app_config.get_or_query_ssh_key().read_text("utf-8")
         else:
