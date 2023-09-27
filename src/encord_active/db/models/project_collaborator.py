@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlmodel import SQLModel, Index
+from sqlmodel import Index, SQLModel
 
 from encord_active.db.models.project import Project
 from encord_active.db.util.fields import (

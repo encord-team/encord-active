@@ -62,9 +62,9 @@ def get_engine(
     concurrent: bool = False,
     use_alembic: bool = True,
 ) -> Engine:
-    override_db = os.environ.get("ENCORD_ACTIVE_DATABASE", None)
-    database_echo = os.environ.get("ENCORD_ACTIVE_DATABASE_ECHO", "0") == "1"
-    create_db_schema = os.environ.get("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1")
+    override_db: Optional[str] = os.environ.get("ENCORD_ACTIVE_DATABASE", None)
+    database_echo: bool = os.environ.get("ENCORD_ACTIVE_DATABASE_ECHO", "0") == "1"
+    create_db_schema: bool = os.environ.get("ENCORD_ACTIVE_DATABASE_SCHEMA_UPDATE", "1") == "1"
 
     path = path.expanduser().resolve()
     engine_url = override_db if override_db is not None else f"sqlite:///{path}"
@@ -74,7 +74,7 @@ def get_engine(
     print(f"Connection to database: {engine_url}")
     engine = create_engine(engine_url, connect_args=connect_args, echo=database_echo)
     path_key = path.as_posix()
-    if path_key not in _init_metadata and create_db_schema == "1":
+    if path_key not in _init_metadata and create_db_schema:
         if use_alembic:
             # Execute alembic config
             import encord_active.db as alembic_file
