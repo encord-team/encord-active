@@ -173,8 +173,6 @@ class ActiveProject:
                         yield ActiveAnnotatedFrame(
                             frame_data_unit, data_hash_map[frame_data_unit.data_hash], frame.to_image().convert("RGB")
                         )
-                # Assume ordered correctly
-                raise ValueError(f"IMAGE NOT YET SUPPORTED")
             else:
                 image = Image.open(url)
                 yield ActiveAnnotatedFrame(data_unit, data_hash_map[data_unit.data_hash], image)
