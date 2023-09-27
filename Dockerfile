@@ -37,13 +37,13 @@ COPY ./pyproject.toml ./poetry.lock /home/appuser/
 RUN poetry cache clear pypi --all
 RUN poetry config virtualenvs.create true  \
     && poetry config virtualenvs.in-project true  \
-    && poetry install --no-root --without dev \
+    && poetry install --no-root --without dev --extras psycopg2\
     && poetry run poe torch-linux
 
 COPY ./src/ /home/appuser/src/
 COPY ./README.md /home/appuser/
 
-RUN poetry install --only-root
+RUN poetry install --only-root --extras psycopg2
 
 RUN poetry run prisma generate --schema=./src/encord_active/lib/db/schema.prisma
 
@@ -56,6 +56,3 @@ EXPOSE 8000
 
 HEALTHCHECK CMD poetry run encord-active --version
 ENTRYPOINT ["/home/appuser/.venv/bin/encord-active"]
-
-ADD https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt /root/.cache/clip
-
