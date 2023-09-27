@@ -462,12 +462,13 @@ def quickstart(
     """
     from encord_active.cli.utils.server import launch_server_app
     from encord_active.db.models import get_engine
-    from encord_active.imports.sandbox.sandbox_projects import fetch_prebuild_project
+    from encord_active.imports.sandbox.sandbox_projects import fetch_prebuilt_project, available_sandbox_projects
 
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
-    fetch_prebuild_project(
-        project_hash=uuid.UUID("d6423838-f60e-41d9-b2ca-715aa2edef9c"),
+    all_projects = available_sandbox_projects()
+    fetch_prebuilt_project(
+        project=all_projects[uuid.UUID("d6423838-f60e-41d9-b2ca-715aa2edef9c")],
         engine=engine,
         database_dir=database_dir,
     )

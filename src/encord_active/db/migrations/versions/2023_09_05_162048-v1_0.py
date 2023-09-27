@@ -1450,6 +1450,9 @@ TransformEmbeddingHu = (None, _transform_embedding_hu)
 
 def _sqlite_insert(table: str, values: list[dict], batch: int = 100) -> None:
     bind = op.get_bind()
+    if len(values) == 0:
+        # Do not clutter logs with initial migration that does not exist.
+        return
     for i in tqdm(range(0, len(values), batch), desc=f"Migrating: {table}"):
         insert_dict_slice = values[i : i + batch]
         sorted_keys = sorted(values[0].keys())
@@ -1766,118 +1769,119 @@ def migrate_sqlite_database_to_new_schema():
     op.get_bind().execute("COMMIT")
     prediction_data = {}
     prediction_data_units = {}
-    for key, (annotation_type, feature_hash, confidence, annotation_bytes) in tqdm(
-        _prediction_annotations.items(), desc="Converting prediction data format"
-    ):
-        prediction_hash, du_hash, frame, annotation_hash = key
-        annotation_hash_str = annotation_hash.to_bytes(length=8, byteorder="little", signed=True).decode("ascii")
-        feature_hash_str = feature_hash.to_bytes(length=8, byteorder="little", signed=True).decode("ascii")
-        project_hash = _prediction_to_project_hash[prediction_hash]
-        predict_data_entry = prediction_data.setdefault(
-            (prediction_hash, _du_hash_to_data_hash[du_hash]),
-            {
-                "prediction_hash": prediction_hash,
-                "data_hash": _du_hash_to_data_hash[du_hash],
-                "project_hash": project_hash,
-                "label_hash": str(uuid.uuid4()).replace("-", ""),
-                "created_at": migrate_now,
-                "last_edited_at": migrate_now,
-                "object_answers": {},
-                "classification_answers": {},
-            },
-        )
-        if annotation_type != _annotation_type_migrate_mapping["CLASSIFICATION"]:
-            predict_data_entry["object_answers"][annotation_hash_str] = {
-                "objectHash": annotation_hash_str,
-                "classifications": [],
-            }
-        else:
-            predict_data_entry["classification_answers"][annotation_hash_str] = {
-                "classificationHash": annotation_hash_str,
-                "classifications": [],
-            }
-
-        predict_du_entry = prediction_data_units.setdefault(
-            (prediction_hash, du_hash, frame),
-            {
-                "prediction_hash": prediction_hash,
-                "du_hash": du_hash,
-                "frame": frame,
-                "project_hash": project_hash,
-                "data_hash": _du_hash_to_data_hash[du_hash],
-                "objects": [],
-                "classifications": [],
-            },
-        )
-        if annotation_type == _annotation_type_migrate_mapping["CLASSIFICATION"]:
-            root_feature_hash, feature_hash_answers = ontology_feature_hash_to_answers_lookup[
-                project_hash, feature_hash_str
-            ]
-            for k, v in feature_hash_answers.items():
-                predict_data_entry["classification_answers"][annotation_hash_str][k] = v
-            predict_du_entry["classifications"].append(
+    if len(_prediction_annotations) > 0:
+        for key, (annotation_type, feature_hash, confidence, annotation_bytes) in tqdm(
+            _prediction_annotations.items(), desc="Converting prediction data format"
+        ):
+            prediction_hash, du_hash, frame, annotation_hash = key
+            annotation_hash_str = annotation_hash.to_bytes(length=8, byteorder="little", signed=True).decode("ascii")
+            feature_hash_str = feature_hash.to_bytes(length=8, byteorder="little", signed=True).decode("ascii")
+            project_hash = _prediction_to_project_hash[prediction_hash]
+            predict_data_entry = prediction_data.setdefault(
+                (prediction_hash, _du_hash_to_data_hash[du_hash]),
                 {
-                    "confidence": float(confidence),
-                    "featureHash": root_feature_hash,
-                    "classificationHash": annotation_hash_str,
-                    "manualAnnotation": False,
-                    "lastEditedBy": "prediction-import@encord.com",
-                    "lastEditedAt": str(migrate_now),
-                    "createdBy": "prediction-import@encord.com",
-                    "createdAt": str(migrate_now),
-                }
+                    "prediction_hash": prediction_hash,
+                    "data_hash": _du_hash_to_data_hash[du_hash],
+                    "project_hash": project_hash,
+                    "label_hash": str(uuid.uuid4()).replace("-", ""),
+                    "created_at": migrate_now,
+                    "last_edited_at": migrate_now,
+                    "object_answers": {},
+                    "classification_answers": {},
+                },
             )
-        else:
-            if annotation_type == _annotation_type_migrate_mapping["BOUNDING_BOX"]:
-                predict_shape = "bounding_box"
-                x1, y1, x2, y2 = np.frombuffer(annotation_bytes, dtype=np.single).tolist()
-                predict_format = {"x": x1, "y": y1, "w": x2 - x1, "h": y2 - y1}
-            elif annotation_type == _annotation_type_migrate_mapping["POLYGON"]:
-                predict_shape = "polygon"
-                poly_list: List[float] = np.frombuffer(annotation_bytes, dtype=np.single).tolist()
-                predict_format = {}
-                for i in range(0, len(poly_list), 2):
-                    predict_format[str(len(predict_format))] = {"x": poly_list[i], "y": poly_list[i + 1]}
-            elif annotation_type == _annotation_type_migrate_mapping["BITMASK"]:
-                predict_shape = "bitmask"
-                width, height = du_hash_to_img_size[du_hash]
-                bitmask_counts: List[int] = np.frombuffer(annotation_bytes, dtype=np.int_).tolist()
-                bitmask_mask = np.zeros((width, height), dtype=np.uint8, order="F")
-                bitmask_fill = False
-                bitmask_offset = 0
-                for count in bitmask_counts:
-                    if bitmask_fill:
-                        bitmask_mask[bitmask_offset : bitmask_offset + count] = 1
-                    bitmask_fill = not bitmask_fill
-                    bitmask_offset += count
-                encoded_bitmask = mask.encode(bitmask_mask)
-                if len(bitmask_counts) == 1:
-                    print("WARNING: prediction has 0 size bitmask")
-                predict_format = {
-                    "rleString": encoded_bitmask["counts"].decode("utf-8"),
-                    "width": encoded_bitmask["size"][0],
-                    "height": encoded_bitmask["size"][1],
-                    "top": 0,
-                    "left": 0,
+            if annotation_type != _annotation_type_migrate_mapping["CLASSIFICATION"]:
+                predict_data_entry["object_answers"][annotation_hash_str] = {
+                    "objectHash": annotation_hash_str,
+                    "classifications": [],
                 }
             else:
-                raise ValueError(f"Unknown annotation type: {annotation_type}")
-
-            predict_du_entry["objects"].append(
-                {
-                    "color": ontology_feature_hash_to_color_lookup[project_hash, feature_hash_str],
-                    "confidence": float(confidence),
-                    "objectHash": annotation_hash_str,
-                    "featureHash": feature_hash_str,
-                    "shape": predict_shape,
-                    "manualAnnotation": False,
-                    "lastEditedBy": "prediction-import@encord.com",
-                    "lastEditedAt": str(migrate_now),
-                    "createdBy": "prediction-import@encord.com",
-                    "createdAt": str(migrate_now),
-                    ("boundingBox" if predict_shape == "bounding_box" else predict_shape): predict_format,
+                predict_data_entry["classification_answers"][annotation_hash_str] = {
+                    "classificationHash": annotation_hash_str,
+                    "classifications": [],
                 }
+
+            predict_du_entry = prediction_data_units.setdefault(
+                (prediction_hash, du_hash, frame),
+                {
+                    "prediction_hash": prediction_hash,
+                    "du_hash": du_hash,
+                    "frame": frame,
+                    "project_hash": project_hash,
+                    "data_hash": _du_hash_to_data_hash[du_hash],
+                    "objects": [],
+                    "classifications": [],
+                },
             )
+            if annotation_type == _annotation_type_migrate_mapping["CLASSIFICATION"]:
+                root_feature_hash, feature_hash_answers = ontology_feature_hash_to_answers_lookup[
+                    project_hash, feature_hash_str
+                ]
+                for k, v in feature_hash_answers.items():
+                    predict_data_entry["classification_answers"][annotation_hash_str][k] = v
+                predict_du_entry["classifications"].append(
+                    {
+                        "confidence": float(confidence),
+                        "featureHash": root_feature_hash,
+                        "classificationHash": annotation_hash_str,
+                        "manualAnnotation": False,
+                        "lastEditedBy": "prediction-import@encord.com",
+                        "lastEditedAt": str(migrate_now),
+                        "createdBy": "prediction-import@encord.com",
+                        "createdAt": str(migrate_now),
+                    }
+                )
+            else:
+                if annotation_type == _annotation_type_migrate_mapping["BOUNDING_BOX"]:
+                    predict_shape = "bounding_box"
+                    x1, y1, x2, y2 = np.frombuffer(annotation_bytes, dtype=np.single).tolist()
+                    predict_format = {"x": x1, "y": y1, "w": x2 - x1, "h": y2 - y1}
+                elif annotation_type == _annotation_type_migrate_mapping["POLYGON"]:
+                    predict_shape = "polygon"
+                    poly_list: List[float] = np.frombuffer(annotation_bytes, dtype=np.single).tolist()
+                    predict_format = {}
+                    for i in range(0, len(poly_list), 2):
+                        predict_format[str(len(predict_format))] = {"x": poly_list[i], "y": poly_list[i + 1]}
+                elif annotation_type == _annotation_type_migrate_mapping["BITMASK"]:
+                    predict_shape = "bitmask"
+                    width, height = du_hash_to_img_size[du_hash]
+                    bitmask_counts: List[int] = np.frombuffer(annotation_bytes, dtype=np.int_).tolist()
+                    bitmask_mask = np.zeros((width, height), dtype=np.uint8, order="F")
+                    bitmask_fill = False
+                    bitmask_offset = 0
+                    for count in bitmask_counts:
+                        if bitmask_fill:
+                            bitmask_mask[bitmask_offset : bitmask_offset + count] = 1
+                        bitmask_fill = not bitmask_fill
+                        bitmask_offset += count
+                    encoded_bitmask = mask.encode(bitmask_mask)
+                    if len(bitmask_counts) == 1:
+                        print("WARNING: prediction has 0 size bitmask")
+                    predict_format = {
+                        "rleString": encoded_bitmask["counts"].decode("utf-8"),
+                        "width": encoded_bitmask["size"][0],
+                        "height": encoded_bitmask["size"][1],
+                        "top": 0,
+                        "left": 0,
+                    }
+                else:
+                    raise ValueError(f"Unknown annotation type: {annotation_type}")
+
+                predict_du_entry["objects"].append(
+                    {
+                        "color": ontology_feature_hash_to_color_lookup[project_hash, feature_hash_str],
+                        "confidence": float(confidence),
+                        "objectHash": annotation_hash_str,
+                        "featureHash": feature_hash_str,
+                        "shape": predict_shape,
+                        "manualAnnotation": False,
+                        "lastEditedBy": "prediction-import@encord.com",
+                        "lastEditedAt": str(migrate_now),
+                        "createdBy": "prediction-import@encord.com",
+                        "createdAt": str(migrate_now),
+                        ("boundingBox" if predict_shape == "bounding_box" else predict_shape): predict_format,
+                    }
+                )
 
     for v in prediction_data.values():
         v["classification_answers"] = json.dumps(v["classification_answers"])
@@ -1967,26 +1971,27 @@ def migrate_sqlite_database_to_new_schema():
         mutate=load_prediction_to_project_hash,
     )
 
-    for prediction_hash, project_hash in tqdm(
-        _prediction_to_project_hash.items(), desc="Populating prediction reduction"
-    ):
-        count = bind.execute(
-            "SELECT COUNT(*) FROM prediction_analytics_reduced WHERE prediction_hash = :prediction_hash",
-            prediction_hash=prediction_hash,
-        ).scalar()
-        if count == 0:
-            sql = (
-                "INSERT INTO prediction_analytics_reduced( "
-                "   reduction_hash, prediction_hash, du_hash, frame, annotation_hash, project_hash, x, y "
-                ") SELECT r.reduction_hash, a.prediction_hash, a.du_hash, a.frame, a.annotation_hash, a.project_hash, r.x, r.y "
-                "FROM project_analytics_data_reduced r, prediction_analytics a "
-                "WHERE r.project_hash = :project_hash "
-                "AND a.prediction_hash = :prediction_hash "
-                "AND a.project_hash = :project_hash "
-                "AND a.du_hash == r.du_hash "
-                "AND a.frame == r.frame "
-            )
-            bind.execute(sql, project_hash=project_hash, prediction_hash=prediction_hash)
+    if len(_prediction_to_project_hash) > 0:
+        for prediction_hash, project_hash in tqdm(
+            _prediction_to_project_hash.items(), desc="Populating prediction reduction"
+        ):
+            count = bind.execute(
+                "SELECT COUNT(*) FROM prediction_analytics_reduced WHERE prediction_hash = :prediction_hash",
+                prediction_hash=prediction_hash,
+            ).scalar()
+            if count == 0:
+                sql = (
+                    "INSERT INTO prediction_analytics_reduced( "
+                    "   reduction_hash, prediction_hash, du_hash, frame, annotation_hash, project_hash, x, y "
+                    ") SELECT r.reduction_hash, a.prediction_hash, a.du_hash, a.frame, a.annotation_hash, a.project_hash, r.x, r.y "
+                    "FROM project_analytics_data_reduced r, prediction_analytics a "
+                    "WHERE r.project_hash = :project_hash "
+                    "AND a.prediction_hash = :prediction_hash "
+                    "AND a.project_hash = :project_hash "
+                    "AND a.du_hash == r.du_hash "
+                    "AND a.frame == r.frame "
+                )
+                bind.execute(sql, project_hash=project_hash, prediction_hash=prediction_hash)
 
     # Drop all tables & indices.
     op.drop_table("active_project_prediction_analytics_extra")

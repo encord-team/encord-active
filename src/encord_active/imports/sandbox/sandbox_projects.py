@@ -171,7 +171,7 @@ def fetch_prebuilt_project(
                 f.write(chunk)
                 bar.update(len(chunk))
 
-    print("Bulding the databse...")
+    print("Building the database...")
     import_serialized_project(engine, output_file_path)
     output_file_path.unlink(missing_ok=False)
 
