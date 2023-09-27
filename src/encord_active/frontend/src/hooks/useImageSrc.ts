@@ -22,7 +22,7 @@ export function useImageSrc(url: string | undefined): string | undefined {
     [querier, itemUrl]
   );
   const { data: queryBlob } = useQuery(
-    ["ImageSrcAuth", itemUrl],
+    ["ImageSrcAuth", requiresAuth ? itemUrl : "no-auth"],
     async () => {
       if (itemUrl === undefined) {
         return undefined;

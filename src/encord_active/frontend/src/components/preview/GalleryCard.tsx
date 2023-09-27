@@ -23,7 +23,7 @@ import {
   toDataItemID,
   toPredictionTy,
 } from "../util/ItemIdUtil";
-import { calculateTruePositiveSet } from "../util/PredictionUtil";
+import { calculateTruePositiveSet, getIOU } from "../util/PredictionUtil";
 
 export const GalleryCard = memo(GalleryCardRaw);
 
@@ -45,6 +45,25 @@ function getPredictionName(ty: "TP" | "FP" | "FN"): string {
   } else {
     return "False Negative";
   }
+}
+
+function getPredictionIOUPostfix(
+  preview: PredictionItem | undefined,
+  annotationHash: string,
+  ty: "TP" | "FP" | "FN"
+): string {
+  if (preview === undefined || ty === "FN") {
+    return "";
+  }
+  const iou = (getIOU(preview as any, annotationHash) ?? NaN).toFixed(2);
+
+  // const featureMismatchSet = new Set(preview.annotation_feature_mismatch);
+  // const featureMismatch = featureMismatchSet.has(annotationHash);
+  // console.log("featureMismatch", featureMismatch);
+  // if (featureMismatch) {
+  //   return `: ${iou} (& wrong class)`;
+  // }
+  return `: ${iou}`;
 }
 
 function GalleryCardRaw(props: {
@@ -96,9 +115,14 @@ function GalleryCardRaw(props: {
     dataId
   );
   const { data: previewPrediction, isLoading: isLoadingPrediction } =
-    usePredictionItem(projectHash, predictionHash ?? "", dataId, {
-      enabled: !projectItem,
-    });
+    usePredictionItem(
+      projectHash,
+      predictionHash ?? "",
+      predictionHash === undefined ? "" : dataId ?? "",
+      {
+        enabled: !projectItem,
+      }
+    );
   const preview: (PredictionItem & ProjectItem) | ProjectItem | undefined =
     useMemo(() => {
       if (projectItem) {
@@ -410,6 +434,11 @@ function GalleryCardRaw(props: {
                 {getPredictionIcon(predictionTy)}
                 <Typography.Text className="ml-1" color={labelObjectColor}>
                   {getPredictionName(predictionTy)}
+                  {getPredictionIOUPostfix(
+                    preview as any, // FIXME: any?
+                    annotationHash ?? "",
+                    predictionTy
+                  )}
                 </Typography.Text>
               </Tag>
             </Row>

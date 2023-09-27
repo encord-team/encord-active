@@ -46,9 +46,9 @@ export function ItemPreviewModal(props: {
   const { data: previewPrediction } = usePredictionItem(
     projectHash,
     predictionHash ?? "",
-    dataId ?? "",
+    predictionHash === undefined ? "" : dataId ?? "",
     {
-      enabled: dataId !== undefined,
+      enabled: dataId !== undefined && predictionHash !== undefined,
     }
   );
   const preview = useMemo(() => {

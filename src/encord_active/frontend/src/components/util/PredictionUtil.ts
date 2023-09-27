@@ -15,3 +15,14 @@ export function calculateTruePositiveSet(
   });
   return new Set(tpSet) as ReadonlySet<string>;
 }
+
+export function getIOU(
+  preview: Pick<PredictionItem, "annotation_iou_bounds">,
+  annotationHash: string
+): number {
+  const bound = preview.annotation_iou_bounds[annotationHash];
+  if (bound === undefined) {
+    return NaN;
+  }
+  return bound[0] ?? NaN;
+}
