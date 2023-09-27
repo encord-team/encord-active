@@ -84,6 +84,10 @@ cli.add_typer(project_cli, name="project", help="[green bold]Manage[/green bold]
 def download(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
     project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
+    store_data_locally: bool = typer.Option(
+        False,
+        help="Store project data locally to avoid the need for on-demand download when visualizing and analyzing it.",
+    ),
 ):
     """
     [green bold]Download[/green bold] a sandbox dataset to get started 📁
@@ -98,7 +102,7 @@ def download(
     from encord_active.db.models.project import Project
     from encord_active.imports.sandbox.sandbox_projects import (
         available_sandbox_projects,
-        fetch_prebuild_project,
+        fetch_prebuilt_project,
         fetch_prebuilt_project_size,
     )
 
@@ -140,11 +144,7 @@ def download(
             raise typer.Abort()
         project_hash = project_names_to_hash_map[answer]
 
-    fetch_prebuild_project(
-        project_hash=project_hash,
-        engine=engine,
-        database_dir=database_dir,
-    )
+    fetch_prebuilt_project(all_projects[project_hash], engine, database_dir)
     success_with_vizualise_command(database_dir, "Successfully downloaded sandbox dataset. ")
 
 
