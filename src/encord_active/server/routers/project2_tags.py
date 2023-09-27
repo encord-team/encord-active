@@ -211,22 +211,44 @@ def route_items_untag_all(
 ) -> None:
     where_tag_data, where_tag_annotation = _where_tag_items(engine.dialect, items)
     with Session(engine) as sess:
-        if where_tag_data is not None:
-            sess.execute(
-                delete(ProjectTaggedDataUnit).where(
-                    ProjectTaggedDataUnit.project_hash == project_hash,
-                    in_op(ProjectTaggedDataUnit.tag_hash, tags),
-                    *where_tag_data,
+        if engine.dialect.name == "postgresql":
+            if where_tag_data is not None:
+                sess.execute(
+                    delete(ProjectTaggedDataUnit).where(
+                        ProjectTaggedDataUnit.project_hash == project_hash,
+                        in_op(ProjectTaggedDataUnit.tag_hash, tags),
+                        *where_tag_data,
+                    )
                 )
-            )
-        if where_tag_annotation is not None:
-            sess.execute(
-                delete(ProjectTaggedAnnotation).where(
-                    ProjectTaggedAnnotation.project_hash == project_hash,
-                    in_op(ProjectTaggedAnnotation.tag_hash, tags),
-                    *where_tag_annotation,
+            if where_tag_annotation is not None:
+                sess.execute(
+                    delete(ProjectTaggedAnnotation).where(
+                        ProjectTaggedAnnotation.project_hash == project_hash,
+                        in_op(ProjectTaggedAnnotation.tag_hash, tags),
+                        *where_tag_annotation,
+                    )
                 )
-            )
+        else:
+            if where_tag_data is not None:
+                data_tags = sess.exec(
+                    select(ProjectTaggedDataUnit).where(
+                        ProjectTaggedDataUnit.project_hash == project_hash,
+                        in_op(ProjectTaggedDataUnit.tag_hash, tags),
+                        *where_tag_data,
+                    )
+                ).fetchall()
+                for data_tag in data_tags:
+                    sess.delete(data_tag)
+            if where_tag_annotation is not None:
+                annotation_tags = sess.exec(
+                    select(ProjectTaggedAnnotation).where(
+                        ProjectTaggedAnnotation.project_hash == project_hash,
+                        in_op(ProjectTaggedAnnotation.tag_hash, tags),
+                        *where_tag_annotation,
+                    )
+                ).fetchall()
+                for annotation_tag in annotation_tags:
+                    sess.delete(annotation_tag)
         sess.commit()
 
 
