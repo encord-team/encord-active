@@ -134,7 +134,7 @@ export function Explorer({
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
   const [predictionOutcome, setPredictionOutcome] =
-    useState<PredictionDomain>("tp");
+    useState<PredictionDomain>("p");
   const [iou, setIou] = useState<number>(0.5);
   const [dataFilters, setDataFilters] = useState<FilterState>(DefaultFilters);
   const [annotationFilters, setAnnotationFilters] =
@@ -459,26 +459,26 @@ export function Explorer({
             options={[
               {
                 label: "Data Metrics",
-                options: Object.entries(dataMetricsSummary.metrics).map(
-                  ([metricKey, metric]) => ({
+                options: Object.entries(dataMetricsSummary.metrics)
+                  .map(([metricKey, metric]) => ({
                     label: `D: ${metric?.title ?? metricKey}`,
                     value: `data-${metricKey}`,
-                  })
-                ),
+                  }))
+                  .sort((a, b) => (a.label > b.label ? 1 : -1)),
               },
               {
                 label:
                   predictionHash === undefined
                     ? "Annotation Metrics"
                     : "Prediction Metrics",
-                options: Object.entries(annotationMetricsSummary.metrics).map(
-                  ([metricKey, metric]) => ({
+                options: Object.entries(annotationMetricsSummary.metrics)
+                  .map(([metricKey, metric]) => ({
                     label: `${predictionHash === undefined ? "A" : "P"}: ${
                       metric?.title ?? metricKey
                     }`,
                     value: `annotation-${metricKey}`,
-                  })
-                ),
+                  }))
+                  .sort((a, b) => (a.label > b.label ? 1 : -1)),
               },
             ]}
           />
