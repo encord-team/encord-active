@@ -44,7 +44,8 @@ def import_predictions(
         )
     else:
         with open(predictions_path, "rb") as f:
-            predictions = pickle.load(f)
+            # predictions = pickle.load(f)
+            pass  # Need to implement this properly
         raise ValueError("Not supported yet!!!")
 
 

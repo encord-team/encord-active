@@ -462,7 +462,10 @@ def quickstart(
     """
     from encord_active.cli.utils.server import launch_server_app
     from encord_active.db.models import get_engine
-    from encord_active.imports.sandbox.sandbox_projects import fetch_prebuilt_project, available_sandbox_projects
+    from encord_active.imports.sandbox.sandbox_projects import (
+        available_sandbox_projects,
+        fetch_prebuilt_project,
+    )
 
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)

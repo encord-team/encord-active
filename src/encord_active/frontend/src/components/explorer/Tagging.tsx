@@ -196,44 +196,42 @@ export function ItemTags({
   limit?: number;
   className?: string;
 }) {
-  const annotationTags = annotationHash && label[annotationHash];
-  const labelTags =
-    annotationTags ||
+  const selectAnnotationTags = annotationHash && label[annotationHash];
+  const allAnnotationTags =
+    selectAnnotationTags ||
     (Object.values(label).filter(Boolean).flat() as ProjectTag[]);
+
+  const dataTags = data.map((d) => d.name).sort();
+  const annotationTags = [...new Set(allAnnotationTags.map((t) => t.name))];
 
   return (
     <div className={`flex flex-col gap-1 ${className ?? ""}`}>
       {!!data.length && (
         <div className="flex items-center">
           <MdOutlineImage className="text-base" />
-          <TagList tags={data} limit={limit} />
+          <TagList tags={dataTags} limit={limit} />
         </div>
       )}
-      {!!labelTags.length && (
+      {!!annotationTags.length && (
         <div className="flex items-center">
           <TbPolygon className="text-base" />
-          <TagList tags={labelTags} limit={limit} />
+          <TagList tags={annotationTags} limit={limit} />
         </div>
       )}
     </div>
   );
 }
 
-export function TagList({
-  tags,
-  limit,
-}: {
-  tags: ProjectTag[];
-  limit?: number;
-}) {
+export function TagList(props: { tags: string[]; limit?: number }) {
+  const { tags, limit } = props;
   const firstTags = tags.slice(0, limit);
   const remainder = tags.length - firstTags.length;
 
   return (
     <div className="flex-wrap">
       {firstTags.map((tag) => (
-        <Tag key={tag.tag_hash} bordered={false} className="rounded-xl">
-          {tag.name}
+        <Tag key={tag} bordered={false} className="rounded-xl">
+          {tag}
         </Tag>
       ))}
       {remainder > 0 && (

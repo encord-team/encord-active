@@ -140,27 +140,10 @@ def remove_metrics(
     target: Path = typer.Option(Path.cwd(), "--target", "-t", help="Path to the target project.", file_okay=False),
 ):
     """Remove metrics from the project."""
-    project_file_structure = ProjectFileStructure(target)
-    metrics_meta = fetch_metrics_meta(project_file_structure)
-
-    for title in metric_title:
-        if title in metrics_meta:
-            rich.print(f"Found existing metric: {title}")
-            rich.print(f"Removing {title}:")
-            rich.print("  Would detach:")
-            rich.print(f"    {metrics_meta[title]['location']}")
-            ok_remove = typer.confirm("Proceed?")
-            if ok_remove:
-                metrics_meta.pop(title)
-                rich.print(f"Successfully removed {title}")
-        else:
-            rich.print(f"[yellow]WARNING: Skipping {title} as it is not attached to the project.[/yellow]")
-
-    # update metric dependencies in metrics_meta.json
-    update_metrics_meta(project_file_structure, metrics_meta)
+    raise ValueError("Not yet implemented")
 '''
 
-
+'''
 @metric_cli.command(name="run", short_help="Run metrics.")
 def run_metrics(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
@@ -168,6 +151,7 @@ def run_metrics(
 ):
     """Run metrics on project data and labels."""
     raise ValueError("Not yet implemented")
+'''
 
 
 @metric_cli.command(name="show", short_help="Show information about available metrics.")

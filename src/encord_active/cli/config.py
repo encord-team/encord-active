@@ -7,24 +7,24 @@ from encord_active.cli.app_config import CONFIG_PROPERTIES, app_config
 config_cli = typer.Typer(rich_markup_mode="markdown")
 
 
-@config_cli.command()
-def list():
+@config_cli.command("list")
+def list_configs():
     """
     List Encord Active configuration properties.
     """
     rich.print(toml.dumps(app_config.contents) or "[bold red]Nothing configured.")
 
 
-def _check_property(property: str):
-    if property not in CONFIG_PROPERTIES:
-        rich.print(f"[bold red]`{property}` is not a valid property.")
+def _check_property(prop: str):
+    if prop not in CONFIG_PROPERTIES:
+        rich.print(f"[bold red]`{prop}` is not a valid property.")
         rich.print("Valid properties are:")
         rich.print(CONFIG_PROPERTIES)
         exit()
 
 
-@config_cli.command()
-def get(
+@config_cli.command("get")
+def get_config(
     property: str = typer.Argument(..., help="Name of the property"),
 ):
     """
@@ -35,8 +35,8 @@ def get(
     rich.print(f"{property} = {value}" or f"[bold red]Property `{property}` not configured.")
 
 
-@config_cli.command()
-def set(
+@config_cli.command("set")
+def set_config(
     property: str = typer.Argument(..., help="Name of the property"),
     value: str = typer.Argument(..., help="Value to set"),
 ):
@@ -50,8 +50,8 @@ def set(
     rich.print(f"[bold green]Property `{property}` has been set.")
 
 
-@config_cli.command()
-def unset(
+@config_cli.command("unset")
+def unset_config(
     property: str = typer.Argument(..., help="Name of the property"),
 ):
     """
