@@ -1,6 +1,7 @@
 import { Form, Input, Modal } from "antd";
 import { useProjectMutationCreateSubset } from "../../../hooks/mutation/useProjectMutationCreateSubset";
 import { SearchFilters } from "../../../openapi/api";
+import { useState } from "react";
 
 export function CreateSubsetModal(props: {
   open: boolean;
@@ -15,8 +16,30 @@ export function CreateSubsetModal(props: {
     dataset_title: string;
     dataset_description?: string | undefined;
   }>();
+  const [newProjectHash, setNewProjectHash] = useState<string>();
 
   const mutateCreateSubset = useProjectMutationCreateSubset(projectHash);
+
+  if (newProjectHash)
+    return (
+      <Modal
+        open={open}
+        title="Subset created successfully"
+        okText="Close"
+        okButtonProps={{ style: { backgroundColor: "#5555ff" } }}
+        cancelButtonProps={{ hidden: true }}
+        onOk={close}
+      >
+        Click{" "}
+        <a
+          className="link"
+          href={`https://app.encord.com/projects/view/${newProjectHash}`}
+        >
+          here
+        </a>{" "}
+        to go to the newly created annotation project
+      </Modal>
+    );
 
   return (
     <Modal
@@ -38,7 +61,7 @@ export function CreateSubsetModal(props: {
               filters,
             })
           )
-          .then(close)
+          .then((f) => (console.log(f.data), setNewProjectHash(f.data)))
           .catch(() => undefined);
       }}
     >

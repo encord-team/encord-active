@@ -5859,6 +5859,7 @@ export const ProjectApiAxiosParamCreator = function (
      * @summary Route Action Create Project Subset
      * @param {string} projectHash
      * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+     * @param {boolean} [remoteOnly]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -5866,6 +5867,7 @@ export const ProjectApiAxiosParamCreator = function (
       async (
         projectHash: string,
         createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+        remoteOnly?: boolean,
         options: AxiosRequestConfig = {}
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
@@ -5908,6 +5910,10 @@ export const ProjectApiAxiosParamCreator = function (
           [],
           configuration
         );
+
+        if (remoteOnly !== undefined) {
+          localVarQueryParameter["remote_only"] = remoteOnly;
+        }
 
         localVarHeaderParameter["Content-Type"] = "application/json";
 
@@ -5935,6 +5941,7 @@ export const ProjectApiAxiosParamCreator = function (
      * @summary Route Action Create Project Subset
      * @param {string} projectHash
      * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+     * @param {boolean} [remoteOnly]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
@@ -5942,6 +5949,7 @@ export const ProjectApiAxiosParamCreator = function (
       async (
         projectHash: string,
         createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+        remoteOnly?: boolean,
         options: AxiosRequestConfig = {}
       ): Promise<RequestArgs> => {
         // verify required parameter 'projectHash' is not null or undefined
@@ -5984,6 +5992,10 @@ export const ProjectApiAxiosParamCreator = function (
           [],
           configuration
         );
+
+        if (remoteOnly !== undefined) {
+          localVarQueryParameter["remote_only"] = remoteOnly;
+        }
 
         localVarHeaderParameter["Content-Type"] = "application/json";
 
@@ -9993,20 +10005,23 @@ export const ProjectApiFp = function (configuration?: Configuration) {
      * @summary Route Action Create Project Subset
      * @param {string} projectHash
      * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+     * @param {boolean} [remoteOnly]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
       projectHash: string,
       createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+      remoteOnly?: boolean,
       options?: AxiosRequestConfig
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
           projectHash,
           createProjectSubsetPostAction,
+          remoteOnly,
           options
         );
       return createRequestFunction(
@@ -10021,20 +10036,23 @@ export const ProjectApiFp = function (configuration?: Configuration) {
      * @summary Route Action Create Project Subset
      * @param {string} projectHash
      * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+     * @param {boolean} [remoteOnly]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
       projectHash: string,
       createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+      remoteOnly?: boolean,
       options?: AxiosRequestConfig
     ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<any>
+      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<string>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
           projectHash,
           createProjectSubsetPostAction,
+          remoteOnly,
           options
         );
       return createRequestFunction(
@@ -11639,18 +11657,21 @@ export const ProjectApiFactory = function (
      * @summary Route Action Create Project Subset
      * @param {string} projectHash
      * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+     * @param {boolean} [remoteOnly]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
       projectHash: string,
       createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+      remoteOnly?: boolean,
       options?: any
-    ): AxiosPromise<any> {
+    ): AxiosPromise<string> {
       return localVarFp
         .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
           projectHash,
           createProjectSubsetPostAction,
+          remoteOnly,
           options
         )
         .then((request) => request(axios, basePath));
@@ -11660,18 +11681,21 @@ export const ProjectApiFactory = function (
      * @summary Route Action Create Project Subset
      * @param {string} projectHash
      * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+     * @param {boolean} [remoteOnly]
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
       projectHash: string,
       createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+      remoteOnly?: boolean,
       options?: any
-    ): AxiosPromise<any> {
+    ): AxiosPromise<string> {
       return localVarFp
         .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
           projectHash,
           createProjectSubsetPostAction,
+          remoteOnly,
           options
         )
         .then((request) => request(axios, basePath));
@@ -12880,6 +12904,7 @@ export class ProjectApi extends BaseAPI {
    * @summary Route Action Create Project Subset
    * @param {string} projectHash
    * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+   * @param {boolean} [remoteOnly]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectApi
@@ -12887,12 +12912,14 @@ export class ProjectApi extends BaseAPI {
   public routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
     projectHash: string,
     createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+    remoteOnly?: boolean,
     options?: AxiosRequestConfig
   ) {
     return ProjectApiFp(this.configuration)
       .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
         projectHash,
         createProjectSubsetPostAction,
+        remoteOnly,
         options
       )
       .then((request) => request(this.axios, this.basePath));
@@ -12903,6 +12930,7 @@ export class ProjectApi extends BaseAPI {
    * @summary Route Action Create Project Subset
    * @param {string} projectHash
    * @param {CreateProjectSubsetPostAction} createProjectSubsetPostAction
+   * @param {boolean} [remoteOnly]
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectApi
@@ -12910,12 +12938,14 @@ export class ProjectApi extends BaseAPI {
   public routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
     projectHash: string,
     createProjectSubsetPostAction: CreateProjectSubsetPostAction,
+    remoteOnly?: boolean,
     options?: AxiosRequestConfig
   ) {
     return ProjectApiFp(this.configuration)
       .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost_1(
         projectHash,
         createProjectSubsetPostAction,
+        remoteOnly,
         options
       )
       .then((request) => request(this.axios, this.basePath));
