@@ -369,11 +369,12 @@ function GalleryCardRaw(props: {
         </Tag>
       </Row>
       {preview?.tags &&
-      ((labelObject == null
-        ? preview?.tags?.data?.length
+      (((labelObject == null
+        ? 0
         : (preview?.tags?.label ?? {})[
             labelObject?.objectHash ?? labelObject?.classificationHash ?? ""
-          ]?.length) ?? 0) > 0 ? (
+          ]?.length) ?? 0) > 0 ||
+        (preview?.tags?.data?.length ?? 0) > 0) ? (
         <Row className="mt-1">
           <ItemTags
             tags={preview?.tags}
