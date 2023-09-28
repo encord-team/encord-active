@@ -7,11 +7,7 @@ from typing import Dict, List, Literal, Optional, Tuple, Union
 from encord.objects import Object, OntologyStructure, Shape
 from pydantic import BaseModel
 
-from encord_active.db.models import (
-    ImportMetadataType,
-    Project,
-    ProjectImportMetadata,
-)
+from encord_active.db.models import ImportMetadataType, Project, ProjectImportMetadata
 
 from ...db.enums import AnnotationType
 from ..local_files import get_data_uri
