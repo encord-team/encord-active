@@ -69,8 +69,8 @@ def get_app(engine: Engine, settings: Settings) -> FastAPI:
 
         @app.get("/{any:path}")
         @app.get("/index.html")
-        def _index() -> FileResponse:
-            return FileResponse(frontend_build_path / "index.html")
+        def _index() -> HTMLResponse:
+            return HTMLResponse(frontend_build_path / "index.html")
 
         @app.get("/favicon.ico")
         def _favicon_ico() -> FileResponse:
