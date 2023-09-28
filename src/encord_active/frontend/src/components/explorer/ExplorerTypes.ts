@@ -1,5 +1,5 @@
 import { PredictionDomain, SearchFilters } from "../../openapi/api";
-
+export type MetricDomain = "Data" | "Label";
 export type ExplorerFilterState = {
   readonly analysisDomain: "data" | "annotation";
   readonly filters: SearchFilters;

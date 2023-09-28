@@ -13,7 +13,11 @@ module.exports = {
           accent: "#37cdbe",
           neutral: "#D7DDE8",
           "base-100": "#ffffff",
-          "gray-2": "#FAFAFA",
+        },
+        colours: {
+          gray: {
+            2: "#FAFAFA",
+          },
         },
       },
     ],

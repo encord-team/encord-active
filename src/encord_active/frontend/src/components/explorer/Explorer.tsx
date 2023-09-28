@@ -42,7 +42,7 @@ import {
 import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysisSearch";
-import { ExplorerFilterState } from "./ExplorerTypes";
+import { MetricDomain, ExplorerFilterState } from "./ExplorerTypes";
 import { ItemPreviewModal } from "../preview/ItemPreviewModal";
 import { usePredictionAnalysisSearch } from "../../hooks/queries/usePredictionAnalysisSearch";
 import {
@@ -58,6 +58,7 @@ import { Content } from "antd/es/layout/layout";
 import Icon from "@ant-design/icons/lib/components/Icon";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Filters } from "./filters/FIlters";
+import { SegmentedValue } from "antd/es/segmented";
 
 export type Metric = {
   domain: "data" | "annotation";
@@ -150,6 +151,33 @@ export function Explorer({
   useEffect(() => {
     setShowAnnotations(selectedMetric.domain === "annotation");
   }, [selectedMetric.domain, setShowAnnotations]);
+
+  //Data or Label selection
+  const [metricDomain, setMetricDomain] = useState<MetricDomain>("Data");
+  const [selectedMetricData, setSelectedMetricData] = useState<Metric>({
+    domain: "data",
+    metric_key: "metric_random",
+  });
+  const [selectedMetricLabel, setSelectedMetricLabel] = useState<Metric>({
+    domain: "annotation",
+    metric_key: "metric_random",
+  });
+  useEffect(() => {
+    if (selectedMetric.domain == "data") {
+      setSelectedMetricData(selectedMetric);
+      setMetricDomain("Data");
+    } else if (selectedMetric.domain == "annotation") {
+      setSelectedMetricLabel(selectedMetric);
+      setMetricDomain("Label");
+    }
+  }, [selectedMetric]);
+  useEffect(() => {
+    if (metricDomain == "Data") {
+      setSelectedMetric(selectedMetricData);
+    } else if (metricDomain == "Label") {
+      setSelectedMetric(selectedMetricLabel);
+    }
+  }, [metricDomain]);
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -435,7 +463,14 @@ export function Explorer({
                   }}
                 />
               ),
-              right: <Segmented selected options={["Data", "Labels"]} />,
+              right: (
+                <Segmented
+                  selected
+                  value={metricDomain}
+                  options={["Data", "Label"]}
+                  onChange={setMetricDomain as (val: SegmentedValue) => void}
+                />
+              ),
             }}
             items={[
               {
