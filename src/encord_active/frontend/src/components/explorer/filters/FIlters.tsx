@@ -16,7 +16,7 @@ type Props = {
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
   isSortedByMetric: boolean;
-  setSelectedMetric: React.Dispatch<React.SetStateAction<Metric>>;
+  setSelectedMetric: (val: Metric) => void;
   isAscending: boolean;
   setIsAscending: React.Dispatch<React.SetStateAction<boolean>>;
   annotationFilters: FilterState;

@@ -162,22 +162,32 @@ export function Explorer({
     domain: "annotation",
     metric_key: "metric_random",
   });
-  useEffect(() => {
-    if (selectedMetric.domain == "data") {
-      setSelectedMetricData(selectedMetric);
-      setMetricDomain("Data");
-    } else if (selectedMetric.domain == "annotation") {
-      setSelectedMetricLabel(selectedMetric);
-      setMetricDomain("Label");
+
+  const handleSelectedDomainChange = (val: MetricDomain) => {
+    setMetricDomain(val);
+    if (metricDomain == "Data") {
+      setSelectedMetric(selectedMetricData);
+    } else if (metricDomain == "Label") {
+      setSelectedMetric(selectedMetricLabel);
     }
-  }, [selectedMetric]);
-  useEffect(() => {
+  };
+
+  useMemo(() => {
     if (metricDomain == "Data") {
       setSelectedMetric(selectedMetricData);
     } else if (metricDomain == "Label") {
       setSelectedMetric(selectedMetricLabel);
     }
   }, [metricDomain]);
+
+  const handleMetricChange = (val: Metric) => {
+    setSelectedMetric(val);
+    if (selectedMetric.domain == "data") {
+      setSelectedMetricData(val);
+    } else if (selectedMetric.domain == "annotation") {
+      setSelectedMetricLabel(val);
+    }
+  };
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -468,7 +478,9 @@ export function Explorer({
                   selected
                   value={metricDomain}
                   options={["Data", "Label"]}
-                  onChange={setMetricDomain as (val: SegmentedValue) => void}
+                  onChange={
+                    handleSelectedDomainChange as (val: SegmentedValue) => void
+                  }
                 />
               ),
             }}
@@ -678,7 +690,7 @@ export function Explorer({
                     predictionHash={predictionHash}
                     dataMetricsSummary={dataMetricsSummary}
                     annotationMetricsSummary={annotationMetricsSummary}
-                    setSelectedMetric={setSelectedMetric}
+                    setSelectedMetric={handleMetricChange}
                     isAscending={isAscending}
                     setIsAscending={setIsAscending}
                     annotationFilters={annotationFilters}
