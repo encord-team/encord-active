@@ -1,11 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
-import { MdFilterAltOff } from "react-icons/md";
-import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
-import TableIcon from "../../../assets/table.svg";
-import EmbeddingsIcon from "../../../assets/dot-chart.svg";
 import {
   Button,
   Col,
@@ -23,16 +19,11 @@ import {
 import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
 import { BulkTaggingForm } from "./Tagging";
-import {
-  FilterState,
-  MetricFilter,
-  DefaultFilters,
-} from "../util/MetricFilter";
+import { FilterState, DefaultFilters } from "../util/MetricFilter";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { env, local } from "../../constants";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
-import { ExplorerDistribution } from "./ExplorerDistribution";
 import {
   DomainSearchFilters,
   Embedding2DFilter,
@@ -50,15 +41,13 @@ import {
   useExplorerPremiumSearch,
 } from "./ExplorerPremiumSearch";
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
-import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
-import { useProjectListTags } from "../../hooks/queries/useProjectListTags";
 import { FeatureHashMap } from "../Types";
 import { classy } from "../../helpers/classy";
-import { Content } from "antd/es/layout/layout";
-import Icon from "@ant-design/icons/lib/components/Icon";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Filters } from "./filters/FIlters";
 import { SegmentedValue } from "antd/es/segmented";
+import TableIcon from "../../../assets/table.svg";
+import EmbeddingsIcon from "../../../assets/dot-chart.svg";
 
 export type Metric = {
   domain: "data" | "annotation";
@@ -157,26 +146,18 @@ export function Explorer({
 
   const handleSelectedDomainChange = (val: MetricDomain) => {
     setMetricDomain(val);
-    if (metricDomain == "Data") {
+    if (val == "Data") {
       setSelectedMetric(selectedMetricData);
-    } else if (metricDomain == "Label") {
+    } else if (val == "Label") {
       setSelectedMetric(selectedMetricLabel);
     }
   };
 
-  useMemo(() => {
-    if (metricDomain == "Data") {
-      setSelectedMetric(selectedMetricData);
-    } else if (metricDomain == "Label") {
-      setSelectedMetric(selectedMetricLabel);
-    }
-  }, [metricDomain]);
-
   const handleMetricChange = (val: Metric) => {
     setSelectedMetric(val);
-    if (selectedMetric.domain == "data") {
+    if (val.domain == "data") {
       setSelectedMetricData(val);
-    } else if (selectedMetric.domain == "annotation") {
+    } else if (val.domain == "annotation") {
       setSelectedMetricLabel(val);
     }
   };

@@ -1,8 +1,8 @@
+import { LeftOutlined } from "@ant-design/icons";
 import { fork } from "radash";
 import { Button, Select, Space } from "antd";
 import { useMemo } from "react";
 import { useProjectList } from "../hooks/queries/useListProjects";
-import { LeftOutlined, UploadOutlined } from "@ant-design/icons";
 
 export type Props = {
   selectedProjectHash: string;

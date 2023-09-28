@@ -1,5 +1,5 @@
 import { CSSProperties, useEffect, useMemo } from "react";
-import { Button, Spin, Tabs } from "antd";
+import { Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
 import {
   FeatureHashMap,
@@ -7,7 +7,6 @@ import {
   OntologyObjectAttributeOptions,
   ProjectOntology,
 } from "./Types";
-import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 import { ProjectSelector } from "./ProjectSelector";
 import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 import { Explorer } from "./explorer";
@@ -108,6 +107,7 @@ export function ProjectPage(props: {
     background: "#FAFAFA",
     margin: 0,
   };
+
   return (
     <Tabs
       className="h-full"

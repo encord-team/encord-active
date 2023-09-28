@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { FaMagic } from "react-icons/fa";
 
-import { Button, Space, Tooltip, Upload } from "antd";
+import { Button, Tooltip, Upload } from "antd";
 import Search from "antd/es/input/Search";
 import { SearchOutlined, UploadOutlined } from "@ant-design/icons";
 

@@ -8,6 +8,7 @@ import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { useProjectListCollaborators } from "../../../hooks/queries/useProjectListCollaborators";
 import { useProjectListTags } from "../../../hooks/queries/useProjectListTags";
 import { useProjectAnalysisSummary } from "../../../hooks/queries/useProjectAnalysisSummary";
+import { Dispatch, SetStateAction } from "react";
 
 type Props = {
   projectHash: string;
@@ -18,11 +19,11 @@ type Props = {
   isSortedByMetric: boolean;
   setSelectedMetric: (val: Metric) => void;
   isAscending: boolean;
-  setIsAscending: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsAscending: Dispatch<SetStateAction<boolean>>;
   annotationFilters: FilterState;
-  setAnnotationFilters: React.Dispatch<React.SetStateAction<FilterState>>;
+  setAnnotationFilters: Dispatch<SetStateAction<FilterState>>;
   dataFilters: FilterState;
-  setDataFilters: React.Dispatch<React.SetStateAction<FilterState>>;
+  setDataFilters: Dispatch<SetStateAction<FilterState>>;
   canResetFilters: string | boolean | File;
   reset: any;
   featureHashMap: FeatureHashMap;
