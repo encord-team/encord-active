@@ -1,7 +1,7 @@
+import { useState } from "react";
 import { Form, Input, Modal } from "antd";
 import { useProjectMutationCreateSubset } from "../../../hooks/mutation/useProjectMutationCreateSubset";
 import { SearchFilters } from "../../../openapi/api";
-import { useState } from "react";
 
 export function CreateSubsetModal(props: {
   open: boolean;
@@ -20,7 +20,7 @@ export function CreateSubsetModal(props: {
 
   const mutateCreateSubset = useProjectMutationCreateSubset(projectHash);
 
-  if (newProjectHash)
+  if (newProjectHash) {
     return (
       <Modal
         open={open}
@@ -40,6 +40,7 @@ export function CreateSubsetModal(props: {
         to go to the newly created annotation project
       </Modal>
     );
+  }
 
   return (
     <Modal
@@ -61,7 +62,7 @@ export function CreateSubsetModal(props: {
               filters,
             })
           )
-          .then((f) => (console.log(f.data), setNewProjectHash(f.data)))
+          .then((f) => setNewProjectHash(f.data))
           .catch(() => undefined);
       }}
     >

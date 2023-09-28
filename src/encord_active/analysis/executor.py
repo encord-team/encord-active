@@ -50,7 +50,11 @@ from encord_active.db.models import (
 )
 
 from ..db.enums import AnnotationType, DataType
-from ..db.local_data import db_uri_to_local_file_path, open_database_uri_image
+from ..db.local_data import (
+    db_uri_to_local_file_path,
+    open_database_uri_image,
+    pyav_video_open,
+)
 from ..db.metrics import MetricType
 from .base import BaseAnalysis, BaseFrameBatchInput, BaseFrameInput, BaseMetric
 from .embedding import (
@@ -423,7 +427,7 @@ class SimpleExecutor(Executor):
             frames: List[Tuple[BaseFrameInput, Optional[Dict[str, AnnotationMetadata]]]] = []
             iter_frame_num = -1
             # FIXME: use torchvision VideoReader!!
-            with av.open(str(video_url_or_path), mode="r", format=video_start.data_title.split(".")[-1]) as container:
+            with pyav_video_open(str(video_url_or_path), video_start) as container:
                 for frame in tqdm(
                     container.decode(video=0),
                     desc=f" - Processing Video: {data_metadata.data_title}",

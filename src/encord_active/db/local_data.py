@@ -1,13 +1,21 @@
+import contextlib
+import logging
 from io import BytesIO
 from pathlib import Path
-from typing import Optional
+from typing import Generator, Optional, Union
 from urllib.parse import unquote, urlparse
 
+import av
 import requests
 from PIL import Image
 
+from encord_active.db.models import ProjectDataUnitMetadata
+
 
 def db_uri_to_local_file_path(database_uri: str, database_dir: Path) -> Optional[Path]:
+    """
+    Convert a data_uri value in the database into a local Path if one is referenced.
+    """
     if database_uri.startswith(("/", "./", "../", "~/")):
         return Path(database_uri)
     if database_uri.startswith("file:"):
@@ -22,6 +30,10 @@ def db_uri_to_local_file_path(database_uri: str, database_dir: Path) -> Optional
 
 
 def file_path_to_database_uri(path: Path, project_dir: Path, relative: Optional[bool] = None) -> str:
+    """
+    Convert a local file path to a database_uri. This supports multiple formats including absolute & reltive
+    addressing modes.
+    """
     path = path.expanduser().absolute().resolve()
     if relative is not None and not relative:
         return path.as_uri()
@@ -63,3 +75,35 @@ def open_database_uri_image(database_uri: str, database_dir: Path) -> Image.Imag
         return Image.open(path)
     img_bytes = download_remote_to_bytes(database_uri)
     return Image.open(BytesIO(img_bytes))
+
+
+logger: logging.Logger = logging.getLogger("local-data")
+
+
+@contextlib.contextmanager
+def pyav_video_open(
+    url_or_path: Union[str, Path], data_unit: ProjectDataUnitMetadata
+) -> Generator[av.container.input.InputContainer, None, None]:
+    try:
+        # Try auto-detect video format
+        with av.open(str(url_or_path), mode="r") as container:
+            yield container
+        return
+    except ValueError as no_container_format:
+        if "no container format" not in str(no_container_format):
+            raise no_container_format
+    logging.warning(f"Failed to infer video type, retrying with data_type")
+
+    try:
+        # Try with explicit data unit data type.
+        with av.open(str(url_or_path), mode="r", format=data_unit.data_type) as container:
+            yield container
+        return
+    except ValueError as no_container_format:
+        if "no container format" not in str(no_container_format):
+            raise no_container_format
+    logging.warning(f"Failed to infer video type, retrying with data_title suffix")
+
+    # Guess from file extension recorded in data title
+    with av.open(str(url_or_path), mode="r", format=data_unit.data_title.split(".")[-1]) as container:
+        yield container

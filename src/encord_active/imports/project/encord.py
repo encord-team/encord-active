@@ -42,7 +42,9 @@ def import_encord(
     project_data_list: List[ProjectDataMetadata] = []
     project_du_list: List[ProjectDataUnitMetadata] = []
     du_hash_local_storage: Dict[uuid.UUID, str] = {}
-    for label_row in tqdm(label_rows, desc="Importing Label Rows"):
+    for label_row in tqdm(
+        label_rows, desc="Importing & Downloading Label Rows" if store_data_locally else "Importing Label Rows"
+    ):
         label_row_json = label_row.to_encord_dict()
         data_hash = uuid.UUID(label_row_json.pop("data_hash"))
         label_hash = uuid.UUID(label_row_json.pop("label_hash"))

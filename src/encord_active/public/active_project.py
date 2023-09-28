@@ -22,7 +22,7 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
 from encord_active.cli.app_config import app_config
-from encord_active.db.local_data import db_uri_to_local_file_path
+from encord_active.db.local_data import db_uri_to_local_file_path, pyav_video_open
 from encord_active.db.models import (
     Project,
     ProjectDataMetadata,
@@ -36,6 +36,7 @@ __all__ = ["ActiveContext", "ActiveAnnotatedFrame"]
 class ActiveAnnotatedFrame:
     """
     Stable API reference to an active annotated image.
+    This may be a video frame or an image.
     """
 
     _image: Image.Image
@@ -106,6 +107,10 @@ class ActiveAnnotatedFrame:
 
 
 class ActiveProject:
+    """
+    Stable API reference to a project imported into encord active.
+    """
+
     _engine: Engine
     _database_dir: Path
     _encord_client: EncordUserClient
@@ -181,7 +186,7 @@ class ActiveProject:
             data_unit = next(data_unit_iter)
             url = self._lookup_url(data_unit.data_hash, data_unit.du_hash, data_unit.data_uri)
             if data_unit.data_uri_is_video:
-                with av.open(str(url), mode="r", format=data_unit.data_title.split(".")[-1]) as container:
+                with pyav_video_open(url, data_unit) as container:
                     video_decode_iter = iter(container.decode(video=0))
                     frame0 = next(video_decode_iter)
                     if frame0.frame != 0:
@@ -215,6 +220,10 @@ class ActiveProject:
 
 
 class ActiveContext:
+    """
+    Stable API for an encord active instance. This may contain many active projects.
+    """
+
     _database_dir: Path
     _engine: Engine
     _ssh_key: str
