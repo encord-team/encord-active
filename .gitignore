@@ -363,3 +363,8 @@ node_modules
 # any local data materialized from local imports
 /examples/**/local-data/
 /local-data/
+/src/**/local-data/
+
+# any serialized projects
+db.json
+/**/export-*/
