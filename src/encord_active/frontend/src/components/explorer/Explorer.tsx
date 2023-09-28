@@ -16,7 +16,6 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
 import { SegmentedValue } from "antd/es/segmented";
 import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
@@ -47,7 +46,11 @@ import { FeatureHashMap } from "../Types";
 import { classy } from "../../helpers/classy";
 import { Filters } from "./filters/Filters";
 import TableIcon from "../../../assets/table.svg";
+import TableIconActive from "../../../assets/table-active.svg";
 import EmbeddingsIcon from "../../../assets/dot-chart.svg";
+import EmbeddingsIconActive from "../../../assets/dot-chart-active.svg";
+import { Overview } from "./overview/Overview";
+import { Display } from "./display/Display";
 
 export type Props = {
   projectHash: string;
@@ -380,6 +383,11 @@ export function Explorer({
   const [open, setOpen] = useState<undefined | "subset" | "upload">();
   const close = () => setOpen(undefined);
 
+  // view state
+  const [activeView, setActiveView] = useState<"gridView" | "embeddingsView">(
+    "gridView"
+  );
+
   return (
     <div className="h-full">
       <CreateSubsetModal
@@ -423,6 +431,8 @@ export function Explorer({
       <Row className="h-full">
         <Col span={18} className="h-full">
           <Tabs
+            activeKey={activeView}
+            onChange={setActiveView as (val: string) => void}
             style={{
               height: "100%",
             }}
@@ -458,7 +468,13 @@ export function Explorer({
               {
                 label: (
                   <span className="flex items-center gap-2">
-                    <img src={TableIcon} alt="grid" className="h-4 w-4" />
+                    <img
+                      src={
+                        activeView === "gridView" ? TableIconActive : TableIcon
+                      }
+                      alt="grid"
+                      className="h-4 w-4"
+                    />
                     Grid View
                   </span>
                 ),
@@ -631,7 +647,15 @@ export function Explorer({
               {
                 label: (
                   <span className="flex items-center gap-2">
-                    <img src={EmbeddingsIcon} alt="grid" className="h-4 w-4" />
+                    <img
+                      src={
+                        activeView === "embeddingsView"
+                          ? EmbeddingsIconActive
+                          : EmbeddingsIcon
+                      }
+                      alt="grid"
+                      className="h-4 w-4"
+                    />
                     Embeddings View
                   </span>
                 ),
@@ -657,31 +681,7 @@ export function Explorer({
               {
                 label: "Overview",
                 key: "overview",
-                children: (
-                  <Space direction="vertical" size="large" className="p-4">
-                    <div className="gap-f flex flex-col">
-                      <div className="text-base text-gray-500">
-                        Total No. of frames
-                      </div>
-                      <div className="text-2xl">48,326</div>
-                    </div>
-                    <Space size="small" direction="vertical">
-                      <div className="text-base text-gray-500">
-                        Data Quality Score <InfoCircleOutlined />
-                      </div>
-                      <div className="text-2xl">50</div>
-                    </Space>
-                    <Space size="small" direction="vertical">
-                      <div className="text-base text-gray-500">
-                        Issue Types <InfoCircleOutlined />
-                      </div>
-                      <div className="text-sm">Duplicate</div>
-                      <div className="text-sm">Blur</div>
-                      <div className="text-sm">Dark</div>
-                      <div className="text-sm">Bright</div>
-                    </Space>
-                  </Space>
-                ),
+                children: <Overview totalFrames={itemsToRender.length} />,
               },
               {
                 label: "Filter",
@@ -712,7 +712,7 @@ export function Explorer({
               {
                 label: "Display",
                 key: "display",
-                children: <>This is display for something for sure</>,
+                children: <Display />,
               },
             ]}
           />
