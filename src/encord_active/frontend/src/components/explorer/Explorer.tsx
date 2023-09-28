@@ -117,18 +117,10 @@ export function Explorer({
   );
 
   // Selection
-<<<<<<< HEAD
   const [selectedItems, setSelectedItems] = useState<
     ReadonlySet<string> | "ALL"
   >(new Set<string>());
-  const [selectedMetric, setSelectedMetric] = useState<{
-    domain: "data" | "annotation";
-    metric_key: string;
-  }>({
-=======
-  const [selectedItems, setSelectedItems] = useState(new Set<string>());
   const [selectedMetric, setSelectedMetric] = useState<Metric>({
->>>>>>> 53096317 (🚀 move filters to new component)
     domain: "data",
     metric_key: "metric_random",
   });
@@ -619,6 +611,10 @@ export function Explorer({
                         showAnnotations={showAnnotations}
                         featureHashMap={featureHashMap}
                         iou={iou}
+                        setPage={setPage}
+                        page={page}
+                        setPageSize={setPageSize}
+                        pageSize={pageSize}
                       />
                     </div>
                   </div>
