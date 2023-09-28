@@ -510,7 +510,10 @@ export function Explorer({
                           placement="bottomRight"
                           content={
                             <BulkTaggingForm
-                              items={[...selectedItems]}
+                              projectHash={projectHash}
+                              selectedItems={selectedItems}
+                              filtersDomain={filters.analysisDomain}
+                              filters={filters.filters}
                               allowTaggingAnnotations={allowTaggingAnnotations}
                             />
                           }
@@ -518,34 +521,61 @@ export function Explorer({
                         >
                           <Tooltip
                             title={
-                              !selectedItems.size
+                              !hasSelectedItems
                                 ? "Select items to tag first"
                                 : ""
                             }
                           >
                             <Button
                               icon={<HiOutlineTag />}
-                              disabled={!selectedItems.size}
+                              disabled={!hasSelectedItems}
                             >
                               Tag
                             </Button>
                           </Tooltip>
                         </Popover>
                         <Button
-                          disabled={!selectedItems.size}
+                          disabled={!hasSelectedItems}
                           onClick={() => setSelectedItems(new Set())}
                           icon={<VscClearAll />}
                         >
-                          Clear selection ({selectedItems.size})
+                          Clear selection (
+                          {selectedItems === "ALL" ? "All" : selectedItems.size}
+                          )
                         </Button>
                         <Button
                           onClick={() =>
-                            setSelectedItems(new Set(itemsToRender))
+                            setSelectedItems((oldState) => {
+                              if (oldState === "ALL") {
+                                return "ALL";
+                              }
+                              return new Set([
+                                ...oldState,
+                                ...itemsToRender.slice(
+                                  (page - 1) * pageSize,
+                                  page * pageSize
+                                ),
+                              ]);
+                            })
                           }
                           disabled={itemsToRender.length === 0}
                           icon={<BiSelectMultiple />}
                         >
-                          Select all ({itemsToRender.length})
+                          Select page (
+                          {
+                            itemsToRender.slice(
+                              (page - 1) * pageSize,
+                              page * pageSize
+                            ).length
+                          }
+                          )
+                        </Button>
+                        <Button
+                          onClick={() => setSelectedItems("ALL")}
+                          disabled={selectedItems === "ALL"}
+                          icon={<BiSelectMultiple />}
+                        >
+                          Select All
                         </Button>
                       </Space.Compact>
                       {env !== "sandbox" && !(remoteProject || !local) ? (
