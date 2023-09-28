@@ -1,4 +1,3 @@
-import pickle
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -6,11 +5,7 @@ from typing import Optional
 import typer
 from rich.markup import escape
 
-from encord_active.cli.common import (
-    TYPER_ENCORD_DATABASE_DIR,
-    TYPER_SELECT_PROJECT_NAME,
-    select_project_hash_from_name,
-)
+from encord_active.cli.common import TYPER_ENCORD_DATABASE_DIR
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.prints import success_with_vizualise_command
 from encord_active.lib.encord.utils import get_encord_projects
