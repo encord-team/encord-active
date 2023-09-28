@@ -8,7 +8,9 @@ This is for external use only.
 Currently experimental.
 """
 import copy
+import logging
 import uuid
+from io import BytesIO
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Union
 
@@ -22,7 +24,11 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
 from encord_active.cli.app_config import app_config
-from encord_active.db.local_data import db_uri_to_local_file_path, pyav_video_open
+from encord_active.db.local_data import (
+    db_uri_to_local_file_path,
+    download_remote_to_bytes,
+    pyav_video_open,
+)
 from encord_active.db.models import (
     Project,
     ProjectDataMetadata,
@@ -30,7 +36,9 @@ from encord_active.db.models import (
     get_engine,
 )
 
-__all__ = ["ActiveContext", "ActiveAnnotatedFrame"]
+__all__ = ["ActiveProject", "ActiveContext", "ActiveAnnotatedFrame"]
+
+logger = logging.getLogger("encord_active.public")
 
 
 class ActiveAnnotatedFrame:
@@ -183,16 +191,21 @@ class ActiveProject:
             data_hash_map = {d.data_hash: d for d in all_data}
         data_unit_iter = iter(all_data_units)
         while True:
-            data_unit = next(data_unit_iter)
+            data_unit = next(data_unit_iter, None)
+            if data_unit is None:
+                return
             url = self._lookup_url(data_unit.data_hash, data_unit.du_hash, data_unit.data_uri)
             if data_unit.data_uri_is_video:
+                # Video: iterate over all frames
                 with pyav_video_open(url, data_unit) as container:
                     video_decode_iter = iter(container.decode(video=0))
                     frame0 = next(video_decode_iter)
-                    # if frame0.frame != 0:
-                    #     raise ValueError(f"Video starts at frame: {frame0.frame} != 0")
-                    # if frame0.is_corrupt:
-                    #     raise ValueError(f"Corrupt video frame: {frame0.frame}")
+                    if frame0.index != 0:
+                        raise ValueError(f"Video starts at frame: {frame0.frame} != 0")
+                    if data_unit.frame != 0:
+                        raise ValueError(f"Encord active data units invalid start frame: {data_unit.frame} != 0")
+                    if frame0.is_corrupt:
+                        raise ValueError(f"Corrupt video frame: {frame0.frame}")
                     yield ActiveAnnotatedFrame(
                         data_unit, data_hash_map[data_unit.data_hash], frame0.to_image().convert("RGB")
                     )
@@ -207,15 +220,24 @@ class ActiveProject:
                             raise ValueError(
                                 f"Video decode length mismatch: {data_unit.data_hash}: {frame_idx} not found in db"
                             )
-                        # if frame.is_corrupt:
-                        #     raise ValueError(f"Corrupt video frame: {frame_idx}")
-                        # if frame_data_unit.frame != frame_idx:
-                        #     raise ValueError(f"Out of order frame iteration: {frame_data_unit.frame} != {frame_idx}")
+                        if frame_data_unit.frame != frame_idx:
+                            raise ValueError(f"Out of order frame iteration: {frame_data_unit.frame} != {frame_idx}")
+                        if frame.is_corrupt:
+                            raise ValueError(f"Corrupt video frame: {frame_idx}")
+                        if frame.index != frame_idx:
+                            logger.error(
+                                f"AV video frame out of sequence (overriding): {frame_idx} (iter) -> {frame.index} (AV)"
+                            )
                         yield ActiveAnnotatedFrame(
                             frame_data_unit, data_hash_map[frame_data_unit.data_hash], frame.to_image().convert("RGB")
                         )
             else:
-                image = Image.open(url)
+                # Single image - direct import & yield.
+                if isinstance(url, Path):
+                    return Image.open(url)
+                else:
+                    img_bytes = download_remote_to_bytes(url)
+                    image = Image.open(BytesIO(img_bytes))
                 yield ActiveAnnotatedFrame(data_unit, data_hash_map[data_unit.data_hash], image)
 
 

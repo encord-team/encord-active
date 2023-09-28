@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.engine import Engine
-from starlette.responses import FileResponse, HTMLResponse
+from starlette.responses import FileResponse
 
 from encord_active.server.dependencies import (
     dep_engine,
