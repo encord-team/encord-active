@@ -45,12 +45,9 @@ import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { FeatureHashMap } from "../Types";
 import { classy } from "../../helpers/classy";
 import { Filters } from "./filters/Filters";
-import TableIcon from "../../../assets/table.svg";
-import TableIconActive from "../../../assets/table-active.svg";
-import EmbeddingsIcon from "../../../assets/dot-chart.svg";
-import EmbeddingsIconActive from "../../../assets/dot-chart-active.svg";
 import { Overview } from "./overview/Overview";
 import { Display } from "./display/Display";
+import { DotChartOutlined, TableOutlined } from "@ant-design/icons";
 
 export type Props = {
   projectHash: string;
@@ -468,13 +465,7 @@ export function Explorer({
               {
                 label: (
                   <span className="flex items-center gap-2">
-                    <img
-                      src={
-                        activeView === "gridView" ? TableIconActive : TableIcon
-                      }
-                      alt="grid"
-                      className="h-4 w-4"
-                    />
+                    <TableOutlined />
                     Grid View
                   </span>
                 ),
@@ -647,16 +638,7 @@ export function Explorer({
               {
                 label: (
                   <span className="flex items-center gap-2">
-                    <img
-                      src={
-                        activeView === "embeddingsView"
-                          ? EmbeddingsIconActive
-                          : EmbeddingsIcon
-                      }
-                      alt="grid"
-                      className="h-4 w-4"
-                    />
-                    Embeddings View
+                    <DotChartOutlined /> Embeddings View
                   </span>
                 ),
                 key: "embeddingsView",
@@ -712,7 +694,21 @@ export function Explorer({
               {
                 label: "Display",
                 key: "display",
-                children: <Display />,
+                children: (
+                  <Display
+                    projectHash={projectHash}
+                    selectedMetric={selectedMetric}
+                    isSortedByMetric={isSortedByMetric}
+                    predictionHash={predictionHash}
+                    dataMetricsSummary={dataMetricsSummary}
+                    annotationMetricsSummary={annotationMetricsSummary}
+                    setSelectedMetric={handleMetricChange}
+                    isAscending={isAscending}
+                    setIsAscending={setIsAscending}
+                    showAnnotations={showAnnotations}
+                    toggleShowAnnotations={toggleShowAnnotations}
+                  />
+                ),
               },
             ]}
           />

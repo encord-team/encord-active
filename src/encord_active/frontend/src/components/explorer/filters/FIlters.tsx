@@ -1,13 +1,20 @@
-import { Button, Popover, Select, Space } from "antd";
+import { Button, List, Popover, Select, Space } from "antd";
 import { MdFilterAltOff } from "react-icons/md";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { Dispatch, SetStateAction } from "react";
-import { FilterState, MetricFilter } from "../../util/MetricFilter";
+import {
+  FilterState,
+  MetricFilter,
+  addNewEntry,
+} from "../../util/MetricFilter";
 import { FeatureHashMap } from "../../Types";
 import { useProjectListCollaborators } from "../../../hooks/queries/useProjectListCollaborators";
 import { useProjectListTags } from "../../../hooks/queries/useProjectListTags";
 import { useProjectAnalysisSummary } from "../../../hooks/queries/useProjectAnalysisSummary";
-import { ProjectDomainSummary } from "../../../openapi/api";
+import {
+  DomainSearchFilters,
+  ProjectDomainSummary,
+} from "../../../openapi/api";
 import { Metric } from "../ExplorerTypes";
 
 type Props = {
@@ -25,7 +32,7 @@ type Props = {
   dataFilters: FilterState;
   setDataFilters: Dispatch<SetStateAction<FilterState>>;
   canResetFilters: string | boolean | File;
-  reset: any;
+  reset: () => void;
   featureHashMap: FeatureHashMap;
   showAnnotations: boolean;
   toggleShowAnnotations: any;
@@ -64,92 +71,89 @@ export function Filters({
   const { data: collaborators } = useProjectListCollaborators(projectHash);
   const { data: tags } = useProjectListTags(projectHash);
 
+  // get active filters
+  const getEachKeyValueObj = (obj: any) => {
+    return Object.keys(obj).map((key) => {
+      return { [key]: obj[key] };
+    });
+  };
+
+  const activeMetricFilters: Array<{ [item: string]: number }> =
+    getEachKeyValueObj(dataFilters.metricFilters);
+
   return (
-    <Space.Compact size="large" direction="vertical">
+    <div className="flex w-full flex-col gap-2">
       <Select
-        value={`${selectedMetric.domain}-${selectedMetric.metric_key}`}
-        onChange={(strKey: string) => {
-          const [domain, metric_key] = strKey.split("-");
-          setSelectedMetric({
-            domain: domain as "data" | "annotation",
-            metric_key,
-          });
+        showSearch
+        onChange={(metricKey) => {
+          console.log(metricKey);
+          const type =
+            metricKey.split("-")[0] == "data" ? "data" : "annotation";
+          const key = metricKey.split("-")[1];
+          setDataFilters(
+            addNewEntry(
+              type === "data" ? dataMetricsSummary : annotationMetricsSummary,
+              type === "data"
+                ? dataMetricRanges?.metrics
+                : annotationMetricRanges?.metrics,
+              featureHashMap,
+              collaborators ?? [],
+              tags ?? [],
+              key
+            )
+          );
         }}
-        className="w-80"
+        placeholder="Add a new filter"
         options={[
-          {
-            label: "Data Metrics",
-            options: Object.entries(dataMetricsSummary.metrics).map(
-              ([metricKey, metric]) => ({
-                label: `D: ${metric?.title ?? metricKey}`,
-                value: `data-${metricKey}`,
-              })
-            ),
-          },
-          {
-            label:
-              predictionHash === undefined
-                ? "Annotation Metrics"
-                : "Prediction Metrics",
-            options: Object.entries(annotationMetricsSummary.metrics).map(
-              ([metricKey, metric]) => ({
-                label: `${predictionHash === undefined ? "A" : "P"}: ${
-                  metric?.title ?? metricKey
-                }`,
-                value: `annotation-${metricKey}`,
-              })
-            ),
-          },
+          ...Object.entries(dataMetricsSummary.metrics).map(
+            ([metricKey, metric]) => ({
+              label: `D: ${metric?.title ?? metricKey}`,
+              value: `data-${metricKey}`,
+              type: "data",
+            })
+          ),
+          ...Object.entries(annotationMetricsSummary.metrics).map(
+            ([metricKey, metric]) => ({
+              label: `A: ${metric?.title ?? metricKey}`,
+              value: `annotation-${metricKey}`,
+              type: "annotation",
+            })
+          ),
+          ...Object.entries(dataMetricsSummary.enums).map(
+            ([metricKey, metric]) => ({
+              label: `D: ${metric?.title ?? metricKey}`,
+              value: `data-${metricKey}`,
+              type: "data",
+            })
+          ),
+          ...Object.entries(annotationMetricsSummary.enums).map(
+            ([metricKey, metric]) => ({
+              label: `A: ${metric?.title ?? metricKey}`,
+              value: `annotation-${metricKey}`,
+              type: "annotation",
+            })
+          ),
         ]}
       />
-      <Button
-        disabled={!isSortedByMetric}
-        onClick={() => setIsAscending(!isAscending)}
-        icon={isAscending ? <TbSortAscending /> : <TbSortDescending />}
+
+      <MetricFilter
+        filters={dataFilters}
+        setFilters={setDataFilters}
+        metricsSummary={dataMetricsSummary}
+        metricRanges={dataMetricRanges?.metrics}
+        featureHashMap={featureHashMap}
+        tags={tags ?? []}
+        collaborators={collaborators ?? []}
       />
-      <Button onClick={toggleShowAnnotations}>
-        {`${showAnnotations ? "Show" : "hide"} all annotations`}
-      </Button>
-      <Popover
-        placement="bottomLeft"
-        content={
-          <MetricFilter
-            filters={dataFilters}
-            setFilters={setDataFilters}
-            metricsSummary={dataMetricsSummary}
-            metricRanges={dataMetricRanges?.metrics}
-            featureHashMap={featureHashMap}
-            tags={tags ?? []}
-            collaborators={collaborators ?? []}
-          />
-        }
-        trigger="click"
-      >
-        <Button>
-          Data Filters
-          {` (${dataFilters.ordering.length})`}
-        </Button>
-      </Popover>
-      <Popover
-        placement="bottomLeft"
-        content={
-          <MetricFilter
-            filters={annotationFilters}
-            setFilters={setAnnotationFilters}
-            metricsSummary={annotationMetricsSummary}
-            metricRanges={annotationMetricRanges?.metrics}
-            featureHashMap={featureHashMap}
-            tags={tags ?? []}
-            collaborators={collaborators ?? []}
-          />
-        }
-        trigger="click"
-      >
-        <Button>
-          Annotation Filters
-          {` (${annotationFilters.ordering.length})`}
-        </Button>
-      </Popover>
+      <MetricFilter
+        filters={annotationFilters}
+        setFilters={setAnnotationFilters}
+        metricsSummary={annotationMetricsSummary}
+        metricRanges={annotationMetricRanges?.metrics}
+        featureHashMap={featureHashMap}
+        tags={tags ?? []}
+        collaborators={collaborators ?? []}
+      />
       <Button
         disabled={!canResetFilters}
         onClick={() => reset()}
@@ -157,6 +161,6 @@ export function Filters({
       >
         Reset filters
       </Button>
-    </Space.Compact>
+    </div>
   );
 }

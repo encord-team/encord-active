@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { Button, Row, Select, Slider, Typography } from "antd";
+import { Button, List, Row, Select, Slider, Typography } from "antd";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   EnumSummary,
@@ -232,18 +232,26 @@ function updateKey(
   };
 }
 
-function addNewEntry(
+export function addNewEntry(
   metricsSummary: ProjectDomainSummary,
   metricRanges: QuerySummary["metrics"] | undefined,
   featureHashMap: FeatureHashMap,
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
-  tags: ReadonlyArray<ProjectTagEntry>
+  tags: ReadonlyArray<ProjectTagEntry>,
+  newMetricName?: string
 ): (old: FilterState) => FilterState {
   return (old) => {
     // Try insert new 'metric' key.
-    const newMetricEntry = Object.entries(metricsSummary.metrics).find(
+    let newMetricEntry = Object.entries(metricsSummary.metrics).find(
       ([candidate]) => !(candidate in old.metricFilters)
     );
+
+    if (newMetricName !== undefined) {
+      newMetricEntry = Object.entries(metricsSummary.metrics).find(
+        ([candidate]) => candidate === newMetricName
+      );
+    }
+
     if (newMetricEntry != null) {
       const [newMetricKey, newMetricSummary] = newMetricEntry;
       const newMetricRanges =
@@ -380,10 +388,7 @@ export function MetricFilter(props: {
   }
 
   return (
-    <>
-      <Row>
-        <Typography.Text strong>Filters:</Typography.Text>
-      </Row>
+    <List className="gap-2">
       {filters.ordering.map((filterKey) => {
         const metric = metricsSummary.metrics[filterKey];
         const metricRange = metricRanges[filterKey];
@@ -401,48 +406,27 @@ export function MetricFilter(props: {
           metric != null ? metric.title : enumFilter?.title ?? "Error";
 
         return (
-          <Row align="middle" key={`row_filter_${filterKey}`}>
-            <Button
-              icon={<MinusOutlined />}
-              shape="circle"
-              size="small"
-              onClick={() => setFilters(deleteKey(filterKey, filterType))}
-            />
-            <Select
-              showSearch
-              value={filterKey}
-              bordered={false}
-              style={{
-                width: 200,
-                marginLeft: 10,
-                marginRight: 10,
-                marginTop: 5,
-                marginBottom: 5,
-              }}
-              onChange={(new_metric_key) =>
-                setFilters(
-                  updateKey(
-                    filterKey,
-                    new_metric_key,
-                    metricsSummary,
-                    metricRanges,
-                    featureHashMap,
-                    collaborators,
-                    tags
-                  )
-                )
-              }
-              options={[
-                ...filterOptions,
-                { value: filterKey, label: filterLabel },
-              ]}
-            />
+          <Row
+            align="middle"
+            key={`row_filter_${filterKey}`}
+            className="border-y p-4"
+          >
+            <div className="flex w-full justify-between">
+              {filterLabel}
+              <Button
+                icon={<MinusOutlined />}
+                shape="circle"
+                size="small"
+                onClick={() => setFilters(deleteKey(filterKey, filterType))}
+              />
+            </div>
+
             {metricBounds != null ? (
               <Slider
                 range={{ draggableTrack: true }}
                 min={metricBounds.min}
                 max={metricBounds.max}
-                style={{ width: 500 }}
+                className="w-full"
                 step={toFixedNumber(metricBounds.step, 2)}
                 value={
                   metricFilters != null
@@ -482,25 +466,6 @@ export function MetricFilter(props: {
           </Row>
         );
       })}
-      <Button
-        icon={<PlusOutlined />}
-        shape="circle"
-        size="small"
-        type="primary"
-        className="bg-black"
-        disabled={filterOptions.length === 0}
-        onClick={() =>
-          setFilters(
-            addNewEntry(
-              metricsSummary,
-              metricRanges,
-              featureHashMap,
-              collaborators,
-              tags
-            )
-          )
-        }
-      />
-    </>
+    </List>
   );
 }
