@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.engine import Engine
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, HTMLResponse
 
 from encord_active.server.dependencies import (
     dep_engine,
@@ -69,12 +69,12 @@ def get_app(engine: Engine, settings: Settings) -> FastAPI:
 
         @app.get("/{any:path}")
         @app.get("/index.html")
-        def _index():
-            return FileResponse(frontend_build_path / "index.html")
+        def _index() -> HTMLResponse:
+            return HTMLResponse(frontend_build_path / "index.html")
 
         @app.get("/favicon.ico")
-        def _favicon_ico():
-            return FileResponse(frontend_build_path / "favicon.ico")
+        def _favicon_ico() -> FileResponse:
+            return FileResponse(frontend_build_path / "favicon.ico", media_type="image/x-icon")
 
     app.mount("/ea-sandbox-static", StaticFiles(directory=IMAGES_PATH, follow_symlink=False), name="sandbox-static")
 

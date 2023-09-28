@@ -189,10 +189,10 @@ class ActiveProject:
                 with pyav_video_open(url, data_unit) as container:
                     video_decode_iter = iter(container.decode(video=0))
                     frame0 = next(video_decode_iter)
-                    if frame0.frame != 0:
-                        raise ValueError(f"Video starts at frame: {frame0.frame} != 0")
-                    if frame0.is_corrupt:
-                        raise ValueError(f"Corrupt video frame: {frame0.frame}")
+                    # if frame0.frame != 0:
+                    #     raise ValueError(f"Video starts at frame: {frame0.frame} != 0")
+                    # if frame0.is_corrupt:
+                    #     raise ValueError(f"Corrupt video frame: {frame0.frame}")
                     yield ActiveAnnotatedFrame(
                         data_unit, data_hash_map[data_unit.data_hash], frame0.to_image().convert("RGB")
                     )
@@ -207,10 +207,10 @@ class ActiveProject:
                             raise ValueError(
                                 f"Video decode length mismatch: {data_unit.data_hash}: {frame_idx} not found in db"
                             )
-                        if frame.is_corrupt:
-                            raise ValueError(f"Corrupt video frame: {frame_idx}")
-                        if frame_data_unit.frame != frame_idx:
-                            raise ValueError(f"Out of order frame iteration: {frame_data_unit.frame} != {frame_idx}")
+                        # if frame.is_corrupt:
+                        #     raise ValueError(f"Corrupt video frame: {frame_idx}")
+                        # if frame_data_unit.frame != frame_idx:
+                        #     raise ValueError(f"Out of order frame iteration: {frame_data_unit.frame} != {frame_idx}")
                         yield ActiveAnnotatedFrame(
                             frame_data_unit, data_hash_map[frame_data_unit.data_hash], frame.to_image().convert("RGB")
                         )
