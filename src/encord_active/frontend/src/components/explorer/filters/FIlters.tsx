@@ -1,14 +1,15 @@
 import { Button, Popover, Select, Space } from "antd";
-import { FilterState, MetricFilter } from "../../util/MetricFilter";
-import { Metric } from "../Explorer";
 import { MdFilterAltOff } from "react-icons/md";
-import { FeatureHashMap } from "../../Types";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
+import { Dispatch, SetStateAction } from "react";
+import { FilterState, MetricFilter } from "../../util/MetricFilter";
+import { FeatureHashMap } from "../../Types";
 import { useProjectListCollaborators } from "../../../hooks/queries/useProjectListCollaborators";
 import { useProjectListTags } from "../../../hooks/queries/useProjectListTags";
 import { useProjectAnalysisSummary } from "../../../hooks/queries/useProjectAnalysisSummary";
-import { Dispatch, SetStateAction } from "react";
 import { ProjectDomainSummary } from "../../../openapi/api";
+import { Metric } from "../ExplorerTypes";
+
 type Props = {
   projectHash: string;
   selectedMetric: Metric;

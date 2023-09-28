@@ -35,7 +35,7 @@ import {
 import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysisSearch";
-import { MetricDomain, ExplorerFilterState } from "./ExplorerTypes";
+import { MetricDomain, ExplorerFilterState, Metric } from "./ExplorerTypes";
 import { ItemPreviewModal } from "../preview/ItemPreviewModal";
 import { usePredictionAnalysisSearch } from "../../hooks/queries/usePredictionAnalysisSearch";
 import {
@@ -45,14 +45,9 @@ import {
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { FeatureHashMap } from "../Types";
 import { classy } from "../../helpers/classy";
-import { Filters } from "./filters/FIlters";
+import { Filters } from "./filters/Filters";
 import TableIcon from "../../../assets/table.svg";
 import EmbeddingsIcon from "../../../assets/dot-chart.svg";
-
-export type Metric = {
-  domain: "data" | "annotation";
-  metric_key: string;
-};
 
 export type Props = {
   projectHash: string;
