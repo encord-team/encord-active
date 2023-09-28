@@ -10,8 +10,6 @@ from pydantic import BaseModel
 from encord_active.db.models import (
     ImportMetadataType,
     Project,
-    ProjectDataMetadata,
-    ProjectDataUnitMetadata,
     ProjectImportMetadata,
 )
 
@@ -19,6 +17,7 @@ from ...db.enums import AnnotationType
 from ..local_files import get_data_uri
 from ..util import append_object_to_list
 from .op import ProjectImportSpec
+from .util import data_du_meta_for_local_image
 
 
 class CoCoFileInfo(BaseModel):
@@ -276,7 +275,6 @@ def import_coco(
     for image in coco_file.images:
         data_hash = uuid.uuid4()
         images_map[str(image.id)] = str(data_hash)
-        label_hash = uuid.uuid4()
         image_url_or_path = _get_image_url(image, images_dir_path)
 
         data_uri = get_data_uri(
@@ -302,44 +300,25 @@ def import_coco(
             else:
                 classifications.extend(coco_objects)
 
-        image_data_type = "png"
-        if len(image.file_name.split(".")) > 1:
-            image_data_type = image.file_name.split(".")[-1]
-
         # Save metadata
-        project_data_list.append(
-            ProjectDataMetadata(
-                project_hash=project_hash,
-                data_hash=data_hash,
-                label_hash=label_hash,
-                dataset_hash=dataset_hash,
-                num_frames=1,
-                frames_per_second=None,
-                dataset_title=dataset_title,
-                data_title=image.file_name,
-                data_type="image",
-                created_at=coco_timestamp,
-                last_edited_at=coco_timestamp,
-                object_answers=object_answers,
-                classification_answers={},
-            )
+        data_meta, du_meta = data_du_meta_for_local_image(
+            database_dir=database_dir,
+            project_hash=project_hash,
+            dataset_hash=dataset_hash,
+            dataset_title=dataset_title,
+            data_hash=data_hash,
+            timestamp=coco_timestamp,
+            data_title=image.file_name,
+            data_uri=data_uri,
+            width=image.width,
+            height=image.height,
+            objects=objects,
+            classifications=classifications,
+            object_answers=object_answers,
+            classification_answers={},
         )
-        project_du_list.append(
-            ProjectDataUnitMetadata(
-                project_hash=project_hash,
-                du_hash=data_hash,
-                frame=0,
-                data_hash=data_hash,
-                width=image.width,
-                height=image.height,
-                data_uri=data_uri,
-                data_uri_is_video=False,
-                data_title=image.file_name,
-                data_type=f"image/{image_data_type}",
-                objects=objects,
-                classifications=classifications,
-            )
-        )
+        project_data_list.append(data_meta)
+        project_du_list.append(du_meta)
 
     # Transform into encord-alike project spec
     if coco_file.info.encord_title is not None:

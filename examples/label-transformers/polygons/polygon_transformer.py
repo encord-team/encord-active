@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from encord_active.lib.labels.label_transformer import (
+from encord_active.public.label_transformer import (
     DataLabel,
     LabelTransformer,
     PolygonLabel,

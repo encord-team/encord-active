@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List
 
-from encord_active.lib.labels.label_transformer import (
+from encord_active.public.label_transformer import (
     ClassificationLabel,
     DataLabel,
     LabelTransformer,

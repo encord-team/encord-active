@@ -359,3 +359,7 @@ ci-tests
 # any sqlite database instance.
 *.sqlite
 node_modules
+
+# any local data materialized from local imports
+/examples/**/local-data/
+/local-data/

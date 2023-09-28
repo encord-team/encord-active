@@ -1,16 +1,18 @@
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from encord import EncordUserClient
 from encord.http.constants import RequestsSettings
 from sqlmodel import Session, select
 
 from ..db.models import Project, ProjectImportMetadata, get_engine
+from ..public.label_transformer import LabelTransformer
 from .prediction.coco import import_coco_result
 from .prediction.op import import_prediction
 from .project.coco import import_coco
 from .project.encord import import_encord
+from .project.label_transformer import import_label_transformer
 from .project.op import import_project, refresh_project
 
 
@@ -24,7 +26,7 @@ def import_coco_project(
     path = database_dir / "encord-active.sqlite"
     engine = get_engine(path)
     project_spec = import_coco(database_dir, annotations_file_path, images_dir_path, store_data_locally, store_symlinks)
-    import_project(engine, database_dir, project_spec, "")
+    import_project(engine, database_dir, project_spec, None)
 
 
 def import_encord_project(
@@ -39,6 +41,27 @@ def import_encord_project(
     encord_project = encord_client.get_project(str(encord_project_hash))
     project_spec = import_encord(encord_project, database_dir, store_data_locally)
     import_project(engine, database_dir, project_spec, ssh_key)
+
+
+def import_local_project(
+    database_dir: Path,
+    files: List[Path],
+    project_name: str,
+    symlinks: bool,
+    label_transformer: Optional[LabelTransformer],
+    label_paths: List[Path],
+) -> None:
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    project_spec = import_label_transformer(
+        database_dir=database_dir,
+        files=files,
+        project_name=project_name,
+        symlinks=symlinks,
+        label_transformer=label_transformer,
+        label_paths=label_paths,
+    )
+    import_project(engine, database_dir, project_spec, None)
 
 
 def refresh_encord_project(

@@ -40,7 +40,7 @@ class ProjectImportSpec:
     project_du_list: List[ProjectDataUnitMetadata]
 
 
-def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpec, ssh_key: str) -> None:
+def import_project(engine: Engine, database_dir: Path, project: ProjectImportSpec, ssh_key: Optional[str]) -> None:
     """
     Imports a project-spec into active.
     """

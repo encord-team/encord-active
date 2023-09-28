@@ -9,7 +9,6 @@ from rich.markup import escape
 from rich.prompt import Confirm
 from tqdm.auto import tqdm
 
-from encord_active.cli.utils.server import ensure_safe_project
 from encord_active.server.settings import AvailableSandboxProjects
 
 
@@ -196,7 +195,7 @@ def fetch_prebuilt_project(
         return output_file_path
 
     unpacked_archive_path = unpack_archive(output_file_path, out_dir)
-    ensure_safe_project(unpacked_archive_path)
+    # ensure_safe_project(unpacked_archive_path)
     return unpacked_archive_path
 
 

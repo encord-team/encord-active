@@ -1,5 +1,7 @@
+import mimetypes
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
 import cv2
@@ -14,6 +16,13 @@ from encord_active.db.enums import AnnotationType
 
 GMT_TIMEZONE = pytz.timezone("GMT")
 DATETIME_STRING_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
+
+
+def get_mimetype(path: Path, fallback: str = "unknown") -> str:
+    guess = mimetypes.guess_type(path)[0]
+    if guess:
+        return guess
+    return f"{fallback}/{path.suffix[1:]}"
 
 
 def get_timestamp():

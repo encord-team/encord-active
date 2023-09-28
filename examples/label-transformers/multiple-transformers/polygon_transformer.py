@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 from utils import get_meta_and_labels, label_file_to_image
 
-from encord_active.lib.labels.label_transformer import (
+from encord_active.public.label_transformer import (
     DataLabel,
     LabelTransformer,
     PolygonLabel,

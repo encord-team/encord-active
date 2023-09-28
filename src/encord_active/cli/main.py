@@ -1,4 +1,3 @@
-import json
 import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Set
@@ -144,7 +143,7 @@ def download(
             raise typer.Abort()
         project_hash = project_names_to_hash_map[answer]
 
-    fetch_prebuilt_project(all_projects[project_hash], engine, database_dir)
+    fetch_prebuilt_project(all_projects[project_hash], engine, database_dir, store_data_locally=store_data_locally)
     success_with_vizualise_command(database_dir, "Successfully downloaded sandbox dataset. ")
 
 
@@ -167,20 +166,16 @@ def import_local_project(
         None,
         "--label-glob",
         "-lg",
-        help="Glob pattern to choose label files. Repeat the `--label-glob` argument to match multiple globs. This argument is only used if you also provide the `transformer` argument.",
+        help="Glob pattern to choose label files. Repeat the `--label-glob` argument to match multiple globs. This "
+        "argument is only used if you also provide the `transformer` argument.",
     ),
-    target: Path = typer.Option(
-        Path.cwd(),
-        "--target",
-        "-t",
-        help="Directory where the project would be saved.",
-        file_okay=False,
-    ),
+    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
     project_name: str = typer.Option(
         "",
         "--name",
         "-n",
-        help="Name to give the new project. If no name is provided, the root directory will be used with '[EA] ' prepended.",
+        help="Name to give the new project. If no name is provided, the root directory will be used with '[EA] ' "
+        "prepended.",
     ),
     symlinks: bool = typer.Option(
         False,
@@ -190,13 +185,10 @@ def import_local_project(
         False,
         help="Print the files that will be imported WITHOUT importing them.",
     ),
-    metrics: bool = typer.Option(
-        True,
-        help="Run the metrics on the initiated project.",
-    ),
     transformer: Path = typer.Option(
         None,
-        help="Path to python module with one or more implementations of the `[blue]encord_active.lib.labels.label_transformer.LabelTransformer[/blue]` interface.",
+        help="Path to python module with one or more implementations of the "
+        "`[blue]encord_active.public.label_transformer.LabelTransformer[/blue]` interface.",
         exists=True,
     ),
 ):
@@ -211,27 +203,20 @@ def import_local_project(
     Both glob results will be passed to your implementation of the `LabelTransformer` interface if you provide a `transformer` argument.
 
     """
-    from encord.ontology import OntologyStructure
     from InquirerPy import inquirer as i
     from InquirerPy.base.control import Choice
 
-    from encord_active.lib.labels.label_transformer import (
+    from encord_active.imports.op import (
+        import_local_project as import_local_project_impl,
+    )
+    from encord_active.imports.project.label_transformer import (
+        NoFilesFoundError,
+        file_glob,
+    )
+    from encord_active.public.label_transformer import (
         TransformerResult,
         load_transformers_from_module,
     )
-    from encord_active.lib.metrics.execute import (
-        run_metrics,
-        run_metrics_by_embedding_type,
-    )
-    from encord_active.lib.metrics.heuristic.img_features import AreaMetric
-    from encord_active.lib.metrics.types import EmbeddingType
-    from encord_active.lib.project.local import (
-        NoFilesFoundError,
-        ProjectExistsError,
-        file_glob,
-        init_local_project,
-    )
-    from encord_active.lib.project.project_file_structure import ProjectFileStructure
 
     try:
         data_result = file_glob(root, data_glob, images_only=True)
@@ -355,46 +340,15 @@ def import_local_project(
     if not project_name:
         project_name = f"[EA] {root.name}"
 
-    try:
-        project_path = init_local_project(
-            files=data_result.matched,
-            target=target,
-            project_name=project_name,
-            symlinks=symlinks,
-            label_transformer=transformer_instance,
-            label_paths=label_result,
-        )
-
-    except ProjectExistsError as e:
-        rich.print(
-            Panel(
-                f"""
-{str(e)}
-
-Consider removing the directory or setting the `--name` option.
-                """,
-                title=":open_file_folder: Project already exists :open_file_folder:",
-                expand=False,
-                style="yellow",
-            )
-        )
-        raise typer.Abort()
-
-    metricize_options = {"data_dir": project_path, "use_cache_only": True}
-    if metrics:
-        run_metrics_by_embedding_type(EmbeddingType.IMAGE, **metricize_options)
-
-        ontology = OntologyStructure.from_dict(json.loads(ProjectFileStructure(project_path).ontology.read_text()))
-        if ontology.objects:
-            run_metrics_by_embedding_type(EmbeddingType.OBJECT, **metricize_options)
-        if ontology.classifications:
-            run_metrics_by_embedding_type(EmbeddingType.CLASSIFICATION, **metricize_options)
-
-    else:
-        # NOTE: we need to compute at least one metric otherwise everything breaks
-        run_metrics(filter_func=lambda x: isinstance(x, AreaMetric), **metricize_options)
-
-    success_with_vizualise_command(project_path, "Project initialised :+1:")
+    import_local_project_impl(
+        database_dir=database_dir,
+        files=data_result.matched,
+        project_name=project_name,
+        symlinks=symlinks,
+        label_transformer=transformer_instance,
+        label_paths=label_result,
+    )
+    success_with_vizualise_command(database_dir, "Project initialised :+1:")
 
 
 @cli.command(name="refresh")
