@@ -1,5 +1,4 @@
 import { Button, Popover, Select, Space } from "antd";
-import { ProjectDomainSummary } from "../../../openapi/api";
 import { FilterState, MetricFilter } from "../../util/MetricFilter";
 import { Metric } from "../Explorer";
 import { MdFilterAltOff } from "react-icons/md";
@@ -9,7 +8,7 @@ import { useProjectListCollaborators } from "../../../hooks/queries/useProjectLi
 import { useProjectListTags } from "../../../hooks/queries/useProjectListTags";
 import { useProjectAnalysisSummary } from "../../../hooks/queries/useProjectAnalysisSummary";
 import { Dispatch, SetStateAction } from "react";
-
+import { ProjectDomainSummary } from "../../../openapi/api";
 type Props = {
   projectHash: string;
   selectedMetric: Metric;
@@ -51,13 +50,14 @@ export function Filters({
   toggleShowAnnotations,
 }: Props) {
   // Load metric ranges
-  const { data: dataMetricRanges, isLoading: isLoadingDataMetrics } =
-    useProjectAnalysisSummary(projectHash, "data");
-  const {
-    data: annotationMetricRanges,
-    isLoading: isLoadingAnnotationMetrics,
-  } = useProjectAnalysisSummary(projectHash, "annotation");
-  const isLoadingMetrics = isLoadingDataMetrics || isLoadingAnnotationMetrics;
+  const { data: dataMetricRanges } = useProjectAnalysisSummary(
+    projectHash,
+    "data"
+  );
+  const { data: annotationMetricRanges } = useProjectAnalysisSummary(
+    projectHash,
+    "annotation"
+  );
 
   // Load all collaborators & tags -> needed to support filters
   const { data: collaborators } = useProjectListCollaborators(projectHash);

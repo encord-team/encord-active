@@ -16,6 +16,8 @@ import {
   Tooltip,
   Typography,
 } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
+import { SegmentedValue } from "antd/es/segmented";
 import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
 import { BulkTaggingForm } from "./Tagging";
@@ -43,9 +45,7 @@ import {
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { FeatureHashMap } from "../Types";
 import { classy } from "../../helpers/classy";
-import { InfoCircleOutlined } from "@ant-design/icons";
 import { Filters } from "./filters/FIlters";
-import { SegmentedValue } from "antd/es/segmented";
 import TableIcon from "../../../assets/table.svg";
 import EmbeddingsIcon from "../../../assets/dot-chart.svg";
 
@@ -133,7 +133,7 @@ export function Explorer({
     setShowAnnotations(selectedMetric.domain === "annotation");
   }, [selectedMetric.domain, setShowAnnotations]);
 
-  //Data or Label selection
+  // Data or Label selection
   const [metricDomain, setMetricDomain] = useState<MetricDomain>("Data");
   const [selectedMetricData, setSelectedMetricData] = useState<Metric>({
     domain: "data",
@@ -146,18 +146,18 @@ export function Explorer({
 
   const handleSelectedDomainChange = (val: MetricDomain) => {
     setMetricDomain(val);
-    if (val == "Data") {
+    if (val === "Data") {
       setSelectedMetric(selectedMetricData);
-    } else if (val == "Label") {
+    } else if (val === "Label") {
       setSelectedMetric(selectedMetricLabel);
     }
   };
 
   const handleMetricChange = (val: Metric) => {
     setSelectedMetric(val);
-    if (val.domain == "data") {
+    if (val.domain === "data") {
       setSelectedMetricData(val);
-    } else if (val.domain == "annotation") {
+    } else if (val.domain === "annotation") {
       setSelectedMetricLabel(val);
     }
   };
@@ -227,12 +227,14 @@ export function Explorer({
   const filters: ExplorerFilterState = useDebounce(rawFilters, 500);
 
   // Load metric ranges
-  const { data: dataMetricRanges, isLoading: isLoadingDataMetrics } =
-    useProjectAnalysisSummary(projectHash, "data");
-  const {
-    data: annotationMetricRanges,
-    isLoading: isLoadingAnnotationMetrics,
-  } = useProjectAnalysisSummary(projectHash, "annotation");
+  const { isLoading: isLoadingDataMetrics } = useProjectAnalysisSummary(
+    projectHash,
+    "data"
+  );
+  const { isLoading: isLoadingAnnotationMetrics } = useProjectAnalysisSummary(
+    projectHash,
+    "annotation"
+  );
   const isLoadingMetrics = isLoadingDataMetrics || isLoadingAnnotationMetrics;
 
   // Premium search hooks:
