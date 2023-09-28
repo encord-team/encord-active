@@ -142,6 +142,7 @@ export function Filters({
         metricsSummary={dataMetricsSummary}
         metricRanges={dataMetricRanges?.metrics}
         featureHashMap={featureHashMap}
+        projectHash={projectHash}
         tags={tags ?? []}
         collaborators={collaborators ?? []}
       />
@@ -151,6 +152,7 @@ export function Filters({
         metricsSummary={annotationMetricsSummary}
         metricRanges={annotationMetricRanges?.metrics}
         featureHashMap={featureHashMap}
+        projectHash={projectHash}
         tags={tags ?? []}
         collaborators={collaborators ?? []}
       />

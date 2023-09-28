@@ -10,6 +10,8 @@ import {
   QuerySummary,
 } from "../../openapi/api";
 import { FeatureHashMap } from "../Types";
+import { EachMetricChartDistributionBar } from "../charts/EachMetricChartDistributionBar";
+import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 
 export type FilterState = {
   readonly metricFilters: Readonly<Record<string, readonly number[]>>;
@@ -315,6 +317,7 @@ export function MetricFilter(props: {
   featureHashMap: FeatureHashMap;
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>;
   tags: ReadonlyArray<ProjectTagEntry>;
+  projectHash: string;
 }) {
   const {
     filters,
@@ -324,6 +327,7 @@ export function MetricFilter(props: {
     featureHashMap,
     collaborators,
     tags,
+    projectHash,
   } = props;
 
   // Remove any invalid filters.
@@ -374,6 +378,9 @@ export function MetricFilter(props: {
     return [...metricOptions, ...enumOptions];
   }, [filters.ordering, metricsSummary]);
 
+  //all the data we need
+  const summary = useProjectAnalysisSummary(projectHash, "data");
+  const { data } = summary;
   // We need range information.
   if (metricRanges === undefined || metricsSummary === undefined) {
     return (
@@ -415,11 +422,20 @@ export function MetricFilter(props: {
               {filterLabel}
               <Button
                 icon={<MinusOutlined />}
-                shape="circle"
+                shape="default"
                 size="small"
                 onClick={() => setFilters(deleteKey(filterKey, filterType))}
               />
             </div>
+
+            <EachMetricChartDistributionBar
+              metricsSummary={metricsSummary}
+              analysisSummary={data}
+              analysisDomain="data"
+              projectHash={projectHash}
+              featureHashMap={featureHashMap}
+              property={filterKey}
+            />
 
             {metricBounds != null ? (
               <Slider
