@@ -423,7 +423,7 @@ class SimpleExecutor(Executor):
             frames: List[Tuple[BaseFrameInput, Optional[Dict[str, AnnotationMetadata]]]] = []
             iter_frame_num = -1
             # FIXME: use torchvision VideoReader!!
-            with av.open(str(video_url_or_path), mode="r") as container:
+            with av.open(str(video_url_or_path), mode="r", format=video_start.data_title.split(".")[-1]) as container:
                 for frame in tqdm(
                     container.decode(video=0),
                     desc=f" - Processing Video: {data_metadata.data_title}",

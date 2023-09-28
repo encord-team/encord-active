@@ -181,7 +181,7 @@ class ActiveProject:
             data_unit = next(data_unit_iter)
             url = self._lookup_url(data_unit.data_hash, data_unit.du_hash, data_unit.data_uri)
             if data_unit.data_uri_is_video:
-                with av.open(str(url), mode="r") as container:
+                with av.open(str(url), mode="r", format=data_unit.data_title.split(".")[-1]) as container:
                     video_decode_iter = iter(container.decode(video=0))
                     frame0 = next(video_decode_iter)
                     if frame0.frame != 0:
