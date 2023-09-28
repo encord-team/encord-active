@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
 
-import av
 import encord
 import numpy as np
 import torch

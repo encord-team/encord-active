@@ -92,7 +92,7 @@ def pyav_video_open(
     except ValueError as no_container_format:
         if "no container format" not in str(no_container_format):
             raise no_container_format
-    logging.warning(f"Failed to infer video type, retrying with data_type")
+    logging.warning("Failed to infer video type, retrying with data_type")
 
     try:
         # Try with explicit data unit data type.
@@ -102,7 +102,7 @@ def pyav_video_open(
     except ValueError as no_container_format:
         if "no container format" not in str(no_container_format):
             raise no_container_format
-    logging.warning(f"Failed to infer video type, retrying with data_title suffix")
+    logging.warning("Failed to infer video type, retrying with data_title suffix")
 
     # Guess from file extension recorded in data title
     with av.open(str(url_or_path), mode="r", format=data_unit.data_title.split(".")[-1]) as container:

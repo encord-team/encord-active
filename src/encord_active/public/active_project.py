@@ -14,7 +14,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Union
 
-import av
 import encord
 from encord import EncordUserClient
 from encord.http.constants import RequestsSettings
