@@ -73,7 +73,7 @@ class EncordActions:
         if not ssh_key_path.is_file():
             raise FileNotFoundError(f"No SSH file in location: {ssh_key_path}")
 
-        self.user_client = get_client(ssh_key_path.expanduser())
+        self.user_client = get_client(ssh_key_path.read_text("utf-8"))
         self.ssh_key_path = ssh_key_path
 
     @property

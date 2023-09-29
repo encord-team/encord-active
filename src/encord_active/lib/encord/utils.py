@@ -3,7 +3,6 @@ from dataclasses import asdict
 from datetime import datetime
 from enum import Enum
 from json import dumps as json_dumps
-from pathlib import Path
 from typing import Dict, List, Optional, TypedDict, Union
 
 from encord import EncordUserClient
