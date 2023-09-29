@@ -42,12 +42,12 @@ class AppConfig:
         _is_dev = self.contents.get(ConfigProperties.DEV.value, "false")
         return _is_dev.lower()[0] in {"t", "1"} if _is_dev else False
 
-    def get_ssh_key(self) -> Optional[Path]:
+    def get_ssh_key(self) -> Optional[str]:
         if ConfigProperties.SSH_KEY_PATH.value in self.contents:
-            return Path(self.contents[ConfigProperties.SSH_KEY_PATH.value]).expanduser()
+            return Path(self.contents[ConfigProperties.SSH_KEY_PATH.value]).expanduser().read_text(encoding="utf-8")
         return None
 
-    def get_or_query_ssh_key(self) -> Path:
+    def get_or_query_ssh_key(self) -> str:
         saved_key_path = self.get_ssh_key()
         if saved_key_path:
             return saved_key_path
@@ -75,7 +75,7 @@ Don't know this? Please see our documentation on the topic to get more help.
         self.contents[ConfigProperties.SSH_KEY_PATH.value] = ssh_key_path.as_posix()
         self.save()
 
-        return ssh_key_path
+        return ssh_key_path.read_text(encoding="utf-8")
 
 
 APP_NAME = "encord-active"

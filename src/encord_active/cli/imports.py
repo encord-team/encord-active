@@ -9,6 +9,7 @@ from encord_active.cli.common import TYPER_ENCORD_DATABASE_DIR
 from encord_active.cli.config import app_config
 from encord_active.cli.utils.prints import success_with_vizualise_command
 from encord_active.lib.encord.utils import get_encord_projects
+from encord_active.server.settings import get_settings
 
 import_cli = typer.Typer(rich_markup_mode="markdown")
 
@@ -104,8 +105,8 @@ def import_project(
         from InquirerPy.base.control import Choice
         from rich.panel import Panel
 
-        ssh_key_path = app_config.get_or_query_ssh_key()
-        projects = get_encord_projects(ssh_key_path)
+        ssh_key = get_settings().SSH_KEY or app_config.get_or_query_ssh_key()
+        projects = get_encord_projects(ssh_key)
         if not projects:
             rich.print(
                 Panel(
@@ -149,7 +150,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
     else:
         from encord_active.imports.op import import_encord_project
 
-        ssh_key = app_config.get_or_query_ssh_key().read_text("utf-8")
+        ssh_key = get_settings().SSH_KEY or app_config.get_or_query_ssh_key()
         import_encord_project(
             database_dir=database_dir,
             encord_project_hash=project_hash,

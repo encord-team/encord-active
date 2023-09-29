@@ -44,30 +44,28 @@ class ProjectQuery(TypedDict, total=False):
     edited_after: Union[str, datetime]
 
 
-def get_client(ssh_key_path: Path):
+def get_client(ssh_key: str):
     return EncordUserClient.create_with_ssh_private_key(
-        ssh_key_path.read_text(encoding="utf-8"),
+        ssh_key,
         requests_settings=RequestsSettings(max_retries=5),
     )
 
 
-def get_encord_project(ssh_key_path: Union[str, Path], project_hash: str):
-    if isinstance(ssh_key_path, str):
-        ssh_key_path = Path(ssh_key_path)
-    client = get_client(ssh_key_path)
+def get_encord_project(ssh_key: str, project_hash: str):
+    client = get_client(ssh_key)
     return client.get_project(project_hash)
 
 
-def get_encord_projects(ssh_key_path: Path, query: Optional[ProjectQuery] = None) -> List[Project]:
-    client = get_client(ssh_key_path)
+def get_encord_projects(ssh_key: str, query: Optional[ProjectQuery] = None) -> List[Project]:
+    client = get_client(ssh_key)
     if query is None:  # Get all projects
         query = ProjectQuery()
     projects: List[Project] = list(map(lambda x: x["project"], client.get_projects(**query)))
     return projects
 
 
-def get_projects_json(ssh_key_path: Path, query: Optional[ProjectQuery] = None) -> str:
-    projects = get_encord_projects(ssh_key_path, query)
+def get_projects_json(ssh_key: str, query: Optional[ProjectQuery] = None) -> str:
+    projects = get_encord_projects(ssh_key, query)
     return json_dumps({p.project_hash: p.title for p in projects}, indent=2)
 
 

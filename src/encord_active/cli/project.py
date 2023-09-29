@@ -47,7 +47,7 @@ def download_data(
         encord_project = None
         if project.remote:
             encord_client = EncordUserClient.create_with_ssh_private_key(
-                app_config.get_or_query_ssh_key().read_text("utf-8"),
+                app_config.get_or_query_ssh_key(),
                 requests_settings=RequestsSettings(max_retries=5),
             )
             encord_project = encord_client.get_project(str(project_hash))

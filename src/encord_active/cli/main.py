@@ -376,7 +376,7 @@ def refresh(
         from encord_active.imports.op import refresh_encord_project
 
         project_hash = select_project_hash_from_name(database_dir, project_name or "")
-        ssh_key = app_config.get_or_query_ssh_key().read_text("utf-8")
+        ssh_key = app_config.get_or_query_ssh_key()
         changes = refresh_encord_project(
             database_dir=database_dir,
             encord_project_hash=project_hash,

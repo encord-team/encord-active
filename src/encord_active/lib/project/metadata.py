@@ -49,8 +49,8 @@ def fetch_encord_project_instance(data_dir: Path) -> EncordProject:
     if "ssh_key_path" not in project_meta:
         raise ValueError("SSH Key path missing in project metadata.")
 
-    private_key_file = Path(project_meta["ssh_key_path"]).expanduser().absolute()
-    client = get_client(private_key_file)
+    private_key = Path(project_meta["ssh_key_path"]).expanduser().absolute().read_text(encoding="utf-8")
+    client = get_client(private_key)
 
     # == Project hash == #
     if "project_hash" not in project_meta:

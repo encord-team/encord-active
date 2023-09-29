@@ -253,7 +253,7 @@ class ActiveContext:
         self._database_dir = path
         self._engine = get_engine(path / "encord-active.sqlite")
         if ssh_key is None:
-            self._ssh_key = app_config.get_or_query_ssh_key().read_text("utf-8")
+            self._ssh_key = app_config.get_or_query_ssh_key()
         else:
             self._ssh_key = ssh_key
 

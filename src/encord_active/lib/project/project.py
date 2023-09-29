@@ -149,14 +149,18 @@ class Project:
         if project_hash is None:
             raise AttributeError("The project does not have a remote project associated to it.")
 
-        ssh_key_path = self.project_meta.get("ssh_key_path", app_config.get_ssh_key())
+        ssh_key_path = self.project_meta.get("ssh_key_path")
         if ssh_key_path is None:
-            raise AttributeError(
-                "The project metadata is missing the path to the private SSH key needed to log into Encord Annotate. "
-                f"Add such path to the property `ssh_key_path` in the file {self.file_structure.project_meta}."
-            )
+            ssh_key = app_config.get_ssh_key()
+            if ssh_key is None:
+                raise AttributeError(
+                    "The project metadata is missing the path to the private SSH key needed to log into Encord Annotate. "
+                    f"Add such path to the property `ssh_key_path` in the file {self.file_structure.project_meta}."
+                )
+        else:
+            ssh_key = Path(ssh_key_path).read_text(encoding="utf-8")
 
-        encord_client = get_client(Path(ssh_key_path))
+        encord_client = get_client(ssh_key)
         encord_project = encord_client.get_project(project_hash)
 
         self.__save_project_meta(encord_project)

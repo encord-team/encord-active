@@ -55,7 +55,7 @@ class DataUnitStructure(NamedTuple):
 
 @functools.lru_cache(maxsize=10)
 def get_encord_project_cached(ssh_key_path: str, project_hash: str) -> encord.Project:
-    return get_encord_project(ssh_key_path=ssh_key_path, project_hash=project_hash)
+    return get_encord_project(ssh_key=Path(ssh_key_path).read_text(encoding="utf-8"), project_hash=project_hash)
 
 
 class LabelRowStructure:
