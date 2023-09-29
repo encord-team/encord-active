@@ -1,6 +1,5 @@
-import { Button, List, Popover, Select, Space } from "antd";
+import { Button, Select } from "antd";
 import { MdFilterAltOff } from "react-icons/md";
-import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { Dispatch, SetStateAction } from "react";
 import {
   FilterState,
@@ -11,10 +10,7 @@ import { FeatureHashMap } from "../../Types";
 import { useProjectListCollaborators } from "../../../hooks/queries/useProjectListCollaborators";
 import { useProjectListTags } from "../../../hooks/queries/useProjectListTags";
 import { useProjectAnalysisSummary } from "../../../hooks/queries/useProjectAnalysisSummary";
-import {
-  DomainSearchFilters,
-  ProjectDomainSummary,
-} from "../../../openapi/api";
+import { ProjectDomainSummary } from "../../../openapi/api";
 import { Metric } from "../ExplorerTypes";
 
 type Props = {
@@ -72,11 +68,8 @@ export function Filters({
   const { data: tags } = useProjectListTags(projectHash);
 
   // get active filters
-  const getEachKeyValueObj = (obj: any) => {
-    return Object.keys(obj).map((key) => {
-      return { [key]: obj[key] };
-    });
-  };
+  const getEachKeyValueObj = (obj: any) =>
+    Object.keys(obj).map((key) => ({ [key]: obj[key] }));
 
   const activeMetricFilters: Array<{ [item: string]: number }> =
     getEachKeyValueObj(dataFilters.metricFilters);

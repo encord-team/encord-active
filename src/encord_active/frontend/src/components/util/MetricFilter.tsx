@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { Button, List, Row, Select, Slider, Typography } from "antd";
+import { Button, List, Row, Select, Slider } from "antd";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   EnumSummary,
@@ -378,7 +378,7 @@ export function MetricFilter(props: {
     return [...metricOptions, ...enumOptions];
   }, [filters.ordering, metricsSummary]);
 
-  //all the data we need
+  // all the data we need
   const summary = useProjectAnalysisSummary(projectHash, "data");
   const { data } = summary;
   // We need range information.

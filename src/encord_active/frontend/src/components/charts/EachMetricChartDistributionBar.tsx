@@ -1,15 +1,11 @@
-import { Checkbox, Select, Space, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
-  Legend,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis,
 } from "recharts";
 import { formatTooltip } from "../util/Formatter";
 import { useProjectAnalysisDistribution } from "../../hooks/queries/useProjectAnalysisDistribution";
@@ -214,27 +210,25 @@ export function EachMetricChartDistributionBar(props: {
   };
 
   return (
-    <>
-      <ResponsiveContainer width="100%" height={100}>
-        <BarChart data={barData} className="active-chart">
-          <XAxis
-            dataKey="group"
-            type={isMetric && barData.length > 1 ? "number" : "category"}
-            domain={
-              isMetric && barData.length > 1
-                ? [barData[0].group, barData[barData.length - 1].group]
-                : undefined
-            }
-            padding="no-gap"
-          />
-          <Tooltip formatter={formatTooltip} />
+    <ResponsiveContainer width="100%" height={100}>
+      <BarChart data={barData} className="active-chart">
+        <XAxis
+          dataKey="group"
+          type={isMetric && barData.length > 1 ? "number" : "category"}
+          domain={
+            isMetric && barData.length > 1
+              ? [barData[0].group, barData[barData.length - 1].group]
+              : undefined
+          }
+          padding="no-gap"
+        />
+        <Tooltip formatter={formatTooltip} />
 
-          <Bar dataKey="count" isAnimationActive={false} />
-          {metadata === undefined || !showQuartiles
-            ? null
-            : referenceLines(metadata)}
-        </BarChart>
-      </ResponsiveContainer>
-    </>
+        <Bar dataKey="count" isAnimationActive={false} />
+        {metadata === undefined || !showQuartiles
+          ? null
+          : referenceLines(metadata)}
+      </BarChart>
+    </ResponsiveContainer>
   );
 }

@@ -1,10 +1,31 @@
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, WarningOutlined } from "@ant-design/icons";
 import { Space } from "antd";
+import { useMemo } from "react";
+import { isEmpty } from "radash";
+import { useProjectAnalysisSummary } from "../../../hooks/queries/useProjectAnalysisSummary";
+import { AnalysisDomain } from "../../../openapi/api";
 
 type Props = {
-  totalFrames: number;
+  projectHash: string;
+  analysisDomain: AnalysisDomain;
 };
-export function Overview({ totalFrames }: Props) {
+export function Overview({ projectHash, analysisDomain }: Props) {
+  const summary = useProjectAnalysisSummary(projectHash, analysisDomain);
+  const { data } = summary;
+  // Derived: Total outliers
+  const [totalSevereOutlier, totalFrames] = useMemo(() => {
+    if (data == null || isEmpty(data.metrics)) {
+      return [0, 0, 0];
+    }
+
+    const frames = data.count;
+    const severe = Object.values(data.metrics)
+      .map((metric) => metric?.severe ?? 0)
+      .reduce((a, b) => a + b);
+
+    return [severe, frames];
+  }, [data]);
+
   return (
     <Space direction="vertical" size="large" className="p-4">
       <div className="gap-f flex flex-col">
@@ -13,18 +34,11 @@ export function Overview({ totalFrames }: Props) {
       </div>
       <Space size="small" direction="vertical">
         <div className="text-base text-gray-500">
-          Data Quality Score <InfoCircleOutlined />
+          Severe Outliers <InfoCircleOutlined />
         </div>
-        <div className="text-2xl">50</div>
-      </Space>
-      <Space size="small" direction="vertical">
-        <div className="text-base text-gray-500">
-          Issue Types <InfoCircleOutlined />
+        <div className="text-2xl">
+          <WarningOutlined className="text-severe" /> {totalSevereOutlier}
         </div>
-        <div className="text-sm">Duplicate</div>
-        <div className="text-sm">Blur</div>
-        <div className="text-sm">Dark</div>
-        <div className="text-sm">Bright</div>
       </Space>
     </Space>
   );

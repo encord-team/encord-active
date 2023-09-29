@@ -14,7 +14,6 @@ type Props = {
   setSelectedMetric: (val: Metric) => void;
   isAscending: boolean;
   setIsAscending: Dispatch<SetStateAction<boolean>>;
-
   showAnnotations: boolean;
   toggleShowAnnotations: any;
 };

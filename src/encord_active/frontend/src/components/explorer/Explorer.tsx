@@ -19,6 +19,7 @@ import {
 import { SegmentedValue } from "antd/es/segmented";
 import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
+import { DotChartOutlined, TableOutlined } from "@ant-design/icons";
 import { BulkTaggingForm } from "./Tagging";
 import { FilterState, DefaultFilters } from "../util/MetricFilter";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
@@ -47,7 +48,6 @@ import { classy } from "../../helpers/classy";
 import { Filters } from "./filters/Filters";
 import { Overview } from "./overview/Overview";
 import { Display } from "./display/Display";
-import { DotChartOutlined, TableOutlined } from "@ant-design/icons";
 
 export type Props = {
   projectHash: string;
@@ -663,7 +663,14 @@ export function Explorer({
               {
                 label: "Overview",
                 key: "overview",
-                children: <Overview totalFrames={itemsToRender.length} />,
+                children: (
+                  <Overview
+                    projectHash={projectHash}
+                    analysisDomain={
+                      metricDomain == "Data" ? "data" : "annotation"
+                    }
+                  />
+                ),
               },
               {
                 label: "Filter",
