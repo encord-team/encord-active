@@ -1,6 +1,7 @@
 import Icon, {
   CheckOutlined,
   CloseOutlined,
+  FontSizeOutlined,
   FullscreenOutlined,
   StopOutlined,
 } from "@ant-design/icons";
@@ -210,6 +211,19 @@ function GalleryCardRaw(props: {
         elem.classificationHash === annotationHash
     );
   }, [annotationHash, preview]);
+
+  const labelAnswers:
+    | undefined
+    | {
+        classifications?: readonly {
+          readonly answers?: string | any[];
+          readonly featureHash: string;
+        }[];
+      } =
+    preview === undefined || annotationHash === undefined
+      ? undefined
+      : preview.classification_answers[annotationHash] ??
+        (preview.object_answers[annotationHash] as any);
 
   const isLoading = projectItem
     ? isLoadingProject
@@ -428,6 +442,20 @@ function GalleryCardRaw(props: {
               </Row>
             </Tag>
           </Row>
+          {(labelAnswers?.classifications ?? [])
+            .filter((v) => typeof v.answers === "string")
+            .map((v) => (
+                <Row className="mt-1" key={v.featureHash}>
+                  <Tag bordered={false} color="geekblue" className="rounded-xl">
+                    <Row>
+                      <FontSizeOutlined />
+                      <Typography.Text className="ml-1">
+                        {v.answers}
+                      </Typography.Text>
+                    </Row>
+                  </Tag>
+                </Row>
+              ))}
           {predictionTy != null ? (
             <Row className="mt-1">
               <Tag bordered={false} color="volcano" className="rounded-xl">
