@@ -233,7 +233,7 @@ class ActiveProject:
             else:
                 # Single image - direct import & yield.
                 if isinstance(url, Path):
-                    return Image.open(url)
+                    image = Image.open(url)
                 else:
                     img_bytes = download_remote_to_bytes(url)
                     image = Image.open(BytesIO(img_bytes))
