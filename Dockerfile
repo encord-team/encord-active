@@ -45,8 +45,6 @@ COPY ./README.md /home/appuser/
 
 RUN poetry install --only-root --extras psycopg2
 
-RUN poetry run prisma generate --schema=./src/encord_active/lib/db/schema.prisma
-
 WORKDIR /data
 
 RUN git config --global --add safe.directory '*'
