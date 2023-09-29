@@ -98,7 +98,7 @@ function ExplorerSearchResultsRaw(props: {
   return (
     <div className="relative h-full overflow-auto">
       <List
-        className="absolute mt-2.5 px-2"
+        className="absolute mt-2.5 gap-1 px-2"
         dataSource={dataSource}
         grid={{
           column: gridCount ?? 4,
@@ -132,6 +132,7 @@ function ExplorerSearchResultsRaw(props: {
             hideExtraAnnotations={showAnnotations}
             featureHashMap={featureHashMap}
             iou={iou}
+            gridCount={gridCount}
           />
         )}
       />

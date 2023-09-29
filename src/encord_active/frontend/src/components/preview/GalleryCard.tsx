@@ -80,6 +80,7 @@ function GalleryCardRaw(props: {
   hideExtraAnnotations: boolean;
   iou: number;
   featureHashMap: FeatureHashMap;
+  gridCount: number | undefined;
 }) {
   const {
     projectHash,
@@ -95,6 +96,7 @@ function GalleryCardRaw(props: {
     hideExtraAnnotations,
     featureHashMap,
     iou,
+    gridCount,
   } = props;
   // Conditionally extract annotation hash
   const dataId = toDataItemID(itemId);
@@ -269,19 +271,18 @@ function GalleryCardRaw(props: {
   return (
     <Card
       hoverable
-      style={{ width: 240, margin: 10 }}
       onClick={() => setSelectedToggle(itemId)}
       loading={isLoading}
       bodyStyle={{ padding: 4 }}
-      className={classy("group m-2.5 w-60 overflow-clip", {
-        "border-blue-300": selected,
-      })}
+      className="w-full p-1"
       cover={
         <div className="!flex items-center justify-center">
           {preview != null && (
             <AnnotatedImage
               item={preview}
-              className="h-56"
+              className={classy({
+                "h-56 w-56": gridCount === 0,
+              })}
               annotationHash={annotationHash}
               hideExtraAnnotations={hideExtraAnnotations}
               predictionTruePositive={predictionTruePositive}
