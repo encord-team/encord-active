@@ -19,8 +19,6 @@ const ExplorerSearchPaginationTruncated: PaginationProps = {
   showTotal: (total) => `${total}+ Search Results`,
 };
 
-const ExplorerSearchGrid = {};
-
 export const ExplorerSearchResults = ExplorerSearchResultsRaw; // FIXME: react.memo
 
 function ExplorerSearchResultsRaw(props: {
@@ -43,6 +41,7 @@ function ExplorerSearchResultsRaw(props: {
   page: number;
   setPageSize: (pageSize: number) => void;
   pageSize: number;
+  gridCount: number | undefined;
 }) {
   const {
     projectHash,
@@ -64,6 +63,7 @@ function ExplorerSearchResultsRaw(props: {
     pageSize,
     setPage,
     setPageSize,
+    gridCount,
   } = props;
 
   const loading = useMemo(
@@ -100,7 +100,9 @@ function ExplorerSearchResultsRaw(props: {
       <List
         className="absolute mt-2.5 px-2"
         dataSource={dataSource}
-        grid={ExplorerSearchGrid}
+        grid={{
+          column: gridCount ?? 4,
+        }}
         loading={loading}
         locale={ExplorerSearchLocale}
         pagination={{

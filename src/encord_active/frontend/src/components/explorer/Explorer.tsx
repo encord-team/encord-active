@@ -306,6 +306,7 @@ export function Explorer({
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [gridCount, setGridCount] = useState(0);
 
   const itemsToRender: readonly string[] = useMemo(() => {
     if (sortedItems == null) {
@@ -630,6 +631,7 @@ export function Explorer({
                         page={page}
                         setPageSize={setPageSize}
                         pageSize={pageSize}
+                        gridCount={gridCount}
                       />
                     </div>
                   </div>
@@ -714,6 +716,9 @@ export function Explorer({
                     setIsAscending={setIsAscending}
                     showAnnotations={showAnnotations}
                     toggleShowAnnotations={toggleShowAnnotations}
+                    setConfidenceFilter={setAnnotationFilters}
+                    gridCount={gridCount}
+                    setGridCount={setGridCount}
                   />
                 ),
               },

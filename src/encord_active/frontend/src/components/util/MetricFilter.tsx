@@ -134,7 +134,7 @@ function deleteKey(
   };
 }
 
-function updateValue<K extends FilterModes>(
+export function updateValue<K extends FilterModes>(
   updateKey: string,
   updateValue: FilterState[K][string],
   filterType: K
@@ -452,6 +452,7 @@ export function MetricFilter(props: {
                         toFixedNumber(metricBounds.max, 2),
                       ]
                 }
+                // Question: Should it be changed to onAfterChange?
                 onChange={(newRange: [number, number]) =>
                   setFilters(updateValue(filterKey, newRange, "metricFilters"))
                 }
