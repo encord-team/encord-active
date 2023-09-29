@@ -445,17 +445,17 @@ function GalleryCardRaw(props: {
           {(labelAnswers?.classifications ?? [])
             .filter((v) => typeof v.answers === "string")
             .map((v) => (
-                <Row className="mt-1" key={v.featureHash}>
-                  <Tag bordered={false} color="geekblue" className="rounded-xl">
-                    <Row>
-                      <FontSizeOutlined />
-                      <Typography.Text className="ml-1">
-                        {v.answers}
-                      </Typography.Text>
-                    </Row>
-                  </Tag>
-                </Row>
-              ))}
+              <Row className="mt-1" key={v.featureHash}>
+                <Tag bordered={false} color="geekblue" className="rounded-xl">
+                  <Row>
+                    <FontSizeOutlined />
+                    <Typography.Text className="ml-1">
+                      {v.answers}
+                    </Typography.Text>
+                  </Row>
+                </Tag>
+              </Row>
+            ))}
           {predictionTy != null ? (
             <Row className="mt-1">
               <Tag bordered={false} color="volcano" className="rounded-xl">
