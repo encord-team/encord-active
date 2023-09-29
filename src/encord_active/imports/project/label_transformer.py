@@ -416,7 +416,7 @@ def import_label_transformer(
         data_hash = path_to_data_hash[file]
         label_row = data_hash_to_label_rows[data_hash]
         data_unit = label_row["data_units"][str(data_hash)]
-        labels = data_unit["labels"]
+        labels = data_unit.get("labels", {})
         data_uri = get_data_uri(
             url_or_path=file,
             store_data_locally=True,
