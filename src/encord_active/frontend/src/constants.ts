@@ -24,3 +24,7 @@ export const rollbarConfig = {
   scrubTelemetryInputs: true,
   captureIp: "anonymize",
 } satisfies Configuration;
+
+export const Colors = {
+  purple: "#5658dd",
+};
