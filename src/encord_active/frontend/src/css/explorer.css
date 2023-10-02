@@ -1,0 +1,10 @@
+.explorer-tabs .ant-tabs-nav-list {
+  margin-left: auto;
+}
+.explorer-tabs .ant-tabs-nav-wrap::after {
+  width: 0px !important;
+}
+
+.explorer-tabs .ant-tabs-ink-bar {
+  background-color: transparent;
+}

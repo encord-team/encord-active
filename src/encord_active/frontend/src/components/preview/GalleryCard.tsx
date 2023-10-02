@@ -274,13 +274,13 @@ function GalleryCardRaw(props: {
       onClick={() => setSelectedToggle(itemId)}
       loading={isLoading}
       bodyStyle={{ padding: 4 }}
-      className="w-full p-1"
+      className="z-1 w-full p-1"
       cover={
         <div className="!flex items-center justify-center">
           {preview != null && (
             <AnnotatedImage
               item={preview}
-              className={classy({
+              className={classy("relative", {
                 "h-56 w-56": gridCount === 0,
               })}
               annotationHash={annotationHash}
@@ -294,20 +294,22 @@ function GalleryCardRaw(props: {
                     component={MdImageSearch}
                     className="top-50 left-50 absolute z-20 text-5xl"
                   />
-                  <div className="z-5 absolute h-full w-full bg-gray-100 bg-opacity-20" />
+                  <div className="absolute z-50 h-20 w-20 bg-gray-100 bg-opacity-20" />
                   <div
                     className={classy(
-                      "absolute z-10 h-full w-full bg-opacity-0 group-hover:bg-opacity-70",
-                      "[&>*]:opacity-0 [&>*]:group-hover:opacity-100"
+                      "group absolute z-30 h-full w-full bg-gray-100 bg-opacity-0 hover:bg-opacity-40 hover:opacity-100"
                     )}
                   >
                     <Checkbox
-                      className={classy("absolute left-2 top-2", {
-                        "!opacity-100": selected,
-                      })}
+                      className={classy(
+                        "absolute left-2 top-2 opacity-0 group-hover:opacity-100",
+                        {
+                          "!opacity-100": selected,
+                        }
+                      )}
                       checked={selected}
                     />
-                    <div className="absolute top-2 right-2 flex flex-col gap-1">
+                    <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100">
                       <Button
                         className="bg-white"
                         icon={<FullscreenOutlined />}
@@ -331,17 +333,19 @@ function GalleryCardRaw(props: {
               ) : (
                 <div
                   className={classy(
-                    "absolute z-10 h-full w-full bg-gray-100 bg-opacity-0 group-hover:bg-opacity-70",
-                    "[&>*]:opacity-0 [&>*]:group-hover:opacity-100"
+                    "group absolute z-30 h-full w-full bg-gray-100 bg-opacity-0 hover:bg-opacity-40 hover:opacity-100"
                   )}
                 >
                   <Checkbox
-                    className={classy("absolute left-2 top-2", {
-                      "!opacity-100": selected,
-                    })}
+                    className={classy(
+                      "absolute left-2 top-2 opacity-0 group-hover:opacity-100",
+                      {
+                        "!opacity-100": selected,
+                      }
+                    )}
                     checked={selected}
                   />
-                  <div className="absolute top-2 right-2 flex flex-col gap-1">
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100">
                     <Button
                       className="bg-white"
                       icon={<FullscreenOutlined />}

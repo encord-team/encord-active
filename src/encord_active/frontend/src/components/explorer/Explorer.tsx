@@ -1,10 +1,19 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import {
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  Dispatch,
+  SetStateAction,
+} from "react";
 import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
 import { VscClearAll } from "react-icons/vsc";
-import { useDebounce, useToggle } from "usehooks-ts";
+import { useDebounce, useLocalStorage, useToggle } from "usehooks-ts";
 import {
   Button,
   Col,
+  ConfigProvider,
+  Dropdown,
   Modal,
   Popover,
   Row,
@@ -19,7 +28,12 @@ import {
 import { SegmentedValue } from "antd/es/segmented";
 import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
-import { DotChartOutlined, TableOutlined } from "@ant-design/icons";
+import {
+  DotChartOutlined,
+  DownOutlined,
+  TableOutlined,
+  TagOutlined,
+} from "@ant-design/icons";
 import { BulkTaggingForm } from "./Tagging";
 import { FilterState, DefaultFilters } from "../util/MetricFilter";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
@@ -27,6 +41,7 @@ import { env, local } from "../../constants";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import {
+  AnalysisDomain,
   DomainSearchFilters,
   Embedding2DFilter,
   PredictionDomain,
@@ -35,7 +50,11 @@ import {
 import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysisSearch";
-import { MetricDomain, ExplorerFilterState, Metric } from "./ExplorerTypes";
+import {
+  ExplorerFilterState,
+  Metric,
+  analysisDomainLabelOverrides,
+} from "./ExplorerTypes";
 import { ItemPreviewModal } from "../preview/ItemPreviewModal";
 import { usePredictionAnalysisSearch } from "../../hooks/queries/usePredictionAnalysisSearch";
 import {
@@ -60,7 +79,11 @@ export type Props = {
   featureHashMap: FeatureHashMap;
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
+  openModal: undefined | "subset" | "upload";
+  setOpenModal: Dispatch<SetStateAction<"subset" | "upload" | undefined>>;
 };
+
+import "../../css/explorer.css";
 
 export function Explorer({
   projectHash,
@@ -71,6 +94,8 @@ export function Explorer({
   annotationMetricsSummary,
   setSelectedProjectHash,
   remoteProject,
+  openModal,
+  setOpenModal,
 }: Props) {
   // Item selected for extra analysis operations
   const [similarityItem, setSimilarityItem] = useState<string | undefined>();
@@ -129,7 +154,15 @@ export function Explorer({
   }, [selectedMetric.domain, setShowAnnotations]);
 
   // Data or Label selection
-  const [metricDomain, setMetricDomain] = useState<MetricDomain>("Data");
+  const analysisDomainOptions = useMemo(() => {
+    return Object.entries(AnalysisDomain).map(([key, value]) => ({
+      label: analysisDomainLabelOverrides.hasOwnProperty(value)
+        ? analysisDomainLabelOverrides[value as AnalysisDomain]
+        : key,
+      value: value,
+    }));
+  }, []);
+  const [analysisDomain, setAnalysisDomain] = useState<AnalysisDomain>("data");
   const [selectedMetricData, setSelectedMetricData] = useState<Metric>({
     domain: "data",
     metric_key: "metric_random",
@@ -139,11 +172,11 @@ export function Explorer({
     metric_key: "metric_random",
   });
 
-  const handleSelectedDomainChange = (val: MetricDomain) => {
-    setMetricDomain(val);
-    if (val === "Data") {
+  const handleSelectedDomainChange = (val: AnalysisDomain) => {
+    setAnalysisDomain(val);
+    if (val === "data") {
       setSelectedMetric(selectedMetricData);
-    } else if (val === "Label") {
+    } else if (val === "annotation") {
       setSelectedMetric(selectedMetricLabel);
     }
   };
@@ -305,8 +338,8 @@ export function Explorer({
   };
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [gridCount, setGridCount] = useState(0);
+  const [pageSize, setPageSize] = useLocalStorage("displayPageSize", 20);
+  const [gridCount, setGridCount] = useLocalStorage("displayGridCount", 6);
 
   const itemsToRender: readonly string[] = useMemo(() => {
     if (sortedItems == null) {
@@ -378,8 +411,7 @@ export function Explorer({
   }, [isLoadingMetrics, isLoadingSortedItems]);
 
   // Modal state
-  const [open, setOpen] = useState<undefined | "subset" | "upload">();
-  const close = () => setOpen(undefined);
+  const close = () => setOpenModal(undefined);
 
   // view state
   const [activeView, setActiveView] = useState<"gridView" | "embeddingsView">(
@@ -389,13 +421,13 @@ export function Explorer({
   return (
     <div className="h-full">
       <CreateSubsetModal
-        open={open === "subset"}
+        open={openModal === "subset"}
         close={close}
         projectHash={projectHash}
         filters={filters.filters}
       />
       <UploadToEncordModal
-        open={open === "upload"}
+        open={openModal === "upload"}
         close={close}
         projectHash={projectHash}
         setSelectedProjectHash={setSelectedProjectHash}
@@ -429,37 +461,42 @@ export function Explorer({
       <Row className="h-full">
         <Col span={18} className="h-full">
           <Tabs
+            centered
             activeKey={activeView}
             onChange={setActiveView as (val: string) => void}
-            style={{
-              height: "100%",
-            }}
-            className="h-full"
+            className="explorer-tabs h-full"
             tabBarStyle={{
               margin: 0,
-              padding: "0px 10px",
+              padding: "0px 20px",
             }}
             tabBarExtraContent={{
               left: (
-                <ExplorerPremiumSearch
-                  premiumSearchState={{
-                    ...premiumSearchState,
-                    setSearch: (args) => {
-                      setSimilarityItem(undefined);
-                      premiumSearchState.setSearch(args);
-                    },
-                  }}
-                />
-              ),
-              right: (
-                <Segmented
-                  selected
-                  value={metricDomain}
-                  options={["Data", "Label"]}
-                  onChange={
-                    handleSelectedDomainChange as (val: SegmentedValue) => void
-                  }
-                />
+                <div className="flex">
+                  <ExplorerPremiumSearch
+                    premiumSearchState={{
+                      ...premiumSearchState,
+                      setSearch: (args) => {
+                        setSimilarityItem(undefined);
+                        premiumSearchState.setSearch(args);
+                      },
+                    }}
+                  />
+                  <Segmented
+                    selected
+                    value={analysisDomain}
+                    options={[
+                      ...analysisDomainOptions,
+                      {
+                        value: "predictions",
+                        label: "Predictions",
+                        disabled: true,
+                      },
+                    ]}
+                    onChange={(val) => {
+                      handleSelectedDomainChange(val as AnalysisDomain);
+                    }}
+                  />
+                </div>
               ),
             }}
             items={[
@@ -473,144 +510,130 @@ export function Explorer({
                 key: "gridView",
                 children: (
                   <div className="flex h-full flex-col items-center bg-gray-100 py-2">
-                    <Space
-                      style={{
-                        flex: "0 1 0",
-                        height: "100%",
-                      }}
-                      wrap
-                    >
-                      {predictionHash !== undefined && (
-                        <PredictionFilters
-                          disabled={!!similarityItem}
-                          iou={iou}
-                          setIou={setIou}
-                          predictionOutcome={predictionOutcome}
-                          isClassificationOnly={false}
-                          setPredictionOutcome={setPredictionOutcome}
-                        />
-                      )}
-
-                      <Space.Compact size="large">
-                        <Popover
-                          placement="bottomRight"
-                          content={
-                            <BulkTaggingForm
-                              projectHash={projectHash}
-                              selectedItems={selectedItems}
-                              filtersDomain={filters.analysisDomain}
-                              filters={filters.filters}
-                              allowTaggingAnnotations={allowTaggingAnnotations}
-                            />
-                          }
-                          trigger="click"
-                        >
-                          <Tooltip
-                            title={
-                              !hasSelectedItems
-                                ? "Select items to tag first"
-                                : ""
-                            }
-                          >
-                            <Button
-                              icon={<HiOutlineTag />}
-                              disabled={!hasSelectedItems}
-                            >
-                              Tag
-                            </Button>
-                          </Tooltip>
-                        </Popover>
+                    <div className="absolute top-1.5 z-[1000] flex flex-shrink flex-grow-0 basis-0 items-center gap-3 rounded-md bg-white py-2 px-6">
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              label: (
+                                <Button
+                                  onClick={() =>
+                                    setSelectedItems((oldState) => {
+                                      if (oldState === "ALL") {
+                                        return "ALL";
+                                      }
+                                      return new Set([
+                                        ...oldState,
+                                        ...itemsToRender.slice(
+                                          (page - 1) * pageSize,
+                                          page * pageSize
+                                        ),
+                                      ]);
+                                    })
+                                  }
+                                  disabled={itemsToRender.length === 0}
+                                  icon={<BiSelectMultiple />}
+                                  className="text-md font-medium text-gray-9"
+                                >
+                                  Select page (
+                                  {
+                                    itemsToRender.slice(
+                                      (page - 1) * pageSize,
+                                      page * pageSize
+                                    ).length
+                                  }
+                                  )
+                                </Button>
+                              ),
+                              key: "0",
+                            },
+                            {
+                              label: (
+                                <Button
+                                  onClick={() => setSelectedItems("ALL")}
+                                  disabled={selectedItems === "ALL"}
+                                  icon={<BiSelectMultiple />}
+                                >
+                                  Select All
+                                </Button>
+                              ),
+                              key: "1",
+                            },
+                          ],
+                        }}
+                        trigger={["click"]}
+                      >
+                        <a onClick={(e) => e.preventDefault()}>
+                          <Space>
+                            Select
+                            <DownOutlined />
+                          </Space>
+                        </a>
+                      </Dropdown>
+                      <ConfigProvider
+                        theme={{
+                          components: {
+                            Button: {
+                              defaultBg: "#434343",
+                            },
+                          },
+                        }}
+                      >
                         <Button
+                          className="border-none bg-gray-9 text-white"
                           disabled={!hasSelectedItems}
                           onClick={() => setSelectedItems(new Set())}
                           icon={<VscClearAll />}
                         >
-                          Clear selection (
-                          {selectedItems === "ALL" ? "All" : selectedItems.size}
-                          )
+                          Clear selection{" "}
+                          <span className="text-gray-5 w-6">
+                            (
+                            {selectedItems === "ALL"
+                              ? "All"
+                              : selectedItems.size}
+                            )
+                          </span>
                         </Button>
-                        <Button
-                          onClick={() =>
-                            setSelectedItems((oldState) => {
-                              if (oldState === "ALL") {
-                                return "ALL";
-                              }
-                              return new Set([
-                                ...oldState,
-                                ...itemsToRender.slice(
-                                  (page - 1) * pageSize,
-                                  page * pageSize
-                                ),
-                              ]);
-                            })
+                      </ConfigProvider>
+                      <Popover
+                        placement="bottomRight"
+                        content={
+                          <BulkTaggingForm
+                            projectHash={projectHash}
+                            selectedItems={selectedItems}
+                            filtersDomain={filters.analysisDomain}
+                            filters={filters.filters}
+                            allowTaggingAnnotations={allowTaggingAnnotations}
+                          />
+                        }
+                        trigger="click"
+                      >
+                        <Tooltip
+                          title={
+                            !hasSelectedItems ? "Select items to tag first" : ""
                           }
-                          disabled={itemsToRender.length === 0}
-                          icon={<BiSelectMultiple />}
                         >
-                          Select page (
-                          {
-                            itemsToRender.slice(
-                              (page - 1) * pageSize,
-                              page * pageSize
-                            ).length
-                          }
-                          )
-                        </Button>
-                        <Button
-                          onClick={() => setSelectedItems("ALL")}
-                          disabled={selectedItems === "ALL"}
-                          icon={<BiSelectMultiple />}
-                        >
-                          Select All
-                        </Button>
-                      </Space.Compact>
-                      {env !== "sandbox" && !(remoteProject || !local) ? (
-                        <Space.Compact size="large">
-                          <Button
-                            onClick={() => setOpen("subset")}
-                            disabled={!canResetFilters}
-                            icon={<BiWindows />}
+                          <ConfigProvider
+                            theme={{
+                              components: {
+                                Button: {
+                                  defaultBg: "#434343",
+                                },
+                              },
+                            }}
                           >
-                            Create Project Subset
-                          </Button>
-                          <Button
-                            onClick={() => setOpen("upload")}
-                            disabled={!!canResetFilters}
-                            icon={<BiCloudUpload />}
-                          >
-                            Upload project
-                          </Button>
-                        </Space.Compact>
-                      ) : (
-                        <>
-                          <Button
-                            onClick={() => setOpen("subset")}
-                            disabled={!canResetFilters}
-                            hidden={env === "sandbox"}
-                            icon={<BiWindows />}
-                            size="large"
-                          >
-                            Create Project subset
-                          </Button>
-                          <Button
-                            onClick={() => setOpen("upload")}
-                            disabled={!!canResetFilters}
-                            hidden={remoteProject || !local}
-                            icon={<BiCloudUpload />}
-                            size="large"
-                          >
-                            Upload project
-                          </Button>
-                        </>
-                      )}
-                    </Space>
-                    <div
-                      style={{
-                        flex: "1 1 auto",
-                        height: "100%",
-                        width: "100%",
-                      }}
-                    >
+                            <Button
+                              className="border-none bg-gray-9 text-white"
+                              icon={<TagOutlined />}
+                              disabled={!hasSelectedItems}
+                            >
+                              Tag
+                            </Button>
+                          </ConfigProvider>
+                        </Tooltip>
+                      </Popover>
+                    </div>
+                    <div className="h-full w-full flex-auto">
                       <ExplorerSearchResults
                         projectHash={projectHash}
                         predictionHash={predictionHash}
@@ -669,7 +692,7 @@ export function Explorer({
                   <Overview
                     projectHash={projectHash}
                     analysisDomain={
-                      metricDomain == "Data" ? "data" : "annotation"
+                      analysisDomain == "data" ? "data" : "annotation"
                     }
                   />
                 ),

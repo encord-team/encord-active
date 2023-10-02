@@ -1,10 +1,14 @@
-import { PredictionDomain, SearchFilters } from "../../openapi/api";
+import {
+  AnalysisDomain,
+  PredictionDomain,
+  SearchFilters,
+} from "../../openapi/api";
 
 export type Metric = {
   domain: "data" | "annotation";
   metric_key: string;
 };
-export type MetricDomain = "Data" | "Label";
+export type MetricDomain = "data" | "label";
 export type ExplorerFilterState = {
   readonly analysisDomain: "data" | "annotation";
   readonly filters: SearchFilters;
@@ -13,4 +17,10 @@ export type ExplorerFilterState = {
   readonly iou: number;
   readonly predictionOutcome: PredictionDomain;
   readonly predictionHash: string | undefined;
+};
+
+export const analysisDomainLabelOverrides: Partial<
+  Record<AnalysisDomain, string>
+> = {
+  [AnalysisDomain.Annotation]: "Label",
 };

@@ -1,5 +1,5 @@
-import { CSSProperties, useEffect, useMemo } from "react";
-import { Spin, Tabs } from "antd";
+import { CSSProperties, useEffect, useMemo, useState } from "react";
+import { Button, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
 import {
   FeatureHashMap,
@@ -14,6 +14,8 @@ import { SummaryView } from "./tabs/AnalyticsView";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
+import { env } from "../constants";
+import { BiWindows } from "react-icons/bi";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -97,6 +99,9 @@ export function ProjectPage(props: {
     return featureHashMap;
   }, [projectSummary]);
 
+  // Modal state
+  const [openModal, setOpenModal] = useState<undefined | "subset" | "upload">();
+
   // Loading screen while waiting for full summary of project metrics.
   if (projectSummary == null) {
     return <Spin indicator={loadingIndicator} />;
@@ -121,6 +126,17 @@ export function ProjectPage(props: {
             setSelectedProjectHash={setSelectedProjectHash}
           />
         ),
+        right: (
+          <Button
+            onClick={() => setOpenModal("subset")}
+            // disabled={!canResetFilters}
+            hidden={env === "sandbox"}
+            icon={<BiWindows />}
+            size="large"
+          >
+            Create Project subset
+          </Button>
+        ),
       }}
       items={[
         {
@@ -136,6 +152,8 @@ export function ProjectPage(props: {
               featureHashMap={featureHashMap}
               setSelectedProjectHash={setSelectedProjectHash}
               remoteProject={remoteProject}
+              openModal={openModal}
+              setOpenModal={setOpenModal}
             />
           ),
         },
@@ -151,17 +169,18 @@ export function ProjectPage(props: {
           ),
         },
 
-        {
-          label: "Project Comparison",
-          key: "comparison",
-          children: (
-            <ProjectComparisonTab
-              projectHash={projectHash}
-              dataMetricsSummary={projectSummary.data}
-              annotationMetricsSummary={projectSummary.annotation}
-            />
-          ),
-        },
+        // Not to be displayed. Commented to work upon later.
+        // {
+        //   label: "Project Comparison",
+        //   key: "comparison",
+        //   children: (
+        //     <ProjectComparisonTab
+        //       projectHash={projectHash}
+        //       dataMetricsSummary={projectSummary.data}
+        //       annotationMetricsSummary={projectSummary.annotation}
+        //     />
+        //   ),
+        // },
       ]}
       activeKey={tab}
       onChange={(key) => navigate(`../${key}`, { relative: "path" })}
