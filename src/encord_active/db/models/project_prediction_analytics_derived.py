@@ -31,7 +31,7 @@ class ProjectPredictionAnalyticsDerived(SQLModel, table=True):
     # Extra state
     project_hash: UUID = field_uuid()
     # Query result
-    similarity: Optional[float] = field_real()
+    similarity: Optional[float] = field_real(nullable=True)
     dep_du_hash: UUID = field_uuid()
     dep_frame: int = field_int()
     dep_annotation_hash: str = field_char8()

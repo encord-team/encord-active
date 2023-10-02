@@ -6,10 +6,13 @@ from encord import EncordUserClient
 from encord.http.constants import RequestsSettings
 from sqlmodel import Session, select
 
+from encord_active.db.models.project_prediction import ProjectPrediction
+from encord_active.imports.prediction.legacy import import_legacy_predictions
+
 from ..db.models import Project, ProjectImportMetadata, get_engine
 from ..public.label_transformer import LabelTransformer
 from .prediction.coco import import_coco_result
-from .prediction.op import import_prediction
+from .prediction.op import PredictionImportSpec, import_prediction
 from .project.coco import import_coco
 from .project.encord import import_encord
 from .project.label_transformer import import_label_transformer
@@ -115,8 +118,23 @@ def import_coco_prediction(
     import_prediction(engine=engine, database_dir=database_dir, ssh_key=ssh_key, prediction=coco_prediction)
 
 
-def import_encord_pickle_prediction(
+def import_legacy_prediction(
     database_dir: Path,
-    pickle_file_path: Path,
+    predictions_file_path: Path,
+    ssh_key: str,
+    project_hash: uuid.UUID,
+    prediction_name: str,
 ) -> None:
-    raise ValueError()
+    path = database_dir / "encord-active.sqlite"
+    engine = get_engine(path)
+    with Session(engine) as sess:
+        ontology = sess.exec(select(Project.ontology).where(Project.project_hash == project_hash)).first()
+        if ontology is None:
+            raise RuntimeError(f"Project hash: {project_hash} is missing from the database")
+    coco_prediction = import_legacy_predictions(
+        ontology=dict(ontology),
+        prediction_name=prediction_name,
+        project_hash=project_hash,
+        prediction_file=predictions_file_path,
+    )
+    import_prediction(engine=engine, database_dir=database_dir, ssh_key=ssh_key, prediction=coco_prediction)
