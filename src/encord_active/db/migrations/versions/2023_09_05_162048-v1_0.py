@@ -1369,8 +1369,8 @@ def _transform_char8(value: Optional[str]) -> Optional[int]:
     return int.from_bytes(value_bytes, byteorder="little", signed=True)
 
 
-def _transform_clamp_normal(value: float) -> float:
-    if math.isnan(value):
+def _transform_clamp_normal(value: Optional[float]) -> float:
+    if not value or math.isnan(value):
         return 0.0
     elif math.isinf(value):
         return 1.0 if value > 0.0 else 0.0
