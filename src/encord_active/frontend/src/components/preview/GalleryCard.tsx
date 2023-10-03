@@ -273,8 +273,8 @@ function GalleryCardRaw(props: {
       hoverable
       onClick={() => setSelectedToggle(itemId)}
       loading={isLoading}
-      bodyStyle={{ padding: 4 }}
-      className="z-1 w-full p-1"
+      bodyStyle={{ padding: 4, marginTop: "auto" }}
+      className="z-1 annotated-image-cover flex h-full w-full flex-col p-1"
       cover={
         <div className="!flex items-center justify-center">
           {preview != null && (

@@ -12,7 +12,6 @@ import { useDebounce, useLocalStorage, useToggle } from "usehooks-ts";
 import {
   Button,
   Col,
-  ConfigProvider,
   Dropdown,
   Modal,
   Popover,
@@ -20,14 +19,12 @@ import {
   Segmented,
   Space,
   Tabs,
-  Tooltip,
 } from "antd";
 import { useNavigate, useParams } from "react-router";
 import {
   DotChartOutlined,
   DownOutlined,
   TableOutlined,
-  TagOutlined,
 } from "@ant-design/icons";
 import { BulkTaggingForm } from "./Tagging";
 import { FilterState, DefaultFilters } from "../util/MetricFilter";
@@ -62,6 +59,7 @@ import { Overview } from "./overview/Overview";
 import { Display } from "./display/Display";
 
 import "../../css/explorer.css";
+import { classy } from "../../helpers/classy";
 
 export type Props = {
   projectHash: string;
@@ -507,7 +505,14 @@ export function Explorer({
                 key: "gridView",
                 children: (
                   <div className="flex h-full flex-col items-center bg-gray-100 py-2">
-                    <div className="absolute top-1.5 z-[1000] flex flex-shrink flex-grow-0 basis-0 items-center gap-3 rounded-md bg-white py-2 px-6">
+                    <div
+                      className={classy(
+                        "top-1.5 z-[1000] flex flex-shrink flex-grow-0 basis-0 items-center gap-3 rounded-md bg-white py-2 px-6 opacity-0",
+                        {
+                          "opacity-100": hasSelectedItems,
+                        }
+                      )}
+                    >
                       <Dropdown
                         menu={{
                           items: [
@@ -565,31 +570,23 @@ export function Explorer({
                           <DownOutlined />
                         </Space>
                       </Dropdown>
-                      <ConfigProvider
-                        theme={{
-                          components: {
-                            Button: {
-                              defaultBg: "#434343",
-                            },
-                          },
-                        }}
+
+                      <Button
+                        className={classy({
+                          "border-none bg-gray-9 text-white": hasSelectedItems,
+                        })}
+                        disabled={!hasSelectedItems}
+                        onClick={() => setSelectedItems(new Set())}
+                        icon={<VscClearAll />}
                       >
-                        <Button
-                          className="border-none bg-gray-9 text-white"
-                          disabled={!hasSelectedItems}
-                          onClick={() => setSelectedItems(new Set())}
-                          icon={<VscClearAll />}
-                        >
-                          Clear selection{" "}
-                          <span className="text-gray-5 w-6">
-                            (
-                            {selectedItems === "ALL"
-                              ? "All"
-                              : selectedItems.size}
-                            )
-                          </span>
-                        </Button>
-                      </ConfigProvider>
+                        Clear selection{" "}
+                        <span className="text-gray-5 w-6">
+                          (
+                          {selectedItems === "ALL" ? "All" : selectedItems.size}
+                          )
+                        </span>
+                      </Button>
+
                       <Popover
                         placement="bottomRight"
                         content={
@@ -603,32 +600,19 @@ export function Explorer({
                         }
                         trigger="click"
                       >
-                        <Tooltip
-                          title={
-                            !hasSelectedItems ? "Select items to tag first" : ""
-                          }
+                        <Button
+                          className={classy({
+                            "border-none bg-gray-9 text-white":
+                              hasSelectedItems,
+                          })}
+                          type="default"
+                          disabled={!hasSelectedItems}
                         >
-                          <ConfigProvider
-                            theme={{
-                              components: {
-                                Button: {
-                                  defaultBg: "#434343",
-                                },
-                              },
-                            }}
-                          >
-                            <Button
-                              className="border-none bg-gray-9 text-white"
-                              icon={<TagOutlined />}
-                              disabled={!hasSelectedItems}
-                            >
-                              Tag
-                            </Button>
-                          </ConfigProvider>
-                        </Tooltip>
+                          Tag
+                        </Button>
                       </Popover>
                     </div>
-                    <div className="h-full w-full flex-auto">
+                    <div className="-mt-10 h-full w-full flex-auto">
                       <ExplorerSearchResults
                         projectHash={projectHash}
                         predictionHash={predictionHash}

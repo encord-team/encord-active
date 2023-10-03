@@ -26,3 +26,10 @@
 .explorer-premium-search .ant-input-search-button {
   display: none;
 }
+.annotated-image-cover .ant-card-cover {
+  margin-top: auto !important;
+}
+
+.explorer-search-results .ant-row > div {
+  padding: 5px;
+}

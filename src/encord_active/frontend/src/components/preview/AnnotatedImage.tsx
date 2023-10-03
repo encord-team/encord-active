@@ -99,7 +99,8 @@ export function AnnotatedImage(props: {
       ) : (
         <img
           ref={image}
-          className="aspect-square !rounded-none object-cover transition-opacity"
+          // className="aspect-square !rounded-none object-cover transition-opacity"
+          className="!rounded-none object-contain transition-opacity"
           style={contentStyle}
           alt=""
           src={imageSrc}

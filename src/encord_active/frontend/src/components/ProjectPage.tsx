@@ -1,5 +1,5 @@
 import { CSSProperties, useEffect, useMemo, useState } from "react";
-import { Button, ConfigProvider, Spin, Tabs } from "antd";
+import { Button, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
 import { PlusOutlined } from "@ant-design/icons";
 import {
@@ -15,6 +15,7 @@ import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
 import { env } from "../constants";
+import { classy } from "../helpers/classy";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -127,27 +128,19 @@ export function ProjectPage(props: {
           />
         ),
         right: (
-          <ConfigProvider
-            theme={{
-              components: {
-                Button: {
-                  defaultBg: "#434343",
-                },
-              },
-            }}
+          <Button
+            className={classy("bg-gray-2", {
+              // "border-none bg-gray-9 text-white": hasSelectedItems,
+            })}
+            onClick={() => setOpenModal("subset")}
+            // disabled={!canResetFilters}
+            disabled
+            hidden={env === "sandbox"}
+            icon={<PlusOutlined />}
+            size="large"
           >
-            <Button
-              className="border-none bg-gray-9 text-white"
-              onClick={() => setOpenModal("subset")}
-              // disabled={!canResetFilters}
-              disabled
-              hidden={env === "sandbox"}
-              icon={<PlusOutlined />}
-              size="large"
-            >
-              Create Annotate Project
-            </Button>
-          </ConfigProvider>
+            Create Annotate Project
+          </Button>
         ),
       }}
       items={[

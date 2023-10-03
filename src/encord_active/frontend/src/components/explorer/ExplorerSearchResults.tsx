@@ -98,7 +98,7 @@ function ExplorerSearchResultsRaw(props: {
   return (
     <div className="relative h-full overflow-auto">
       <List
-        className="absolute mt-2.5 px-6"
+        className="explorer-search-results absolute px-6"
         dataSource={dataSource}
         grid={{
           column: gridCount ?? 4,
