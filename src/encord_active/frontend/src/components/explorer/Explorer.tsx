@@ -27,7 +27,11 @@ import {
   TableOutlined,
 } from "@ant-design/icons";
 import { BulkTaggingForm } from "./Tagging";
-import { FilterState, DefaultFilters } from "../util/MetricFilter";
+import {
+  FilterState,
+  DefaultFilters,
+  DefaultAnnotationFilters,
+} from "../util/MetricFilter";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
@@ -120,10 +124,28 @@ export function Explorer({
   const [selectedItems, setSelectedItems] = useState<
     ReadonlySet<string> | "ALL"
   >(new Set<string>());
-  const [selectedMetric, setSelectedMetric] = useState<Metric>({
+
+  const [analysisDomain, setAnalysisDomain] = useState<AnalysisDomain>("data");
+  const [selectedMetricData, setSelectedMetricData] = useState<Metric>({
     domain: "data",
     metric_key: "metric_random",
   });
+  const [selectedMetricLabel, setSelectedMetricLabel] = useState<Metric>({
+    domain: "annotation",
+    metric_key: "metric_random",
+  });
+
+  const selectedMetric =
+    analysisDomain === "data" ? selectedMetricData : selectedMetricLabel;
+
+  const handleMetricChange = (val: Metric) => {
+    if (val.domain === "data") {
+      setSelectedMetricData(val);
+    } else if (val.domain === "annotation") {
+      setSelectedMetricLabel(val);
+    }
+  };
+
   const hasSelectedItems = selectedItems === "ALL" || selectedItems.size > 0;
   const [clearSelectionModalVisible, setClearSelectionModalVisible] =
     useState(false);
@@ -158,33 +180,6 @@ export function Explorer({
       })),
     []
   );
-  const [analysisDomain, setAnalysisDomain] = useState<AnalysisDomain>("data");
-  const [selectedMetricData, setSelectedMetricData] = useState<Metric>({
-    domain: "data",
-    metric_key: "metric_random",
-  });
-  const [selectedMetricLabel, setSelectedMetricLabel] = useState<Metric>({
-    domain: "annotation",
-    metric_key: "metric_random",
-  });
-
-  const handleSelectedDomainChange = (val: AnalysisDomain) => {
-    setAnalysisDomain(val);
-    if (val === "data") {
-      setSelectedMetric(selectedMetricData);
-    } else if (val === "annotation") {
-      setSelectedMetric(selectedMetricLabel);
-    }
-  };
-
-  const handleMetricChange = (val: Metric) => {
-    setSelectedMetric(val);
-    if (val.domain === "data") {
-      setSelectedMetricData(val);
-    } else if (val.domain === "annotation") {
-      setSelectedMetricLabel(val);
-    }
-  };
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -192,8 +187,9 @@ export function Explorer({
     useState<PredictionDomain>("p");
   const [iou, setIou] = useState<number>(0.5);
   const [dataFilters, setDataFilters] = useState<FilterState>(DefaultFilters);
-  const [annotationFilters, setAnnotationFilters] =
-    useState<FilterState>(DefaultFilters);
+  const [annotationFilters, setAnnotationFilters] = useState<FilterState>(
+    DefaultAnnotationFilters
+  );
   const [embeddingFilter, setEmbeddingFilter] = useState<
     Embedding2DFilter | undefined
   >();
@@ -414,6 +410,17 @@ export function Explorer({
     "gridView"
   );
 
+  // Load metric ranges
+  const { data: dataMetricRanges } = useProjectAnalysisSummary(
+    projectHash,
+    "data"
+  );
+
+  const { data: annotationMetricRanges } = useProjectAnalysisSummary(
+    projectHash,
+    "annotation"
+  );
+
   return (
     <div className="h-full">
       <CreateSubsetModal
@@ -488,7 +495,7 @@ export function Explorer({
                       },
                     ]}
                     onChange={(val) => {
-                      handleSelectedDomainChange(val as AnalysisDomain);
+                      setAnalysisDomain(val as AnalysisDomain);
                     }}
                   />
                 </div>
@@ -691,6 +698,8 @@ export function Explorer({
                     featureHashMap={featureHashMap}
                     reset={reset}
                     canResetFilters={canResetFilters}
+                    dataMetricRanges={dataMetricRanges?.metrics}
+                    annotationMetricRanges={annotationMetricRanges?.metrics}
                   />
                 ),
               },
@@ -699,6 +708,11 @@ export function Explorer({
                 key: "display",
                 children: (
                   <Display
+                    dataFilters={dataFilters}
+                    annotationFilters={annotationFilters}
+                    dataMetricRanges={dataMetricRanges?.metrics}
+                    annotationMetricRanges={annotationMetricRanges?.metrics}
+                    metricsSummary={dataMetricsSummary}
                     selectedMetric={selectedMetric}
                     isSortedByMetric={isSortedByMetric}
                     predictionHash={predictionHash}

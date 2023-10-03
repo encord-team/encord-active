@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Button, List, Row, Select, Slider } from "antd";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import {
+  AnalysisDomain,
   EnumSummary,
   MetricSummary,
   ProjectCollaboratorEntry,
@@ -27,7 +28,13 @@ export const DefaultFilters: FilterState = {
   ordering: [],
 };
 
-function getMetricBounds<
+export const DefaultAnnotationFilters: FilterState = {
+  metricFilters: { metric_confidence: [0.0, 1.0] },
+  enumFilters: {},
+  ordering: [],
+};
+
+export function getMetricBounds<
   R extends {
     min: number;
     max: number;
@@ -224,7 +231,7 @@ export function addNewEntry(
   };
 }
 
-const toFixedNumber = (number: number, precision: number) =>
+export const toFixedNumber = (number: number, precision: number) =>
   parseFloat(number.toFixed(precision));
 
 export function MetricFilter(props: {
@@ -236,6 +243,7 @@ export function MetricFilter(props: {
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>;
   tags: ReadonlyArray<ProjectTagEntry>;
   projectHash: string;
+  analysisDomain: AnalysisDomain;
 }) {
   const {
     filters,
@@ -246,6 +254,7 @@ export function MetricFilter(props: {
     collaborators,
     tags,
     projectHash,
+    analysisDomain,
   } = props;
 
   // Remove any invalid filters.
@@ -326,7 +335,7 @@ export function MetricFilter(props: {
             <EachMetricChartDistributionBar
               metricsSummary={metricsSummary}
               analysisSummary={data}
-              analysisDomain="data"
+              analysisDomain={analysisDomain}
               projectHash={projectHash}
               featureHashMap={featureHashMap}
               property={filterKey}

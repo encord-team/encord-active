@@ -10,8 +10,11 @@ import {
 import { FeatureHashMap } from "../../Types";
 import { useProjectListCollaborators } from "../../../hooks/queries/useProjectListCollaborators";
 import { useProjectListTags } from "../../../hooks/queries/useProjectListTags";
-import { useProjectAnalysisSummary } from "../../../hooks/queries/useProjectAnalysisSummary";
-import { ProjectDomainSummary } from "../../../openapi/api";
+import {
+  AnalysisDomain,
+  ProjectDomainSummary,
+  QuerySummary,
+} from "../../../openapi/api";
 
 type Props = {
   projectHash: string;
@@ -24,6 +27,8 @@ type Props = {
   canResetFilters: string | boolean | File;
   reset: () => void;
   featureHashMap: FeatureHashMap;
+  dataMetricRanges: QuerySummary["metrics"] | undefined;
+  annotationMetricRanges: QuerySummary["metrics"] | undefined;
 };
 export function Filters({
   projectHash,
@@ -36,17 +41,9 @@ export function Filters({
   featureHashMap,
   dataFilters,
   setDataFilters,
+  dataMetricRanges,
+  annotationMetricRanges,
 }: Props) {
-  // Load metric ranges
-  const { data: dataMetricRanges } = useProjectAnalysisSummary(
-    projectHash,
-    "data"
-  );
-  const { data: annotationMetricRanges } = useProjectAnalysisSummary(
-    projectHash,
-    "annotation"
-  );
-
   // Load all collaborators & tags -> needed to support filters
   const { data: collaborators } = useProjectListCollaborators(projectHash);
   const { data: tags } = useProjectListTags(projectHash);
@@ -62,21 +59,39 @@ export function Filters({
           const type =
             metricKey.split("-")[0] === "data" ? "data" : "annotation";
           const key = metricKey.split("-")[1];
-          setDataFilters(
-            addNewEntry(
-              type === "data" ? dataMetricsSummary : annotationMetricsSummary,
-              type === "data"
-                ? dataMetricRanges?.metrics
-                : annotationMetricRanges?.metrics,
-              featureHashMap,
-              collaborators ?? [],
-              tags ?? [],
-              key
-            )
-          );
+          if (type === "data") {
+            setDataFilters(
+              addNewEntry(
+                dataMetricsSummary,
+                dataMetricRanges,
+                featureHashMap,
+                collaborators ?? [],
+                tags ?? [],
+                key
+              )
+            );
+          } else if (type === "annotation") {
+            setAnnotationFilters(
+              addNewEntry(
+                annotationMetricsSummary,
+                annotationMetricRanges,
+                featureHashMap,
+                collaborators ?? [],
+                tags ?? [],
+                key
+              )
+            );
+          }
         }}
         options={[
           ...Object.entries(dataMetricsSummary.metrics).map(
+            ([metricKey, metric]) => ({
+              label: `D: ${metric?.title ?? metricKey}`,
+              value: `data-${metricKey}`,
+              type: "data",
+            })
+          ),
+          ...Object.entries(dataMetricsSummary.enums).map(
             ([metricKey, metric]) => ({
               label: `D: ${metric?.title ?? metricKey}`,
               value: `data-${metricKey}`,
@@ -88,13 +103,6 @@ export function Filters({
               label: `A: ${metric?.title ?? metricKey}`,
               value: `annotation-${metricKey}`,
               type: "annotation",
-            })
-          ),
-          ...Object.entries(dataMetricsSummary.enums).map(
-            ([metricKey, metric]) => ({
-              label: `D: ${metric?.title ?? metricKey}`,
-              value: `data-${metricKey}`,
-              type: "data",
             })
           ),
           ...Object.entries(annotationMetricsSummary.enums).map(
@@ -111,21 +119,23 @@ export function Filters({
         filters={dataFilters}
         setFilters={setDataFilters}
         metricsSummary={dataMetricsSummary}
-        metricRanges={dataMetricRanges?.metrics}
+        metricRanges={dataMetricRanges}
         featureHashMap={featureHashMap}
         projectHash={projectHash}
         tags={tags ?? []}
         collaborators={collaborators ?? []}
+        analysisDomain={AnalysisDomain.Data}
       />
       <MetricFilter
         filters={annotationFilters}
         setFilters={setAnnotationFilters}
         metricsSummary={annotationMetricsSummary}
-        metricRanges={annotationMetricRanges?.metrics}
+        metricRanges={annotationMetricRanges}
         featureHashMap={featureHashMap}
         projectHash={projectHash}
         tags={tags ?? []}
         collaborators={collaborators ?? []}
+        analysisDomain={AnalysisDomain.Annotation}
       />
       <Button
         disabled={!canResetFilters}

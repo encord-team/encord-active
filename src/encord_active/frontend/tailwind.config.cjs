@@ -7,7 +7,7 @@ module.exports = {
         gray: {
           2: "#FAFAFA",
           8: "#595959",
-          9: "#595959",
+          9: "#434343",
         },
         warning: "#ec9c27",
         severe: "#cf1322",

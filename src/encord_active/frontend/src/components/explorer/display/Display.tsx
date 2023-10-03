@@ -3,10 +3,21 @@ import { Dispatch, SetStateAction } from "react";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { MinusSquareFilled, TableOutlined } from "@ant-design/icons";
 import { Metric } from "../ExplorerTypes";
-import { ProjectDomainSummary } from "../../../openapi/api";
-import { FilterState, updateValue } from "../../util/MetricFilter";
+import { ProjectDomainSummary, QuerySummary } from "../../../openapi/api";
+import {
+  FilterState,
+  getMetricBounds,
+  toFixedNumber,
+  updateValue,
+} from "../../util/MetricFilter";
+import { Colors, GRID_MAX_COUNT, GRID_MIN_COUNT } from "../../../constants";
 
 type Props = {
+  dataFilters: FilterState;
+  annotationFilters: FilterState;
+  dataMetricRanges: QuerySummary["metrics"] | undefined;
+  annotationMetricRanges: QuerySummary["metrics"] | undefined;
+  metricsSummary: ProjectDomainSummary;
   selectedMetric: Metric;
   predictionHash: string | undefined;
   dataMetricsSummary: ProjectDomainSummary;
@@ -24,6 +35,11 @@ type Props = {
   setGridCount: (val: number) => void;
 };
 export function Display({
+  dataFilters,
+  annotationFilters,
+  dataMetricRanges,
+  annotationMetricRanges,
+  metricsSummary,
   predictionHash,
   dataMetricsSummary,
   annotationMetricsSummary,
@@ -38,17 +54,29 @@ export function Display({
   gridCount,
   setGridCount,
 }: Props) {
+  // Setting confidence metric specific parameters
+  const METRIC_CONFIDENCE = "metric_confidence";
+  const confidenceFilters = annotationFilters.metricFilters[METRIC_CONFIDENCE];
+  const confidenceRange = annotationMetricRanges
+    ? annotationMetricRanges[METRIC_CONFIDENCE]
+    : undefined;
+  const confidence = annotationMetricsSummary.metrics[METRIC_CONFIDENCE];
+  const confidenceBounds =
+    confidenceRange !== undefined && confidence !== undefined
+      ? getMetricBounds(confidenceRange, confidence)
+      : undefined;
+
   return (
     <div className="flex flex-col gap-2 divide-y ">
       <div className="icon-wrapper flex w-full items-center gap-2">
         <MinusSquareFilled className="text-base text-gray-8" />
         <Slider
-          min={1}
-          max={12}
+          min={GRID_MIN_COUNT}
+          max={GRID_MAX_COUNT}
           defaultValue={gridCount ?? 4}
           className="w-full"
           trackStyle={{
-            backgroundColor: "#434343",
+            backgroundColor: Colors.darkGray,
           }}
           onChange={(val) => setGridCount(val)}
         />
@@ -68,19 +96,28 @@ export function Display({
       </div>
       <div className="flex flex-col items-start justify-between p-4">
         <div className=" text-sm text-gray-8">Confidence</div>
-        <Slider
-          range
-          defaultValue={[0, 1]}
-          min={0}
-          max={1}
-          step={0.01}
-          className="w-full"
-          onAfterChange={(newRange: [number, number]) => {
-            setConfidenceFilter(
-              updateValue("metric_confidence", newRange, "metricFilters")
-            );
-          }}
-        />
+        {confidenceBounds !== undefined && (
+          <Slider
+            value={
+              confidenceFilters != null
+                ? [confidenceFilters[0], confidenceFilters[1]]
+                : [
+                    toFixedNumber(confidenceBounds.min, 2),
+                    toFixedNumber(confidenceBounds.max, 2),
+                  ]
+            }
+            range={{ draggableTrack: true }}
+            min={confidenceBounds.min}
+            max={confidenceBounds.max}
+            step={0.01}
+            className="w-full"
+            onChange={(newRange: [number, number]) => {
+              setConfidenceFilter(
+                updateValue(METRIC_CONFIDENCE, newRange, "metricFilters")
+              );
+            }}
+          />
+        )}
       </div>
       <div>
         <Space.Compact size="large" className="mt-4 w-full">

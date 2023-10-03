@@ -19,6 +19,15 @@ export function App() {
         token: {
           colorPrimary: Colors.purple,
         },
+        components: {
+          Slider: {
+            dotBorderColor: Colors.darkGray,
+            trackBg: Colors.darkGray,
+            trackHoverBg: Colors.darkGray,
+            handleColor: Colors.darkGray,
+            handleActiveColor: Colors.darkGray,
+          },
+        },
       }}
     >
       <div className="flex h-full flex-col">
