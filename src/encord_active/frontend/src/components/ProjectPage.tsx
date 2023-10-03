@@ -1,6 +1,7 @@
 import { CSSProperties, useEffect, useMemo, useState } from "react";
 import { Button, ConfigProvider, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
+import { PlusOutlined } from "@ant-design/icons";
 import {
   FeatureHashMap,
   OntologyObjectAttribute,
@@ -8,16 +9,12 @@ import {
   ProjectOntology,
 } from "./Types";
 import { ProjectSelector } from "./ProjectSelector";
-import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 import { Explorer } from "./explorer";
 import { SummaryView } from "./tabs/AnalyticsView";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
 import { env } from "../constants";
-import { BiWindows } from "react-icons/bi";
-import { IoAddCircleOutline } from "react-icons/io5";
-import { PlusOutlined } from "@ant-design/icons";
 
 export function ProjectPage(props: {
   encordDomain: string;

@@ -152,88 +152,6 @@ export function updateValue<K extends FilterModes>(
   };
 }
 
-function updateKey(
-  oldKey: string,
-  newKey: string,
-  metricsSummary: ProjectDomainSummary,
-  metricRanges: QuerySummary["metrics"] | undefined,
-  featureHashMap: FeatureHashMap,
-  collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
-  tags: ReadonlyArray<ProjectTagEntry>
-): (old: FilterState) => FilterState {
-  return (old) => {
-    const oldMetricSummary = metricsSummary.metrics[oldKey];
-    const oldFilterKey =
-      oldMetricSummary != null ? "metricFilters" : "enumFilters";
-    const oldOrder = old.ordering.indexOf(oldKey);
-    if (oldOrder < 0 || !(oldKey in old[oldFilterKey])) {
-      // Cannot be deleted.
-      return old;
-    }
-
-    const existingNewOrder = old.ordering.indexOf(newKey);
-    if (existingNewOrder !== -1) {
-      // Already exists.
-      return old;
-    }
-
-    // Generate intermediate state without new filter state inserted.
-    const renamedOrdering = [...old.ordering];
-    renamedOrdering[oldOrder] = newKey;
-    const { [oldKey]: deleted, ...renamedFilter } = old[oldFilterKey];
-    const renamed = {
-      ...old,
-      ordering: renamedOrdering,
-      [oldFilterKey]: renamedFilter,
-    };
-
-    // Check if a metric
-    const newMetricSummary = metricsSummary.metrics[newKey];
-    if (newMetricSummary != null) {
-      const newMetricRanges =
-        metricRanges === undefined ? undefined : metricRanges[newKey];
-      if (newMetricRanges != null) {
-        const newBounds = getMetricBounds(newMetricRanges, newMetricSummary);
-        const newRange: readonly [number, number] = [
-          newBounds.min,
-          newBounds.max,
-        ];
-
-        return {
-          ...renamed,
-          metricFilters: {
-            ...renamed.metricFilters,
-            [newKey]: newRange,
-          },
-        };
-      }
-      return old;
-    }
-
-    // Check if an enum
-    const newEnumSummary = metricsSummary.enums[newKey];
-    if (newEnumSummary != null && !(newKey in old.enumFilters)) {
-      const newValues = getEnumList(
-        newEnumSummary,
-        featureHashMap,
-        collaborators,
-        tags
-      );
-
-      return {
-        ...renamed,
-        enumFilters: {
-          ...renamed.enumFilters,
-          [newKey]: newValues,
-        },
-      };
-    }
-
-    // Failed to rename key.
-    return old;
-  };
-}
-
 export function addNewEntry(
   metricsSummary: ProjectDomainSummary,
   metricRanges: QuerySummary["metrics"] | undefined,
@@ -354,29 +272,6 @@ export function MetricFilter(props: {
 
     return { ...rawMetricsSummary, metrics: Object.fromEntries(metrics) };
   }, [metricRanges, rawMetricsSummary]);
-
-  // Render all active filters, skip metrics that cannot be selected.
-  const filterOptions = useMemo(() => {
-    if (metricsSummary == null) {
-      return [];
-    }
-    // Set of filters that 'exist'
-    const exists = new Set<string>(filters.ordering);
-    const metricOptions = Object.entries(metricsSummary.metrics)
-      .filter(([metricKey]) => !exists.has(metricKey))
-      .map(([metricKey, metricState]) => ({
-        value: metricKey,
-        label: metricState?.title ?? metricKey,
-      }));
-    const enumOptions = Object.entries(metricsSummary.enums)
-      .filter(([enumKey]) => !exists.has(enumKey))
-      .map(([enumKey, enumState]) => ({
-        value: enumKey,
-        label: enumState !== undefined ? enumState.title : enumKey,
-      }));
-
-    return [...metricOptions, ...enumOptions];
-  }, [filters.ordering, metricsSummary]);
 
   // all the data we need
   const summary = useProjectAnalysisSummary(projectHash, "data");

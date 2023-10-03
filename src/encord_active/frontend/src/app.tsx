@@ -1,8 +1,8 @@
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
 import { Navigate, Route, Routes, useNavigate } from "react-router";
+import { ConfigProvider } from "antd";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
-import { ConfigProvider } from "antd";
 import { Colors } from "./constants";
 
 export function App() {
@@ -17,7 +17,6 @@ export function App() {
     <ConfigProvider
       theme={{
         token: {
-          // Seed Token
           colorPrimary: Colors.purple,
         },
       }}

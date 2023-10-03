@@ -1,19 +1,12 @@
 import { Button, Select, Slider, Space, Switch } from "antd";
 import { Dispatch, SetStateAction } from "react";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
+import { MinusSquareFilled, TableOutlined } from "@ant-design/icons";
 import { Metric } from "../ExplorerTypes";
 import { ProjectDomainSummary } from "../../../openapi/api";
-import { GrDisabledOutline } from "react-icons/gr";
-import { ChartOutlierSummaryBar } from "../../charts/ChartOutlierSummaryBar";
-import {
-  MinusSquareFilled,
-  TableOutlined,
-  TabletFilled,
-} from "@ant-design/icons";
 import { FilterState, updateValue } from "../../util/MetricFilter";
 
 type Props = {
-  projectHash: string;
   selectedMetric: Metric;
   predictionHash: string | undefined;
   dataMetricsSummary: ProjectDomainSummary;

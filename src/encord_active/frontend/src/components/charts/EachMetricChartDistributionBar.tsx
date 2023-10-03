@@ -35,7 +35,7 @@ export function EachMetricChartDistributionBar(props: {
     featureHashMap,
     property,
   } = props;
-  const [showQuartiles, setShowQuartiles] = useState(false);
+  const [showQuartiles] = useState(false);
 
   const allProperties = useMemo(() => {
     const properties = Object.entries(metricsSummary.metrics)

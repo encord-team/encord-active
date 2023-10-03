@@ -6,7 +6,7 @@ import {
   Dispatch,
   SetStateAction,
 } from "react";
-import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
+import { BiSelectMultiple } from "react-icons/bi";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useLocalStorage, useToggle } from "usehooks-ts";
 import {
@@ -18,15 +18,10 @@ import {
   Popover,
   Row,
   Segmented,
-  Select,
-  Slider,
   Space,
   Tabs,
   Tooltip,
-  Typography,
 } from "antd";
-import { SegmentedValue } from "antd/es/segmented";
-import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
 import {
   DotChartOutlined,
@@ -37,7 +32,6 @@ import {
 import { BulkTaggingForm } from "./Tagging";
 import { FilterState, DefaultFilters } from "../util/MetricFilter";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
-import { env, local } from "../../constants";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import {
@@ -63,10 +57,11 @@ import {
 } from "./ExplorerPremiumSearch";
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { FeatureHashMap } from "../Types";
-import { classy } from "../../helpers/classy";
 import { Filters } from "./filters/Filters";
 import { Overview } from "./overview/Overview";
 import { Display } from "./display/Display";
+
+import "../../css/explorer.css";
 
 export type Props = {
   projectHash: string;
@@ -82,8 +77,6 @@ export type Props = {
   openModal: undefined | "subset" | "upload";
   setOpenModal: Dispatch<SetStateAction<"subset" | "upload" | undefined>>;
 };
-
-import "../../css/explorer.css";
 
 export function Explorer({
   projectHash,
@@ -154,14 +147,19 @@ export function Explorer({
   }, [selectedMetric.domain, setShowAnnotations]);
 
   // Data or Label selection
-  const analysisDomainOptions = useMemo(() => {
-    return Object.entries(AnalysisDomain).map(([key, value]) => ({
-      label: analysisDomainLabelOverrides.hasOwnProperty(value)
-        ? analysisDomainLabelOverrides[value as AnalysisDomain]
-        : key,
-      value: value,
-    }));
-  }, []);
+  const analysisDomainOptions = useMemo(
+    () =>
+      Object.entries(AnalysisDomain).map(([key, value]) => ({
+        label: Object.prototype.hasOwnProperty.call(
+          analysisDomainLabelOverrides,
+          value
+        )
+          ? analysisDomainLabelOverrides[value as AnalysisDomain]
+          : key,
+        value,
+      })),
+    []
+  );
   const [analysisDomain, setAnalysisDomain] = useState<AnalysisDomain>("data");
   const [selectedMetricData, setSelectedMetricData] = useState<Metric>({
     domain: "data",
@@ -562,12 +560,10 @@ export function Explorer({
                         }}
                         trigger={["click"]}
                       >
-                        <a onClick={(e) => e.preventDefault()}>
-                          <Space>
-                            Select
-                            <DownOutlined />
-                          </Space>
-                        </a>
+                        <Space>
+                          Select
+                          <DownOutlined />
+                        </Space>
                       </Dropdown>
                       <ConfigProvider
                         theme={{
@@ -691,7 +687,7 @@ export function Explorer({
                   <Overview
                     projectHash={projectHash}
                     analysisDomain={
-                      analysisDomain == "data" ? "data" : "annotation"
+                      analysisDomain === "data" ? "data" : "annotation"
                     }
                   />
                 ),
@@ -702,14 +698,8 @@ export function Explorer({
                 children: (
                   <Filters
                     projectHash={projectHash}
-                    selectedMetric={selectedMetric}
-                    isSortedByMetric={isSortedByMetric}
-                    predictionHash={predictionHash}
                     dataMetricsSummary={dataMetricsSummary}
                     annotationMetricsSummary={annotationMetricsSummary}
-                    setSelectedMetric={handleMetricChange}
-                    isAscending={isAscending}
-                    setIsAscending={setIsAscending}
                     annotationFilters={annotationFilters}
                     setAnnotationFilters={setAnnotationFilters}
                     dataFilters={dataFilters}
@@ -717,8 +707,6 @@ export function Explorer({
                     featureHashMap={featureHashMap}
                     reset={reset}
                     canResetFilters={canResetFilters}
-                    showAnnotations={showAnnotations}
-                    toggleShowAnnotations={toggleShowAnnotations}
                   />
                 ),
               },
@@ -727,7 +715,6 @@ export function Explorer({
                 key: "display",
                 children: (
                   <Display
-                    projectHash={projectHash}
                     selectedMetric={selectedMetric}
                     isSortedByMetric={isSortedByMetric}
                     predictionHash={predictionHash}
@@ -749,76 +736,5 @@ export function Explorer({
         </Col>
       </Row>
     </div>
-  );
-}
-function PredictionFilters({
-  iou,
-  setIou,
-  predictionOutcome,
-  setPredictionOutcome,
-  isClassificationOnly,
-  disabled,
-}: {
-  iou: number;
-  setIou: (iou: number) => void;
-  predictionOutcome: PredictionDomain;
-  setPredictionOutcome: (outcome: PredictionDomain) => void;
-  isClassificationOnly: boolean;
-  disabled: boolean;
-}) {
-  return (
-    <Space.Compact size="large">
-      <Select
-        disabled={disabled}
-        onChange={setPredictionOutcome}
-        value={predictionOutcome}
-        options={[
-          {
-            value: "fp",
-            label: "False Positive",
-          },
-          {
-            value: "tp",
-            label: "True Positive",
-          },
-          {
-            value: "fn",
-            label: "False Negative",
-          },
-          {
-            value: "p",
-            label: "All Positive",
-          },
-          {
-            value: "a",
-            label: "All Outcomes",
-          },
-        ]}
-      />
-
-      {!isClassificationOnly && (
-        <div
-          className={classy(
-            "box-border h-10 w-80 rounded-r-lg border-r border-b border-t border-solid border-gray-200",
-            "flex items-center gap-1 px-2"
-          )}
-        >
-          <Typography.Text strong className="min-w-fit">
-            IOU:
-          </Typography.Text>
-          <Slider
-            className="w-full"
-            tooltip={{
-              formatter: (val: number | undefined) => `${val}`,
-            }}
-            value={iou}
-            onChange={setIou}
-            min={0}
-            max={1}
-            step={0.01}
-          />
-        </div>
-      )}
-    </Space.Compact>
   );
 }
