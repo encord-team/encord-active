@@ -1,6 +1,7 @@
 import { Button, Select } from "antd";
 import { MdFilterAltOff } from "react-icons/md";
 import { Dispatch, SetStateAction } from "react";
+import { PlusOutlined } from "@ant-design/icons";
 import {
   FilterState,
   MetricFilter,
@@ -53,6 +54,9 @@ export function Filters({
   return (
     <div className="flex w-full flex-col gap-2">
       <Select
+        suffixIcon={<PlusOutlined />}
+        value="Add a new filter"
+        className="w-full"
         showSearch
         onChange={(metricKey) => {
           const type =
@@ -71,7 +75,6 @@ export function Filters({
             )
           );
         }}
-        placeholder="Add a new filter"
         options={[
           ...Object.entries(dataMetricsSummary.metrics).map(
             ([metricKey, metric]) => ({
