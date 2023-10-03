@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Button, Tooltip, Upload } from "antd";
+import { Button, Input, Tooltip, Upload } from "antd";
 import Search from "antd/es/input/Search";
 import { SearchOutlined, UploadOutlined } from "@ant-design/icons";
 
@@ -33,9 +33,10 @@ export function ExplorerPremiumSearch(props: {
 
   // FIXME: re-add snippet (probably query json - with option to set current filter state to match??)
   return (
-    <div className="mr-4 flex">
+    <div className="mr-2 flex h-full items-center gap-2 border-r border-gray-200 px-4">
       <Tooltip overlay="Text Search">
         <Search
+          className="explorer-premium-search"
           placeholder="Search Anything"
           onSearch={(value) => setSearch(value || undefined)}
           allowClear
@@ -61,7 +62,10 @@ export function ExplorerPremiumSearch(props: {
           beforeUpload={() => false}
           showUploadList={false}
         >
-          <Button className="border-none" icon={<UploadOutlined />} />
+          <Button
+            className="border-none shadow-none"
+            icon={<UploadOutlined />}
+          />
         </Upload>
       </Tooltip>
       {/* <Select */}

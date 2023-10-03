@@ -467,11 +467,10 @@ export function Explorer({
             className="explorer-tabs h-full"
             tabBarStyle={{
               margin: 0,
-              padding: "0px 20px",
             }}
             tabBarExtraContent={{
               left: (
-                <div className="flex">
+                <div className=" flex h-full items-center">
                   <ExplorerPremiumSearch
                     premiumSearchState={{
                       ...premiumSearchState,
@@ -662,7 +661,7 @@ export function Explorer({
               },
               {
                 label: (
-                  <span className="flex items-center gap-2">
+                  <span className="mr-2 flex items-center gap-2">
                     <DotChartOutlined /> Embeddings View
                   </span>
                 ),

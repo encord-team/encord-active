@@ -8,3 +8,21 @@
 .explorer-tabs .ant-tabs-ink-bar {
   background-color: transparent;
 }
+
+.explorer-tabs .ant-tabs-extra-content {
+  height: 100%;
+}
+
+.explorer-premium-search * {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.explorer-premium-search :focus {
+  border-color: #530101 !important;
+  box-shadow: none !important;
+}
+
+.explorer-premium-search .ant-input-search-button {
+  display: none;
+}

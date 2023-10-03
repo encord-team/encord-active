@@ -1,5 +1,5 @@
 import { CSSProperties, useEffect, useMemo, useState } from "react";
-import { Button, Spin, Tabs } from "antd";
+import { Button, ConfigProvider, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
 import {
   FeatureHashMap,
@@ -16,6 +16,8 @@ import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
 import { env } from "../constants";
 import { BiWindows } from "react-icons/bi";
+import { IoAddCircleOutline } from "react-icons/io5";
+import { PlusOutlined } from "@ant-design/icons";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -111,6 +113,7 @@ export function ProjectPage(props: {
   const tabBarStyle: CSSProperties = {
     background: "#FAFAFA",
     margin: 0,
+    padding: "0px 10px",
   };
 
   return (
@@ -127,15 +130,27 @@ export function ProjectPage(props: {
           />
         ),
         right: (
-          <Button
-            onClick={() => setOpenModal("subset")}
-            // disabled={!canResetFilters}
-            hidden={env === "sandbox"}
-            icon={<BiWindows />}
-            size="large"
+          <ConfigProvider
+            theme={{
+              components: {
+                Button: {
+                  defaultBg: "#434343",
+                },
+              },
+            }}
           >
-            Create Project subset
-          </Button>
+            <Button
+              className="border-none bg-gray-9 text-white"
+              onClick={() => setOpenModal("subset")}
+              // disabled={!canResetFilters}
+              disabled
+              hidden={env === "sandbox"}
+              icon={<PlusOutlined />}
+              size="large"
+            >
+              Create Annotate Project
+            </Button>
+          </ConfigProvider>
         ),
       }}
       items={[
