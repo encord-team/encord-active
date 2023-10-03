@@ -579,9 +579,7 @@ export function Explorer({
                       </Dropdown>
 
                       <Button
-                        className={classy({
-                          "border-none bg-gray-9 text-white": hasSelectedItems,
-                        })}
+                        className="border-none bg-gray-9 text-white"
                         disabled={!hasSelectedItems}
                         onClick={() => setSelectedItems(new Set())}
                         icon={<VscClearAll />}
@@ -608,10 +606,7 @@ export function Explorer({
                         trigger="click"
                       >
                         <Button
-                          className={classy({
-                            "border-none bg-gray-9 text-white":
-                              hasSelectedItems,
-                          })}
+                          className="border-none bg-gray-9 text-white"
                           type="default"
                           disabled={!hasSelectedItems}
                         >

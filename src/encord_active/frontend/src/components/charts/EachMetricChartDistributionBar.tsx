@@ -18,6 +18,7 @@ import {
 } from "../../openapi/api";
 import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
 import { FeatureHashMap } from "../Types";
+import { Colors } from "../../constants";
 
 export function EachMetricChartDistributionBar(props: {
   metricsSummary: ProjectDomainSummary;
@@ -92,7 +93,7 @@ export function EachMetricChartDistributionBar(props: {
     if (groupingData.data == null) {
       return [];
     }
-    let getFill: (score: number) => string = () => "#ffa600";
+    let getFill: (score: number) => string = () => Colors.lightGray;
     const results = [...groupingData.data.results];
     let keyValues: Readonly<Record<string, string | undefined>> | undefined;
     if (!isMetric) {
@@ -224,7 +225,12 @@ export function EachMetricChartDistributionBar(props: {
         />
         <Tooltip formatter={formatTooltip} />
 
-        <Bar dataKey="count" isAnimationActive={false} />
+        <Bar
+          dataKey="count"
+          isAnimationActive={false}
+          floodColor="#434343"
+          colorInterpolation={"#434343"}
+        />
         {metadata === undefined || !showQuartiles
           ? null
           : referenceLines(metadata)}

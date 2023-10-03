@@ -274,7 +274,12 @@ function GalleryCardRaw(props: {
       onClick={() => setSelectedToggle(itemId)}
       loading={isLoading}
       bodyStyle={{ padding: 4, marginTop: "auto" }}
-      className="z-1 annotated-image-cover flex h-full w-full flex-col p-1"
+      className={classy(
+        "z-1 annotated-image-cover flex h-full w-full flex-col p-1",
+        {
+          "border border-blue-300": selected,
+        }
+      )}
       cover={
         <div className="!flex items-center justify-center">
           {preview != null && (
