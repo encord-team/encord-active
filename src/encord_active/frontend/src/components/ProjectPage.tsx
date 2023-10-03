@@ -46,6 +46,13 @@ export function ProjectPage(props: {
     }
   }, [isError, setSelectedProjectHash]);
 
+  // selection
+  const [selectedItems, setSelectedItems] = useState<
+    ReadonlySet<string> | "ALL"
+  >(new Set<string>());
+
+  const hasSelectedItems = selectedItems === "ALL" || selectedItems.size > 0;
+
   const featureHashMap: FeatureHashMap = useMemo(() => {
     const featureHashMap: Record<
       string,
@@ -129,12 +136,14 @@ export function ProjectPage(props: {
         ),
         right: (
           <Button
-            className={classy("bg-gray-2", {
-              // "border-none bg-gray-9 text-white": hasSelectedItems,
-            })}
+            className={classy(
+              "text-white disabled:bg-gray-9 disabled:bg-opacity-40 disabled:text-white",
+              {
+                "border-none bg-gray-9": hasSelectedItems,
+              }
+            )}
             onClick={() => setOpenModal("subset")}
-            // disabled={!canResetFilters}
-            disabled
+            disabled={!hasSelectedItems}
             hidden={env === "sandbox"}
             icon={<PlusOutlined />}
             size="large"
@@ -159,6 +168,9 @@ export function ProjectPage(props: {
               remoteProject={remoteProject}
               openModal={openModal}
               setOpenModal={setOpenModal}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
+              hasSelectedItems={hasSelectedItems}
             />
           ),
         },

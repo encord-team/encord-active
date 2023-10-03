@@ -78,6 +78,9 @@ export type Props = {
   remoteProject: boolean;
   openModal: undefined | "subset" | "upload";
   setOpenModal: Dispatch<SetStateAction<"subset" | "upload" | undefined>>;
+  selectedItems: ReadonlySet<string> | "ALL";
+  setSelectedItems: Dispatch<SetStateAction<ReadonlySet<string> | "ALL">>;
+  hasSelectedItems: boolean;
 };
 
 export function Explorer({
@@ -91,6 +94,9 @@ export function Explorer({
   remoteProject,
   openModal,
   setOpenModal,
+  selectedItems,
+  setSelectedItems,
+  hasSelectedItems,
 }: Props) {
   // Item selected for extra analysis operations
   const [similarityItem, setSimilarityItem] = useState<string | undefined>();
@@ -121,9 +127,6 @@ export function Explorer({
   );
 
   // Selection
-  const [selectedItems, setSelectedItems] = useState<
-    ReadonlySet<string> | "ALL"
-  >(new Set<string>());
 
   const [analysisDomain, setAnalysisDomain] = useState<AnalysisDomain>("data");
   const [selectedMetricData, setSelectedMetricData] = useState<Metric>({
@@ -146,7 +149,6 @@ export function Explorer({
     }
   };
 
-  const hasSelectedItems = selectedItems === "ALL" || selectedItems.size > 0;
   const [clearSelectionModalVisible, setClearSelectionModalVisible] =
     useState(false);
   useEffect(() => {
