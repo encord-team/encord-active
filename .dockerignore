@@ -1,3 +1,3 @@
 node_modules
 .git
-frontend_components/encord_active_components/frontend/node_modules
+src/encord_active/frontend/node_modules
