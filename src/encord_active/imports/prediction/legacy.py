@@ -1,25 +1,17 @@
 import uuid
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 
-from encord.objects import Object, OntologyStructure
+from encord.objects import OntologyStructure
 from pydantic import parse_file_as
 
 from encord_active.db.enums import AnnotationType
 from encord_active.db.models import ProjectPrediction
-from encord_active.db.models.project import Project
 from encord_active.imports.prediction.op import (
     PredictionImportSpec,
     ProjectPredictedDataUnit,
 )
-from encord_active.imports.util import (
-    append_object_to_list,
-    bitmask_to_bounding_box,
-    bitmask_to_encord_dict,
-    bitmask_to_polygon,
-    bitmask_to_rotatable_bounding_box,
-    coco_str_to_bitmask,
-)
+from encord_active.imports.util import append_object_to_list
 from encord_active.lib.db.predictions import BoundingBox, Format, Prediction
 
 
@@ -56,7 +48,7 @@ def import_legacy_predictions(
             elif predict.object.format == Format.BOUNDING_BOX:
                 annotation_type = AnnotationType.BOUNDING_BOX
                 assert isinstance(predict.object.data, BoundingBox)
-                shape = predict.object.data.dict()
+                shape = predict.object.data.dict()  # type: ignore
                 ontology_object = ontology_structure.get_child_by_hash(predict.object.feature_hash)
             else:
                 annotation_type = AnnotationType.BITMASK
@@ -69,7 +61,7 @@ def import_legacy_predictions(
         append_object_to_list(
             object_list=predicted_data_unit.objects,
             annotation_type=annotation_type,
-            shape_data_list=[shape],
+            shape_data_list=[shape],  # type: ignore
             ontology_object=ontology_object,
             confidence=predict.confidence,
             object_hash=None,
