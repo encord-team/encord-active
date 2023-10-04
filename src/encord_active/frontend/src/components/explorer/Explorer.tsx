@@ -356,20 +356,23 @@ export function Explorer({
   }, [sortedItems, similarityItem]);
   const itemTruncated = sortedItems?.truncated ?? false;
 
-  const toggleImageSelection = useCallback((id: string) => {
-    setSelectedItems((prev) => {
-      if (prev === "ALL") {
-        return "ALL";
-      }
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
+  const toggleImageSelection = useCallback(
+    (id: string) => {
+      setSelectedItems((prev) => {
+        if (prev === "ALL") {
+          return "ALL";
+        }
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        return next;
+      });
+    },
+    [setSelectedItems]
+  );
 
   const closePreview = useCallback(
     () => setPreviewedItem(undefined),

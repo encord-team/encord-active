@@ -14,6 +14,7 @@ export function SummaryView(props: {
 
   return (
     <Tabs
+      className="h-full overflow-y-auto p-4"
       items={[
         {
           label: "Data",

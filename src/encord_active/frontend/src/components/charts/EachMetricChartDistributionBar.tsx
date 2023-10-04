@@ -225,12 +225,7 @@ export function EachMetricChartDistributionBar(props: {
         />
         <Tooltip formatter={formatTooltip} />
 
-        <Bar
-          dataKey="count"
-          isAnimationActive={false}
-          floodColor="#434343"
-          colorInterpolation={"#434343"}
-        />
+        <Bar dataKey="count" isAnimationActive={false} />
         {metadata === undefined || !showQuartiles
           ? null
           : referenceLines(metadata)}
