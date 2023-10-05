@@ -85,7 +85,7 @@ WELL_KNOWN_METRICS: Dict[str, str] = {
     "Random Values on Objects": "metric_random",
     "Image-level Annotation Quality": "metric_annotation_quality",
     "Shape outlier detection": "metric_label_shape_outlier",
-    "Detect Occlusion in Video": "$SKIP"
+    "Detect Occlusion in Video": "$SKIP",
 }
 
 # Metrics that need to be migrated to the normalised format from percentage for consistency with other metrics.
