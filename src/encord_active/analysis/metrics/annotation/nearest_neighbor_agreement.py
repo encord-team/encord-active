@@ -36,10 +36,8 @@ class NearestNeighborAgreement(DerivedMetric):
         similarity_sum = sum(nearest_neighbours.similarities)
         if similarity_sum > 0.0:
             # Weight by similarities
-            # Relatively smaller values should contribute more to the total
-            raw_bias = [1.0 / max(s, 0.01) for s in nearest_neighbours.similarities]
-            total_bias = sum(raw_bias)
-            matches = [m * (t / total_bias) for m, t in zip(matches, raw_bias)]
+            # Relatively higher values (higher similarity, lower distance) should contribute more to the total
+            matches = [m * (s / similarity_sum) for m, s in zip(matches, nearest_neighbours.similarities)]
             return min(sum(matches), 1.0)
         else:
             return min(sum(matches) / len(matches), 1.0)
