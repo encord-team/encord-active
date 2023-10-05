@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
 import { PlusOutlined } from "@ant-design/icons";
@@ -116,6 +116,7 @@ export function ProjectPage(props: {
   }
 
   const remoteProject = !projectSummary.local_project;
+
   return (
     <Tabs
       className="h-full"

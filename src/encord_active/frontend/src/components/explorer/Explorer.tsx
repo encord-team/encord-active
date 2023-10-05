@@ -8,7 +8,7 @@ import {
 } from "react";
 import { BiSelectMultiple } from "react-icons/bi";
 import { VscClearAll } from "react-icons/vsc";
-import { useDebounce, useLocalStorage, useToggle } from "usehooks-ts";
+import { useDebounce, useToggle } from "usehooks-ts";
 import {
   Button,
   Col,
@@ -45,11 +45,7 @@ import {
 import { useProjectListReductions } from "../../hooks/queries/useProjectListReductions";
 import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 import { useProjectAnalysisSearch } from "../../hooks/queries/useProjectAnalysisSearch";
-import {
-  ExplorerFilterState,
-  Metric,
-  analysisDomainLabelOverrides,
-} from "./ExplorerTypes";
+import { ExplorerFilterState } from "./ExplorerTypes";
 import { ItemPreviewModal } from "../preview/ItemPreviewModal";
 import { usePredictionAnalysisSearch } from "../../hooks/queries/usePredictionAnalysisSearch";
 import {
@@ -168,19 +164,16 @@ export function Explorer({
   }, [analysisDomain, setShowAnnotations]);
 
   // Data or Label selection
-  const analysisDomainOptions = useMemo(
-    () =>
-      Object.entries(AnalysisDomain).map(([key, value]) => ({
-        label: Object.prototype.hasOwnProperty.call(
-          analysisDomainLabelOverrides,
-          value
-        )
-          ? analysisDomainLabelOverrides[value as AnalysisDomain]
-          : key,
-        value,
-      })),
-    []
-  );
+  const analysisDomainOptions: { label: string; value: AnalysisDomain }[] = [
+    {
+      label: "Data",
+      value: AnalysisDomain.Data,
+    },
+    {
+      label: "Labels",
+      value: AnalysisDomain.Annotation,
+    },
+  ];
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -206,7 +199,7 @@ export function Explorer({
       );
 
     return {
-      analysisDomain: analysisDomain,
+      analysisDomain,
       filters: {
         data: {
           // FIXME: the 'as' casts should NOT! be needed
@@ -245,6 +238,7 @@ export function Explorer({
     predictionOutcome,
     embeddingFilter,
     iou,
+    analysisDomain,
   ]);
 
   const filters: ExplorerFilterState = useDebounce(rawFilters, 500);

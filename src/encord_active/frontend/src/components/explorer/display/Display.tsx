@@ -2,7 +2,6 @@ import { Button, Select, Slider, Space, Switch } from "antd";
 import { Dispatch, SetStateAction } from "react";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
 import { MinusSquareFilled, TableOutlined } from "@ant-design/icons";
-import { Metric } from "../ExplorerTypes";
 import {
   AnalysisDomain,
   ProjectDomainSummary,
@@ -17,11 +16,8 @@ import {
 import { Colors, GRID_MAX_COUNT, GRID_MIN_COUNT } from "../../../constants";
 
 type Props = {
-  dataFilters: FilterState;
   annotationFilters: FilterState;
-  dataMetricRanges: QuerySummary["metrics"] | undefined;
   annotationMetricRanges: QuerySummary["metrics"] | undefined;
-  metricsSummary: ProjectDomainSummary;
   selectedMetric: string;
   analysisDomain: AnalysisDomain;
   predictionHash: string | undefined;
@@ -127,12 +123,12 @@ export function Display({
           <Select
             value={`${analysisDomain}-${selectedMetric}`}
             onChange={(strKey: string) => {
-              const [domain, metric_key] = strKey.split("-");
+              const metric_key = strKey.split("-")[1];
               setSelectedMetric(metric_key);
             }}
             className="w-full"
             options={
-              analysisDomain == AnalysisDomain.Data
+              analysisDomain === AnalysisDomain.Data
                 ? Object.entries(dataMetricsSummary.metrics).map(
                     ([metricKey, metric]) => ({
                       label: `D: ${metric?.title ?? metricKey}`,
