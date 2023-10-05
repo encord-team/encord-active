@@ -56,7 +56,17 @@ export function ExplorerPremiumSearch(props: {
           }
         />
       </Tooltip>
-      <Tooltip overlay="Image Search">
+      <Tooltip
+        overlay={
+          <div>
+            <div>Search Anything Imahge</div>
+            <div>
+              You can search anything using this image searcha s a part of your
+              project and it is very very amazing
+            </div>
+          </div>
+        }
+      >
         <Upload
           onChange={({ file }) => setSearch(file as unknown as File)}
           beforeUpload={() => false}

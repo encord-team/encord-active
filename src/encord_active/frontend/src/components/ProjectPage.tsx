@@ -17,6 +17,7 @@ import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
 import { env } from "../constants";
 import { classy } from "../helpers/classy";
+import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -185,8 +186,21 @@ export function ProjectPage(props: {
             />
           ),
         },
+        {
+          label: "Model Evaluation",
+          key: "predictions",
+          children: (
+            <PredictionsTab
+              projectHash={projectHash}
+              annotationMetricsSummary={projectSummary.annotation}
+              dataMetricsSummary={projectSummary.data}
+              featureHashMap={featureHashMap}
+              setSelectedProjectHash={setSelectedProjectHash}
+              remoteProject={remoteProject}
+            />
+          ),
+        },
 
-        // Not to be displayed. Commented to work upon later.
         // {
         //   label: "Project Comparison",
         //   key: "comparison",
