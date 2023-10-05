@@ -116,6 +116,7 @@ export function Display({
         </div>
         {confidenceBounds !== undefined && (
           <Slider
+            disabled
             value={
               confidenceFilters != null
                 ? [confidenceFilters[0], confidenceFilters[1]]
