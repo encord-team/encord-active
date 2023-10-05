@@ -19,11 +19,13 @@ import {
   Segmented,
   Space,
   Tabs,
+  Tooltip,
 } from "antd";
 import { useNavigate, useParams } from "react-router";
 import {
   DotChartOutlined,
   DownOutlined,
+  InfoCircleOutlined,
   TableOutlined,
 } from "@ant-design/icons";
 import { BulkTaggingForm } from "./Tagging";
@@ -54,13 +56,14 @@ import {
 } from "./ExplorerPremiumSearch";
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { FeatureHashMap, ModalName } from "../Types";
-import { Filters } from "./filters/Filters";
 import { Overview } from "./overview/Overview";
 import { Display } from "./display/Display";
 
 import "./css/explorer.css";
 import { classy } from "../../helpers/classy";
 import { useUserSettings } from "../../hooks/useUserSettings";
+import { CustomTooltip } from "../util/CustomTooltip";
+import { Filters } from "./filters/FIlters";
 
 export type Props = {
   projectHash: string;
@@ -473,7 +476,7 @@ export function Explorer({
             }}
             tabBarExtraContent={{
               left: (
-                <div className=" flex h-full items-center">
+                <div className=" flex h-full items-center gap-2">
                   <ExplorerPremiumSearch
                     premiumSearchState={{
                       ...premiumSearchState,
@@ -498,6 +501,13 @@ export function Explorer({
                       setAnalysisDomain(val as AnalysisDomain);
                     }}
                   />
+
+                  <CustomTooltip
+                    title="Switch data view"
+                    description="Switch between Data, Label, and Prediction cards to customize your view in the Explorer."
+                  >
+                    <InfoCircleOutlined className="text-lg" />
+                  </CustomTooltip>
                 </div>
               ),
             }}
@@ -674,7 +684,11 @@ export function Explorer({
           <Tabs
             items={[
               {
-                label: "Overview",
+                label: (
+                  <Tooltip title="Gain insight into the quality and quantity of your data and labels. Easy find and view common issues.">
+                    Overview
+                  </Tooltip>
+                ),
                 key: "overview",
                 children: (
                   <Overview
@@ -686,7 +700,11 @@ export function Explorer({
                 ),
               },
               {
-                label: "Filter",
+                label: (
+                  <Tooltip title="Filter your grid view by classes, annotators, quality metrics, and more. Save filters for later usage.">
+                    Filter
+                  </Tooltip>
+                ),
                 key: "filter",
                 children: (
                   <Filters
@@ -706,7 +724,11 @@ export function Explorer({
                 ),
               },
               {
-                label: "Display",
+                label: (
+                  <Tooltip title="Customize your grid view by altering display parameters. Tailor the layout, labels/predictions, and other visual settings to your preference.">
+                    Display
+                  </Tooltip>
+                ),
                 key: "display",
                 children: (
                   <Display

@@ -8,6 +8,7 @@ module.exports = {
           2: "#FAFAFA",
           8: "#595959",
           9: "#434343",
+          10: "#262626",
         },
         warning: "#ec9c27",
         severe: "#cf1322",
