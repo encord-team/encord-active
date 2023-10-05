@@ -710,11 +710,8 @@ export function Explorer({
                 key: "display",
                 children: (
                   <Display
-                    dataFilters={dataFilters}
                     annotationFilters={annotationFilters}
-                    dataMetricRanges={dataMetricRanges?.metrics}
                     annotationMetricRanges={annotationMetricRanges?.metrics}
-                    metricsSummary={dataMetricsSummary}
                     selectedMetric={selectedMetric}
                     analysisDomain={analysisDomain}
                     isSortedByMetric={isSortedByMetric}
