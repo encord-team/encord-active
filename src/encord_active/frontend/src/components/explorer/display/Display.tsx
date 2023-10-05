@@ -1,7 +1,11 @@
-import { Button, Select, Slider, Space, Switch } from "antd";
+import { Button, Select, Slider, Space, Switch, Tooltip } from "antd";
 import { Dispatch, SetStateAction } from "react";
 import { TbSortAscending, TbSortDescending } from "react-icons/tb";
-import { MinusSquareFilled, TableOutlined } from "@ant-design/icons";
+import {
+  InfoCircleOutlined,
+  MinusSquareFilled,
+  TableOutlined,
+} from "@ant-design/icons";
 import {
   AnalysisDomain,
   ProjectDomainSummary,
@@ -82,7 +86,12 @@ export function Display({
         <TableOutlined className="text-base text-gray-8" />
       </div>
       <div className="flex items-center justify-between">
-        <div className="px-2 py-4 text-sm text-gray-8">Display Labels</div>
+        <div className="text-gray-1 flex items-center gap-1 px-2 py-4 text-sm">
+          Display Labels
+          <Tooltip title="Hide and show annotated labels on your data units.">
+            <InfoCircleOutlined />
+          </Tooltip>
+        </div>
         <Switch
           onClick={toggleShowAnnotations}
           className="bg-gray-9"
@@ -90,11 +99,21 @@ export function Display({
         />
       </div>
       <div className="flex items-center justify-between">
-        <div className="px-2 py-4 text-sm text-gray-8">Display Predictions</div>
+        <div className="flex items-center gap-1 px-2 py-4 text-sm text-gray-8">
+          Display Predictions
+          <Tooltip title="Hide and show predictions to compare against labels and assess model performance.">
+            <InfoCircleOutlined />
+          </Tooltip>
+        </div>
         <Switch disabled className="bg-gray-9" />
       </div>
       <div className="flex flex-col items-start justify-between p-4">
-        <div className=" text-sm text-gray-8">Confidence</div>
+        <div className=" flex items-center gap-1 text-sm text-gray-8">
+          Confidence
+          <Tooltip title="Set a minimum/maximum confidence level to filter and display only those predictions that meet or exceed this value.">
+            <InfoCircleOutlined />
+          </Tooltip>
+        </div>
         {confidenceBounds !== undefined && (
           <Slider
             value={

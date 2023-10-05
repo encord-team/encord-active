@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button, Tooltip, Upload } from "antd";
 import Search from "antd/es/input/Search";
 import { SearchOutlined, UploadOutlined } from "@ant-design/icons";
+import { CustomTooltip } from "../util/CustomTooltip";
 
 export type ExplorerPremiumSearchState = {
   search: string | File | undefined;
@@ -56,16 +57,9 @@ export function ExplorerPremiumSearch(props: {
           }
         />
       </Tooltip>
-      <Tooltip
-        overlay={
-          <div>
-            <div>Search Anything Imahge</div>
-            <div>
-              You can search anything using this image searcha s a part of your
-              project and it is very very amazing
-            </div>
-          </div>
-        }
+      <CustomTooltip
+        title="Search anything by image"
+        description="Use to perform similarity search with external media"
       >
         <Upload
           onChange={({ file }) => setSearch(file as unknown as File)}
@@ -77,7 +71,8 @@ export function ExplorerPremiumSearch(props: {
             icon={<UploadOutlined />}
           />
         </Upload>
-      </Tooltip>
+      </CustomTooltip>
+
       {/* <Select */}
       {/*   value={searchMode} */}
       {/*   onChange={(mode) => { */}
