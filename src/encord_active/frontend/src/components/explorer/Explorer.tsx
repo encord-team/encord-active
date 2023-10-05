@@ -645,7 +645,7 @@ export function Explorer({
                         setPage={setPage}
                         page={page}
                         setPageSize={(val: number) => {
-                          updateUserDisplaySettings("explorerPageSize", val);
+                          updateUserDisplaySettings({ explorerPageSize: val });
                         }}
                         pageSize={userDisplaySettings.explorerPageSize}
                         gridCount={userDisplaySettings.explorerGridCount}
@@ -735,7 +735,7 @@ export function Explorer({
                     setConfidenceFilter={setAnnotationFilters}
                     gridCount={userDisplaySettings.explorerGridCount}
                     setGridCount={(val: number) => {
-                      updateUserDisplaySettings("explorerGridCount", val);
+                      updateUserDisplaySettings({ explorerGridCount: val });
                     }}
                   />
                 ),

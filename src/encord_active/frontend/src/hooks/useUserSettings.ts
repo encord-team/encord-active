@@ -3,10 +3,7 @@ import { UserSettings } from "../components/Types";
 
 export function useUserSettings(): [
   settings: UserSettings,
-  updateDisplaySettings: (
-    key: keyof UserSettings,
-    value: UserSettings[keyof UserSettings]
-  ) => void
+  updateDisplaySettings: (settings: Partial<UserSettings>) => void
 ] {
   const DEFAULT_SETTINGS: UserSettings = {
     explorerGridCount: 5,
@@ -19,11 +16,8 @@ export function useUserSettings(): [
     DEFAULT_SETTINGS
   );
 
-  function updateDisplaySettings<T>(
-    key: keyof UserSettings,
-    value: UserSettings[keyof UserSettings]
-  ) {
-    const newSettings = { ...settings, [key]: value };
+  function updateDisplaySettings(settingsToUpdate: Partial<UserSettings>) {
+    const newSettings = { ...settings, ...settingsToUpdate };
     updateSettings(newSettings);
   }
   return [settings, updateDisplaySettings];
