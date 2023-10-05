@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { PlusOutlined } from "@ant-design/icons";
 import {
   FeatureHashMap,
+  ModalName,
   OntologyObjectAttribute,
   OntologyObjectAttributeOptions,
   ProjectOntology,
@@ -107,7 +108,7 @@ export function ProjectPage(props: {
   }, [projectSummary]);
 
   // Modal state
-  const [openModal, setOpenModal] = useState<undefined | "subset" | "upload">();
+  const [openModal, setOpenModal] = useState<ModalName | undefined>();
 
   // Loading screen while waiting for full summary of project metrics.
   if (projectSummary == null) {
@@ -115,17 +116,15 @@ export function ProjectPage(props: {
   }
 
   const remoteProject = !projectSummary.local_project;
-  const tabBarStyle: CSSProperties = {
-    background: "#FAFAFA",
-    margin: 0,
-    padding: "0px 10px",
-  };
-
   return (
     <Tabs
       className="h-full"
       size="large"
-      tabBarStyle={tabBarStyle}
+      tabBarStyle={{
+        background: "#FAFAFA",
+        margin: 0,
+        padding: "0px 10px",
+      }}
       centered
       tabBarExtraContent={{
         left: (

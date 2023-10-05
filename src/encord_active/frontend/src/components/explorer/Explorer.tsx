@@ -57,13 +57,14 @@ import {
   useExplorerPremiumSearch,
 } from "./ExplorerPremiumSearch";
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
-import { FeatureHashMap } from "../Types";
+import { FeatureHashMap, ModalName } from "../Types";
 import { Filters } from "./filters/Filters";
 import { Overview } from "./overview/Overview";
 import { Display } from "./display/Display";
 
-import "../../css/explorer.css";
+import "./css/explorer.css";
 import { classy } from "../../helpers/classy";
+import { useUserSettings } from "../../hooks/useUserSettings";
 
 export type Props = {
   projectHash: string;
@@ -76,8 +77,8 @@ export type Props = {
   featureHashMap: FeatureHashMap;
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
-  openModal: undefined | "subset" | "upload";
-  setOpenModal: Dispatch<SetStateAction<"subset" | "upload" | undefined>>;
+  openModal: ModalName | undefined;
+  setOpenModal: Dispatch<SetStateAction<ModalName | undefined>>;
   selectedItems: ReadonlySet<string> | "ALL";
   setSelectedItems: Dispatch<SetStateAction<ReadonlySet<string> | "ALL">>;
   hasSelectedItems: boolean;
@@ -129,22 +130,20 @@ export function Explorer({
   // Selection
 
   const [analysisDomain, setAnalysisDomain] = useState<AnalysisDomain>("data");
-  const [selectedMetricData, setSelectedMetricData] = useState<Metric>({
-    domain: "data",
-    metric_key: "metric_random",
-  });
-  const [selectedMetricLabel, setSelectedMetricLabel] = useState<Metric>({
-    domain: "annotation",
-    metric_key: "metric_random",
-  });
+  const [selectedMetricData, setSelectedMetricData] =
+    useState<string>("metric_random");
+  const [selectedMetricLabel, setSelectedMetricLabel] =
+    useState<string>("metric_random");
 
   const selectedMetric =
-    analysisDomain === "data" ? selectedMetricData : selectedMetricLabel;
+    analysisDomain === AnalysisDomain.Data
+      ? selectedMetricData
+      : selectedMetricLabel;
 
-  const handleMetricChange = (val: Metric) => {
-    if (val.domain === "data") {
+  const handleMetricChange = (val: string) => {
+    if (analysisDomain === AnalysisDomain.Data) {
       setSelectedMetricData(val);
-    } else if (val.domain === "annotation") {
+    } else if (analysisDomain === AnalysisDomain.Annotation) {
       setSelectedMetricLabel(val);
     }
   };
@@ -159,14 +158,14 @@ export function Explorer({
       setClearSelectionModalVisible(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMetric.domain]);
+  }, [analysisDomain]);
 
   // Set show animations view state.
   const [showAnnotations, toggleShowAnnotations, setShowAnnotations] =
     useToggle(true);
   useEffect(() => {
-    setShowAnnotations(selectedMetric.domain === "annotation");
-  }, [selectedMetric.domain, setShowAnnotations]);
+    setShowAnnotations(analysisDomain === AnalysisDomain.Annotation);
+  }, [analysisDomain, setShowAnnotations]);
 
   // Data or Label selection
   const analysisDomainOptions = useMemo(
@@ -207,14 +206,16 @@ export function Explorer({
       );
 
     return {
-      analysisDomain: selectedMetric.domain,
+      analysisDomain: analysisDomain,
       filters: {
         data: {
           // FIXME: the 'as' casts should NOT! be needed
           metrics: dataFilters.metricFilters as DomainSearchFilters["metrics"],
           enums: removeTagFilter(dataFilters.enumFilters),
           reduction:
-            selectedMetric.domain === "data" ? embeddingFilter : undefined,
+            analysisDomain === AnalysisDomain.Data
+              ? embeddingFilter
+              : undefined,
           tags: dataFilters.enumFilters.tags as DomainSearchFilters["tags"],
         },
         annotation: {
@@ -222,14 +223,14 @@ export function Explorer({
             annotationFilters.metricFilters as DomainSearchFilters["metrics"],
           enums: removeTagFilter(annotationFilters.enumFilters),
           reduction:
-            selectedMetric.domain === "annotation"
+            analysisDomain === AnalysisDomain.Annotation
               ? embeddingFilter
               : undefined,
           tags: annotationFilters.enumFilters
             .tags as DomainSearchFilters["tags"],
         },
       },
-      orderBy: selectedMetric.metric_key,
+      orderBy: selectedMetric,
       desc: !isAscending,
       iou,
       predictionOutcome,
@@ -332,8 +333,8 @@ export function Explorer({
   };
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useLocalStorage("displayPageSize", 20);
-  const [gridCount, setGridCount] = useLocalStorage("displayGridCount", 6);
+
+  const [userDisplaySettings, updateUserDisplaySettings] = useUserSettings();
 
   const itemsToRender: readonly string[] = useMemo(() => {
     if (sortedItems == null) {
@@ -387,7 +388,7 @@ export function Explorer({
     [closePreview, setSearch]
   );
 
-  const allowTaggingAnnotations = selectedMetric?.domain === "annotation";
+  const allowTaggingAnnotations = analysisDomain === AnalysisDomain.Annotation;
 
   const loadingDescription = useMemo(() => {
     const descriptions = [
@@ -441,7 +442,7 @@ export function Explorer({
         setSelectedProjectHash={setSelectedProjectHash}
       />
       <Modal
-        title={`Changing domain to ${selectedMetric.domain}`}
+        title={`Changing domain to ${analysisDomain}`}
         onOk={() => {
           setSelectedItems(new Set());
           setClearSelectionModalVisible(false);
@@ -459,7 +460,7 @@ export function Explorer({
         projectHash={projectHash}
         predictionHash={predictionHash}
         previewItem={previewItem}
-        domain={selectedMetric.domain}
+        domain={analysisDomain}
         onClose={closePreview}
         onShowSimilar={() =>
           previewItem != null ? setSimilaritySearch(previewItem) : undefined
@@ -539,8 +540,10 @@ export function Explorer({
                                       return new Set([
                                         ...oldState,
                                         ...itemsToRender.slice(
-                                          (page - 1) * pageSize,
-                                          page * pageSize
+                                          (page - 1) *
+                                            userDisplaySettings.explorerPageSize,
+                                          page *
+                                            userDisplaySettings.explorerPageSize
                                         ),
                                       ]);
                                     })
@@ -552,8 +555,10 @@ export function Explorer({
                                   Select page (
                                   {
                                     itemsToRender.slice(
-                                      (page - 1) * pageSize,
-                                      page * pageSize
+                                      (page - 1) *
+                                        userDisplaySettings.explorerPageSize,
+                                      page *
+                                        userDisplaySettings.explorerPageSize
                                     ).length
                                   }
                                   )
@@ -629,6 +634,7 @@ export function Explorer({
                         truncated={itemTruncated}
                         loadingDescription={loadingDescription}
                         selectedMetric={selectedMetric}
+                        analysisDomain={analysisDomain}
                         toggleImageSelection={toggleImageSelection}
                         setPreviewedItem={setPreviewedItem}
                         setSimilaritySearch={setSimilaritySearch}
@@ -638,9 +644,11 @@ export function Explorer({
                         iou={iou}
                         setPage={setPage}
                         page={page}
-                        setPageSize={setPageSize}
-                        pageSize={pageSize}
-                        gridCount={gridCount}
+                        setPageSize={(val: number) => {
+                          updateUserDisplaySettings("explorerPageSize", val);
+                        }}
+                        pageSize={userDisplaySettings.explorerPageSize}
+                        gridCount={userDisplaySettings.explorerGridCount}
                       />
                     </div>
                   </div>
@@ -714,6 +722,7 @@ export function Explorer({
                     annotationMetricRanges={annotationMetricRanges?.metrics}
                     metricsSummary={dataMetricsSummary}
                     selectedMetric={selectedMetric}
+                    analysisDomain={analysisDomain}
                     isSortedByMetric={isSortedByMetric}
                     predictionHash={predictionHash}
                     dataMetricsSummary={dataMetricsSummary}
@@ -724,8 +733,10 @@ export function Explorer({
                     showAnnotations={showAnnotations}
                     toggleShowAnnotations={toggleShowAnnotations}
                     setConfidenceFilter={setAnnotationFilters}
-                    gridCount={gridCount}
-                    setGridCount={setGridCount}
+                    gridCount={userDisplaySettings.explorerGridCount}
+                    setGridCount={(val: number) => {
+                      updateUserDisplaySettings("explorerGridCount", val);
+                    }}
                   />
                 ),
               },

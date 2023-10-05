@@ -16,7 +16,7 @@ import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 import { classy } from "../../helpers/classy";
 import { ItemTags } from "../explorer/Tagging";
 import { FeatureHashMap } from "../Types";
-import { PredictionItem, ProjectItem } from "../../openapi/api";
+import { AnalysisDomain, PredictionItem, ProjectItem } from "../../openapi/api";
 import { AnnotationShapeIcon } from "../icons/AnnotationShapeIcon";
 import {
   toAnnotationHash,
@@ -73,7 +73,8 @@ function GalleryCardRaw(props: {
   itemSimilarity: number | undefined;
   similaritySearchCard: boolean;
   selected: boolean;
-  selectedMetric: { domain: "annotation" | "data"; metric_key: string };
+  selectedMetric: string;
+  analysisDomain: AnalysisDomain;
   setItemPreview: (itemId: string) => void;
   setSelectedToggle: (itemId: string) => void;
   setSimilaritySearch: (itemId: string | undefined) => void;
@@ -90,6 +91,7 @@ function GalleryCardRaw(props: {
     similaritySearchCard,
     selected,
     selectedMetric,
+    analysisDomain,
     setItemPreview,
     setSelectedToggle,
     setSimilaritySearch,
@@ -101,7 +103,8 @@ function GalleryCardRaw(props: {
   // Conditionally extract annotation hash
   const dataId = toDataItemID(itemId);
   const annotationItem =
-    selectedMetric.domain === "annotation" || predictionHash !== undefined;
+    analysisDomain === AnalysisDomain.Annotation ||
+    predictionHash !== undefined;
   const annotationHash: string | undefined = annotationItem
     ? toAnnotationHash(itemId, predictionHash !== undefined)
     : undefined;
@@ -146,27 +149,23 @@ function GalleryCardRaw(props: {
   // Load project summary state for extra metadata
   const { data: projectSummary } = useProjectSummary(projectHash);
   const projectSummaryForDomain =
-    projectSummary === undefined
-      ? {}
-      : projectSummary[selectedMetric.domain].metrics;
+    projectSummary === undefined ? {} : projectSummary[analysisDomain].metrics;
 
   // Metric name for order by metric
   const metricName =
     projectSummaryForDomain === undefined
       ? "unknown"
-      : projectSummaryForDomain[selectedMetric.metric_key]?.title ?? "unknown";
+      : projectSummaryForDomain[selectedMetric]?.title ?? "unknown";
 
   // Metric value for order by metric
   const displayValueData =
-    preview === undefined
-      ? NaN
-      : preview.data_metrics[selectedMetric.metric_key] ?? NaN;
+    preview === undefined ? NaN : preview.data_metrics[selectedMetric] ?? NaN;
   const displayValueAnnotationMetricsDict =
     preview === undefined
       ? {}
       : preview.annotation_metrics[annotationHash ?? ""] ?? {};
   const displayValueAnnotation =
-    displayValueAnnotationMetricsDict[selectedMetric.metric_key] ?? NaN;
+    displayValueAnnotationMetricsDict[selectedMetric] ?? NaN;
   const displayValue = annotationItem
     ? displayValueAnnotation
     : displayValueData;

@@ -8,7 +8,6 @@ export type Metric = {
   domain: "data" | "annotation";
   metric_key: string;
 };
-export type MetricDomain = "data" | "label";
 export type ExplorerFilterState = {
   readonly analysisDomain: "data" | "annotation";
   readonly filters: SearchFilters;

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { GalleryCard } from "../preview/GalleryCard";
 import { loadingIndicator } from "../Spin";
 import { FeatureHashMap } from "../Types";
+import { AnalysisDomain } from "../../openapi/api";
 
 const ExplorerSearchLocale = {
   emptyText: "No Results",
@@ -29,7 +30,8 @@ function ExplorerSearchResultsRaw(props: {
   itemSimilarityItemAtIndex0: boolean;
   truncated: boolean;
   loadingDescription: string;
-  selectedMetric: { domain: "annotation" | "data"; metric_key: string };
+  selectedMetric: string;
+  analysisDomain: AnalysisDomain;
   toggleImageSelection: (itemId: string) => void;
   setPreviewedItem: (itemId: string) => void;
   setSimilaritySearch: (itemId: string | undefined) => void;
@@ -51,6 +53,7 @@ function ExplorerSearchResultsRaw(props: {
     itemSimilarityItemAtIndex0,
     loadingDescription,
     selectedMetric,
+    analysisDomain,
     toggleImageSelection,
     setPreviewedItem,
     setSimilaritySearch,
@@ -121,6 +124,7 @@ function ExplorerSearchResultsRaw(props: {
             projectHash={projectHash}
             predictionHash={predictionHash}
             selectedMetric={selectedMetric}
+            analysisDomain={analysisDomain}
             key={item}
             itemId={item}
             itemSimilarity={similarity}
@@ -136,7 +140,6 @@ function ExplorerSearchResultsRaw(props: {
           />
         )}
       />
-      <div className="hidden h-full">1</div>
     </div>
   );
 }
