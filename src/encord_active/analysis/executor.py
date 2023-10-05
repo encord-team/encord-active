@@ -355,7 +355,7 @@ class SimpleExecutor(Executor):
             for result in tqdm(results, desc="Prefetching data links"):
                 _, images = result.result(timeout=120.0)
                 for image in images or []:
-                    du_hash = uuid.UUID(image["data_hash"])
+                    du_hash = uuid.UUID(image["image_hash"])
                     signed_url = str(image["file_link"])
                     self.encord_project_urls[(project_hash, du_hash)] = signed_url
 
@@ -745,7 +745,7 @@ class SimpleExecutor(Executor):
                 self.encord_projects[project_hash] = encord_project
             video, images = encord_project.get_data(data_hash=str(data_hash), get_signed_url=True)
             for image in images or []:
-                du_hash = uuid.UUID(image["data_hash"])
+                du_hash = uuid.UUID(image["image_hash"])
                 signed_url = str(image["file_link"])
                 self.encord_project_urls[(project_hash, du_hash)] = signed_url
             if video is not None:

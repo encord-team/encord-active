@@ -70,7 +70,7 @@ def download_data(
                 else:
                     url_found = None
                     for image in images or []:
-                        du_hash = uuid.UUID(image["data_hash"])
+                        du_hash = uuid.UUID(image["imzge_hash"])
                         if du_hash == du.du_hash:
                             url_found = str(image["file_link"])
                             du.data_uri_is_video = False

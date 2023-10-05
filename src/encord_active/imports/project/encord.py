@@ -88,7 +88,7 @@ def import_encord(
             elif store_data_locally:
                 video, images = encord_project.get_data(str(data_hash), get_signed_url=True)
                 for image in images or []:
-                    du_hash_local_storage[uuid.UUID(image["data_hash"])] = get_data_uri(
+                    du_hash_local_storage[uuid.UUID(image["image_hash"])] = get_data_uri(
                         url_or_path=str(image["file_link"]),
                         store_data_locally=True,
                         store_symlinks=False,

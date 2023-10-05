@@ -828,13 +828,13 @@ files = [
 
 [[package]]
 name = "encord"
-version = "0.1.94"
+version = "0.1.97"
 description = "Encord Python SDK Client"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "encord-0.1.94-py3-none-any.whl", hash = "sha256:091b37aa42cb63eb66246eea4a07ff58b7eeaa66cd121b55066bea562405034a"},
-    {file = "encord-0.1.94.tar.gz", hash = "sha256:46cd16dd99f6b58c5251d8cb87d31297003783d27318b4bee539260de1de343d"},
+    {file = "encord-0.1.97-py3-none-any.whl", hash = "sha256:d2622a9ff25d83d0b877b312441a3213f7ca939df3a8136b4e2f27a75cc1acd1"},
+    {file = "encord-0.1.97.tar.gz", hash = "sha256:0687c0e33c22fa4c4b3e8826653b530ca73414fab776569db754fd26ecbdcec5"},
 ]
 
 [package.dependencies]
@@ -5259,4 +5259,4 @@ psycopg2 = ["psycopg2", "psycopg2-binary"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<3.12"
-content-hash = "76494d837a686702eefef2027ea6a9d1cb24dde9d951e413e4163b0f52eec6d3"
+content-hash = "36b3b494198bdfafb9d5e6521d948bb4ebaec32fa1d92ea4299c68b28c9f2278"
