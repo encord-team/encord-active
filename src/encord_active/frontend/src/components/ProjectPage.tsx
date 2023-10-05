@@ -1,20 +1,23 @@
-import { useEffect, useMemo } from "react";
-import { Spin, Tabs } from "antd";
+import { useEffect, useMemo, useState } from "react";
+import { Button, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
+import { PlusOutlined } from "@ant-design/icons";
 import {
   FeatureHashMap,
+  ModalName,
   OntologyObjectAttribute,
   OntologyObjectAttributeOptions,
   ProjectOntology,
 } from "./Types";
-import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 import { ProjectSelector } from "./ProjectSelector";
-import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 import { Explorer } from "./explorer";
-import { SummaryView } from "./tabs/SummaryView";
+import { SummaryView } from "./tabs/AnalyticsView";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
+import { env } from "../constants";
+import { classy } from "../helpers/classy";
+import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -44,6 +47,13 @@ export function ProjectPage(props: {
       setSelectedProjectHash(undefined);
     }
   }, [isError, setSelectedProjectHash]);
+
+  // selection
+  const [selectedItems, setSelectedItems] = useState<
+    ReadonlySet<string> | "ALL"
+  >(new Set<string>());
+
+  const hasSelectedItems = selectedItems === "ALL" || selectedItems.size > 0;
 
   const featureHashMap: FeatureHashMap = useMemo(() => {
     const featureHashMap: Record<
@@ -98,6 +108,9 @@ export function ProjectPage(props: {
     return featureHashMap;
   }, [projectSummary]);
 
+  // Modal state
+  const [openModal, setOpenModal] = useState<ModalName | undefined>();
+
   // Loading screen while waiting for full summary of project metrics.
   if (projectSummary == null) {
     return <Spin indicator={loadingIndicator} />;
@@ -107,24 +120,40 @@ export function ProjectPage(props: {
 
   return (
     <Tabs
-      tabBarExtraContent={
-        <ProjectSelector
-          selectedProjectHash={projectHash}
-          setSelectedProjectHash={setSelectedProjectHash}
-        />
-      }
+      className="h-full"
+      size="large"
+      tabBarStyle={{
+        background: "#FAFAFA",
+        margin: 0,
+        padding: "0px 10px",
+      }}
+      centered
+      tabBarExtraContent={{
+        left: (
+          <ProjectSelector
+            selectedProjectHash={projectHash}
+            setSelectedProjectHash={setSelectedProjectHash}
+          />
+        ),
+        right: (
+          <Button
+            className={classy(
+              "text-white disabled:bg-gray-9 disabled:bg-opacity-40 disabled:text-white",
+              {
+                "border-none bg-gray-9": hasSelectedItems,
+              }
+            )}
+            onClick={() => setOpenModal("subset")}
+            disabled={!hasSelectedItems}
+            hidden={env === "sandbox"}
+            icon={<PlusOutlined />}
+            size="large"
+          >
+            Create Annotate Project
+          </Button>
+        ),
+      }}
       items={[
-        {
-          label: "Summary",
-          key: "summary",
-          children: (
-            <SummaryView
-              projectHash={projectHash}
-              projectSummary={projectSummary}
-              featureHashMap={featureHashMap}
-            />
-          ),
-        },
         {
           label: "Explorer",
           key: "explorer",
@@ -138,11 +167,27 @@ export function ProjectPage(props: {
               featureHashMap={featureHashMap}
               setSelectedProjectHash={setSelectedProjectHash}
               remoteProject={remoteProject}
+              openModal={openModal}
+              setOpenModal={setOpenModal}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
+              hasSelectedItems={hasSelectedItems}
             />
           ),
         },
         {
-          label: "Predictions",
+          label: "Analytics",
+          key: "analytics",
+          children: (
+            <SummaryView
+              projectHash={projectHash}
+              projectSummary={projectSummary}
+              featureHashMap={featureHashMap}
+            />
+          ),
+        },
+        {
+          label: "Model Evaluation",
           key: "predictions",
           children: (
             <PredictionsTab
@@ -155,17 +200,18 @@ export function ProjectPage(props: {
             />
           ),
         },
-        {
-          label: "Project Comparison",
-          key: "comparison",
-          children: (
-            <ProjectComparisonTab
-              projectHash={projectHash}
-              dataMetricsSummary={projectSummary.data}
-              annotationMetricsSummary={projectSummary.annotation}
-            />
-          ),
-        },
+
+        // {
+        //   label: "Project Comparison",
+        //   key: "comparison",
+        //   children: (
+        //     <ProjectComparisonTab
+        //       projectHash={projectHash}
+        //       dataMetricsSummary={projectSummary.data}
+        //       annotationMetricsSummary={projectSummary.annotation}
+        //     />
+        //   ),
+        // },
       ]}
       activeKey={tab}
       onChange={(key) => navigate(`../${key}`, { relative: "path" })}

@@ -1,0 +1,35 @@
+.explorer-tabs .ant-tabs-nav-list {
+  margin-left: auto;
+}
+.explorer-tabs .ant-tabs-nav-wrap::after {
+  width: 0px !important;
+}
+
+.explorer-tabs .ant-tabs-ink-bar {
+  background-color: transparent;
+}
+
+.explorer-tabs .ant-tabs-extra-content {
+  height: 100%;
+}
+
+.explorer-premium-search * {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.explorer-premium-search :focus {
+  border-color: #530101 !important;
+  box-shadow: none !important;
+}
+
+.explorer-premium-search .ant-input-search-button {
+  display: none;
+}
+.annotated-image-cover .ant-card-cover {
+  margin-top: auto !important;
+}
+
+.explorer-search-results .ant-row > div {
+  padding: 5px;
+}

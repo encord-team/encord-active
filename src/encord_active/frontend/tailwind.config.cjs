@@ -2,7 +2,18 @@
 module.exports = {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        gray: {
+          2: "#FAFAFA",
+          8: "#595959",
+          9: "#434343",
+        },
+        warning: "#ec9c27",
+        severe: "#cf1322",
+        healthy: "#3f8600",
+      },
+    },
   },
   daisyui: {
     themes: [

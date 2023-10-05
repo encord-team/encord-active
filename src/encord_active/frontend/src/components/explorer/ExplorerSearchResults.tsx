@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { GalleryCard } from "../preview/GalleryCard";
 import { loadingIndicator } from "../Spin";
 import { FeatureHashMap } from "../Types";
+import { AnalysisDomain } from "../../openapi/api";
 
 const ExplorerSearchLocale = {
   emptyText: "No Results",
@@ -19,8 +20,6 @@ const ExplorerSearchPaginationTruncated: PaginationProps = {
   showTotal: (total) => `${total}+ Search Results`,
 };
 
-const ExplorerSearchGrid = {};
-
 export const ExplorerSearchResults = ExplorerSearchResultsRaw; // FIXME: react.memo
 
 function ExplorerSearchResultsRaw(props: {
@@ -31,7 +30,8 @@ function ExplorerSearchResultsRaw(props: {
   itemSimilarityItemAtIndex0: boolean;
   truncated: boolean;
   loadingDescription: string;
-  selectedMetric: { domain: "annotation" | "data"; metric_key: string };
+  selectedMetric: string;
+  analysisDomain: AnalysisDomain;
   toggleImageSelection: (itemId: string) => void;
   setPreviewedItem: (itemId: string) => void;
   setSimilaritySearch: (itemId: string | undefined) => void;
@@ -43,6 +43,7 @@ function ExplorerSearchResultsRaw(props: {
   page: number;
   setPageSize: (pageSize: number) => void;
   pageSize: number;
+  gridCount: number | undefined;
 }) {
   const {
     projectHash,
@@ -52,6 +53,7 @@ function ExplorerSearchResultsRaw(props: {
     itemSimilarityItemAtIndex0,
     loadingDescription,
     selectedMetric,
+    analysisDomain,
     toggleImageSelection,
     setPreviewedItem,
     setSimilaritySearch,
@@ -64,6 +66,7 @@ function ExplorerSearchResultsRaw(props: {
     pageSize,
     setPage,
     setPageSize,
+    gridCount,
   } = props;
 
   const loading = useMemo(
@@ -96,41 +99,47 @@ function ExplorerSearchResultsRaw(props: {
   }, [itemsToRender, itemSimilarities, itemSimilarityItemAtIndex0]);
 
   return (
-    <List
-      className="mt-2.5"
-      dataSource={dataSource}
-      grid={ExplorerSearchGrid}
-      loading={loading}
-      locale={ExplorerSearchLocale}
-      pagination={{
-        pageSize,
-        current: page,
-        onChange: (page, pageSize) => {
-          setPage(page);
-          setPageSize(pageSize);
-        },
-        ...(truncated
-          ? ExplorerSearchPaginationTruncated
-          : ExplorerSearchPagination),
-      }}
-      renderItem={({ item, similarity, similaritySearchCard }) => (
-        <GalleryCard
-          projectHash={projectHash}
-          predictionHash={predictionHash}
-          selectedMetric={selectedMetric}
-          key={item}
-          itemId={item}
-          itemSimilarity={similarity}
-          similaritySearchCard={similaritySearchCard ?? false}
-          setSelectedToggle={toggleImageSelection}
-          setItemPreview={setPreviewedItem}
-          setSimilaritySearch={setSimilaritySearch}
-          selected={selectedItems === "ALL" || selectedItems.has(item)}
-          hideExtraAnnotations={showAnnotations}
-          featureHashMap={featureHashMap}
-          iou={iou}
-        />
-      )}
-    />
+    <div className="relative h-full overflow-auto">
+      <List
+        className="explorer-search-results absolute px-6"
+        dataSource={dataSource}
+        grid={{
+          column: gridCount ?? 4,
+        }}
+        loading={loading}
+        locale={ExplorerSearchLocale}
+        pagination={{
+          pageSize,
+          current: page,
+          onChange: (page, pageSize) => {
+            setPage(page);
+            setPageSize(pageSize);
+          },
+          ...(truncated
+            ? ExplorerSearchPaginationTruncated
+            : ExplorerSearchPagination),
+        }}
+        renderItem={({ item, similarity, similaritySearchCard }) => (
+          <GalleryCard
+            projectHash={projectHash}
+            predictionHash={predictionHash}
+            selectedMetric={selectedMetric}
+            analysisDomain={analysisDomain}
+            key={item}
+            itemId={item}
+            itemSimilarity={similarity}
+            similaritySearchCard={similaritySearchCard ?? false}
+            setSelectedToggle={toggleImageSelection}
+            setItemPreview={setPreviewedItem}
+            setSimilaritySearch={setSimilaritySearch}
+            selected={selectedItems === "ALL" || selectedItems.has(item)}
+            hideExtraAnnotations={showAnnotations}
+            featureHashMap={featureHashMap}
+            iou={iou}
+            gridCount={gridCount}
+          />
+        )}
+      />
+    </div>
   );
 }

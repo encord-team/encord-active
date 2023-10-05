@@ -17,7 +17,7 @@ import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 import { classy } from "../../helpers/classy";
 import { ItemTags } from "../explorer/Tagging";
 import { FeatureHashMap } from "../Types";
-import { PredictionItem, ProjectItem } from "../../openapi/api";
+import { AnalysisDomain, PredictionItem, ProjectItem } from "../../openapi/api";
 import { AnnotationShapeIcon } from "../icons/AnnotationShapeIcon";
 import {
   toAnnotationHash,
@@ -74,13 +74,15 @@ function GalleryCardRaw(props: {
   itemSimilarity: number | undefined;
   similaritySearchCard: boolean;
   selected: boolean;
-  selectedMetric: { domain: "annotation" | "data"; metric_key: string };
+  selectedMetric: string;
+  analysisDomain: AnalysisDomain;
   setItemPreview: (itemId: string) => void;
   setSelectedToggle: (itemId: string) => void;
   setSimilaritySearch: (itemId: string | undefined) => void;
   hideExtraAnnotations: boolean;
   iou: number;
   featureHashMap: FeatureHashMap;
+  gridCount: number | undefined;
 }) {
   const {
     projectHash,
@@ -90,17 +92,20 @@ function GalleryCardRaw(props: {
     similaritySearchCard,
     selected,
     selectedMetric,
+    analysisDomain,
     setItemPreview,
     setSelectedToggle,
     setSimilaritySearch,
     hideExtraAnnotations,
     featureHashMap,
     iou,
+    gridCount,
   } = props;
   // Conditionally extract annotation hash
   const dataId = toDataItemID(itemId);
   const annotationItem =
-    selectedMetric.domain === "annotation" || predictionHash !== undefined;
+    analysisDomain === AnalysisDomain.Annotation ||
+    predictionHash !== undefined;
   const annotationHash: string | undefined = annotationItem
     ? toAnnotationHash(itemId, predictionHash !== undefined)
     : undefined;
@@ -145,27 +150,23 @@ function GalleryCardRaw(props: {
   // Load project summary state for extra metadata
   const { data: projectSummary } = useProjectSummary(projectHash);
   const projectSummaryForDomain =
-    projectSummary === undefined
-      ? {}
-      : projectSummary[selectedMetric.domain].metrics;
+    projectSummary === undefined ? {} : projectSummary[analysisDomain].metrics;
 
   // Metric name for order by metric
   const metricName =
     projectSummaryForDomain === undefined
       ? "unknown"
-      : projectSummaryForDomain[selectedMetric.metric_key]?.title ?? "unknown";
+      : projectSummaryForDomain[selectedMetric]?.title ?? "unknown";
 
   // Metric value for order by metric
   const displayValueData =
-    preview === undefined
-      ? NaN
-      : preview.data_metrics[selectedMetric.metric_key] ?? NaN;
+    preview === undefined ? NaN : preview.data_metrics[selectedMetric] ?? NaN;
   const displayValueAnnotationMetricsDict =
     preview === undefined
       ? {}
       : preview.annotation_metrics[annotationHash ?? ""] ?? {};
   const displayValueAnnotation =
-    displayValueAnnotationMetricsDict[selectedMetric.metric_key] ?? NaN;
+    displayValueAnnotationMetricsDict[selectedMetric] ?? NaN;
   const displayValue = annotationItem
     ? displayValueAnnotation
     : displayValueData;
@@ -283,19 +284,23 @@ function GalleryCardRaw(props: {
   return (
     <Card
       hoverable
-      style={{ width: 240, margin: 10 }}
       onClick={() => setSelectedToggle(itemId)}
       loading={isLoading}
-      bodyStyle={{ padding: 4 }}
-      className={classy("group m-2.5 w-60 overflow-clip", {
-        "border-blue-300": selected,
-      })}
+      bodyStyle={{ padding: 4, marginTop: "auto" }}
+      className={classy(
+        "z-1 annotated-image-cover flex h-full w-full flex-col p-1",
+        {
+          "border border-blue-300": selected,
+        }
+      )}
       cover={
         <div className="!flex items-center justify-center">
           {preview != null && (
             <AnnotatedImage
               item={preview}
-              className="h-56"
+              className={classy("relative", {
+                "h-56 w-56": gridCount === 0,
+              })}
               annotationHash={annotationHash}
               hideExtraAnnotations={hideExtraAnnotations}
               predictionTruePositive={predictionTruePositive}
@@ -307,20 +312,22 @@ function GalleryCardRaw(props: {
                     component={MdImageSearch}
                     className="top-50 left-50 absolute z-20 text-5xl"
                   />
-                  <div className="z-5 absolute h-full w-full bg-gray-100 bg-opacity-20" />
+                  <div className="absolute z-50 h-20 w-20 bg-gray-100 bg-opacity-20" />
                   <div
                     className={classy(
-                      "absolute z-10 h-full w-full bg-opacity-0 group-hover:bg-opacity-70",
-                      "[&>*]:opacity-0 [&>*]:group-hover:opacity-100"
+                      "group absolute z-30 h-full w-full bg-gray-100 bg-opacity-0 hover:bg-opacity-40 hover:opacity-100"
                     )}
                   >
                     <Checkbox
-                      className={classy("absolute left-2 top-2", {
-                        "!opacity-100": selected,
-                      })}
+                      className={classy(
+                        "absolute left-2 top-2 opacity-0 group-hover:opacity-100",
+                        {
+                          "!opacity-100": selected,
+                        }
+                      )}
                       checked={selected}
                     />
-                    <div className="absolute top-2 right-2 flex flex-col gap-1">
+                    <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100">
                       <Button
                         className="bg-white"
                         icon={<FullscreenOutlined />}
@@ -344,17 +351,19 @@ function GalleryCardRaw(props: {
               ) : (
                 <div
                   className={classy(
-                    "absolute z-10 h-full w-full bg-gray-100 bg-opacity-0 group-hover:bg-opacity-70",
-                    "[&>*]:opacity-0 [&>*]:group-hover:opacity-100"
+                    "group absolute z-30 h-full w-full bg-gray-100 bg-opacity-0 hover:bg-opacity-40 hover:opacity-100"
                   )}
                 >
                   <Checkbox
-                    className={classy("absolute left-2 top-2", {
-                      "!opacity-100": selected,
-                    })}
+                    className={classy(
+                      "absolute left-2 top-2 opacity-0 group-hover:opacity-100",
+                      {
+                        "!opacity-100": selected,
+                      }
+                    )}
                     checked={selected}
                   />
-                  <div className="absolute top-2 right-2 flex flex-col gap-1">
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100">
                     <Button
                       className="bg-white"
                       icon={<FullscreenOutlined />}

@@ -20,6 +20,7 @@ import { useProjectItemsListTags } from "../../hooks/queries/useProjectItemsList
 import { useProjectMutationCreateTag } from "../../hooks/mutation/useProjectMutationCreateTag";
 import { toDataItemID } from "../util/ItemIdUtil";
 import { useProjectFilterListTags } from "../../hooks/queries/useProjectFilterListTags";
+import { Colors } from "../../constants";
 
 export function BulkTaggingForm(props: {
   projectHash: string;
@@ -235,7 +236,7 @@ export function TagList(props: { tags: string[]; limit?: number }) {
         </Tag>
       ))}
       {remainder > 0 && (
-        <Tag bordered={false} color="#434343" className="rounded-xl">
+        <Tag bordered={false} color={Colors.darkGray} className="rounded-xl">
           + {remainder} more tags
         </Tag>
       )}

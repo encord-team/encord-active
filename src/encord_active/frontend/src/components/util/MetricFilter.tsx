@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from "react";
-import { Button, Row, Select, Slider, Typography } from "antd";
+import { Button, List, Row, Select, Slider } from "antd";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import {
+  AnalysisDomain,
   EnumSummary,
   MetricSummary,
   ProjectCollaboratorEntry,
@@ -10,6 +11,8 @@ import {
   QuerySummary,
 } from "../../openapi/api";
 import { FeatureHashMap } from "../Types";
+import { EachMetricChartDistributionBar } from "../charts/EachMetricChartDistributionBar";
+import { useProjectAnalysisSummary } from "../../hooks/queries/useProjectAnalysisSummary";
 
 export type FilterState = {
   readonly metricFilters: Readonly<Record<string, readonly number[]>>;
@@ -25,7 +28,13 @@ export const DefaultFilters: FilterState = {
   ordering: [],
 };
 
-function getMetricBounds<
+export const DefaultAnnotationFilters: FilterState = {
+  metricFilters: { metric_confidence: [0.0, 1.0] },
+  enumFilters: {},
+  ordering: [],
+};
+
+export function getMetricBounds<
   R extends {
     min: number;
     max: number;
@@ -132,7 +141,7 @@ function deleteKey(
   };
 }
 
-function updateValue<K extends FilterModes>(
+export function updateValue<K extends FilterModes>(
   updateKey: string,
   updateValue: FilterState[K][string],
   filterType: K
@@ -150,100 +159,26 @@ function updateValue<K extends FilterModes>(
   };
 }
 
-function updateKey(
-  oldKey: string,
-  newKey: string,
+export function addNewEntry(
   metricsSummary: ProjectDomainSummary,
   metricRanges: QuerySummary["metrics"] | undefined,
   featureHashMap: FeatureHashMap,
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
-  tags: ReadonlyArray<ProjectTagEntry>
-): (old: FilterState) => FilterState {
-  return (old) => {
-    const oldMetricSummary = metricsSummary.metrics[oldKey];
-    const oldFilterKey =
-      oldMetricSummary != null ? "metricFilters" : "enumFilters";
-    const oldOrder = old.ordering.indexOf(oldKey);
-    if (oldOrder < 0 || !(oldKey in old[oldFilterKey])) {
-      // Cannot be deleted.
-      return old;
-    }
-
-    const existingNewOrder = old.ordering.indexOf(newKey);
-    if (existingNewOrder !== -1) {
-      // Already exists.
-      return old;
-    }
-
-    // Generate intermediate state without new filter state inserted.
-    const renamedOrdering = [...old.ordering];
-    renamedOrdering[oldOrder] = newKey;
-    const { [oldKey]: deleted, ...renamedFilter } = old[oldFilterKey];
-    const renamed = {
-      ...old,
-      ordering: renamedOrdering,
-      [oldFilterKey]: renamedFilter,
-    };
-
-    // Check if a metric
-    const newMetricSummary = metricsSummary.metrics[newKey];
-    if (newMetricSummary != null) {
-      const newMetricRanges =
-        metricRanges === undefined ? undefined : metricRanges[newKey];
-      if (newMetricRanges != null) {
-        const newBounds = getMetricBounds(newMetricRanges, newMetricSummary);
-        const newRange: readonly [number, number] = [
-          newBounds.min,
-          newBounds.max,
-        ];
-
-        return {
-          ...renamed,
-          metricFilters: {
-            ...renamed.metricFilters,
-            [newKey]: newRange,
-          },
-        };
-      }
-      return old;
-    }
-
-    // Check if an enum
-    const newEnumSummary = metricsSummary.enums[newKey];
-    if (newEnumSummary != null && !(newKey in old.enumFilters)) {
-      const newValues = getEnumList(
-        newEnumSummary,
-        featureHashMap,
-        collaborators,
-        tags
-      );
-
-      return {
-        ...renamed,
-        enumFilters: {
-          ...renamed.enumFilters,
-          [newKey]: newValues,
-        },
-      };
-    }
-
-    // Failed to rename key.
-    return old;
-  };
-}
-
-function addNewEntry(
-  metricsSummary: ProjectDomainSummary,
-  metricRanges: QuerySummary["metrics"] | undefined,
-  featureHashMap: FeatureHashMap,
-  collaborators: ReadonlyArray<ProjectCollaboratorEntry>,
-  tags: ReadonlyArray<ProjectTagEntry>
+  tags: ReadonlyArray<ProjectTagEntry>,
+  newMetricName?: string
 ): (old: FilterState) => FilterState {
   return (old) => {
     // Try insert new 'metric' key.
-    const newMetricEntry = Object.entries(metricsSummary.metrics).find(
+    let newMetricEntry = Object.entries(metricsSummary.metrics).find(
       ([candidate]) => !(candidate in old.metricFilters)
     );
+
+    if (newMetricName !== undefined) {
+      newMetricEntry = Object.entries(metricsSummary.metrics).find(
+        ([candidate]) => candidate === newMetricName
+      );
+    }
+
     if (newMetricEntry != null) {
       const [newMetricKey, newMetricSummary] = newMetricEntry;
       const newMetricRanges =
@@ -296,7 +231,7 @@ function addNewEntry(
   };
 }
 
-const toFixedNumber = (number: number, precision: number) =>
+export const toFixedNumber = (number: number, precision: number) =>
   parseFloat(number.toFixed(precision));
 
 export function MetricFilter(props: {
@@ -307,6 +242,8 @@ export function MetricFilter(props: {
   featureHashMap: FeatureHashMap;
   collaborators: ReadonlyArray<ProjectCollaboratorEntry>;
   tags: ReadonlyArray<ProjectTagEntry>;
+  projectHash: string;
+  analysisDomain: AnalysisDomain;
 }) {
   const {
     filters,
@@ -316,6 +253,8 @@ export function MetricFilter(props: {
     featureHashMap,
     collaborators,
     tags,
+    projectHash,
+    analysisDomain,
   } = props;
 
   // Remove any invalid filters.
@@ -343,29 +282,9 @@ export function MetricFilter(props: {
     return { ...rawMetricsSummary, metrics: Object.fromEntries(metrics) };
   }, [metricRanges, rawMetricsSummary]);
 
-  // Render all active filters, skip metrics that cannot be selected.
-  const filterOptions = useMemo(() => {
-    if (metricsSummary == null) {
-      return [];
-    }
-    // Set of filters that 'exist'
-    const exists = new Set<string>(filters.ordering);
-    const metricOptions = Object.entries(metricsSummary.metrics)
-      .filter(([metricKey]) => !exists.has(metricKey))
-      .map(([metricKey, metricState]) => ({
-        value: metricKey,
-        label: metricState?.title ?? metricKey,
-      }));
-    const enumOptions = Object.entries(metricsSummary.enums)
-      .filter(([enumKey]) => !exists.has(enumKey))
-      .map(([enumKey, enumState]) => ({
-        value: enumKey,
-        label: enumState !== undefined ? enumState.title : enumKey,
-      }));
-
-    return [...metricOptions, ...enumOptions];
-  }, [filters.ordering, metricsSummary]);
-
+  // all the data we need
+  const summary = useProjectAnalysisSummary(projectHash, "data");
+  const { data } = summary;
   // We need range information.
   if (metricRanges === undefined || metricsSummary === undefined) {
     return (
@@ -380,10 +299,7 @@ export function MetricFilter(props: {
   }
 
   return (
-    <>
-      <Row>
-        <Typography.Text strong>Filters:</Typography.Text>
-      </Row>
+    <List className="gap-2">
       {filters.ordering.map((filterKey) => {
         const metric = metricsSummary.metrics[filterKey];
         const metricRange = metricRanges[filterKey];
@@ -401,48 +317,36 @@ export function MetricFilter(props: {
           metric != null ? metric.title : enumFilter?.title ?? "Error";
 
         return (
-          <Row align="middle" key={`row_filter_${filterKey}`}>
-            <Button
-              icon={<MinusOutlined />}
-              shape="circle"
-              size="small"
-              onClick={() => setFilters(deleteKey(filterKey, filterType))}
+          <Row
+            align="middle"
+            key={`row_filter_${filterKey}`}
+            className="border-y p-4"
+          >
+            <div className="flex w-full justify-between">
+              {filterLabel}
+              <Button
+                icon={<MinusOutlined />}
+                shape="default"
+                size="small"
+                onClick={() => setFilters(deleteKey(filterKey, filterType))}
+              />
+            </div>
+
+            <EachMetricChartDistributionBar
+              metricsSummary={metricsSummary}
+              analysisSummary={data}
+              analysisDomain={analysisDomain}
+              projectHash={projectHash}
+              featureHashMap={featureHashMap}
+              property={filterKey}
             />
-            <Select
-              showSearch
-              value={filterKey}
-              bordered={false}
-              style={{
-                width: 200,
-                marginLeft: 10,
-                marginRight: 10,
-                marginTop: 5,
-                marginBottom: 5,
-              }}
-              onChange={(new_metric_key) =>
-                setFilters(
-                  updateKey(
-                    filterKey,
-                    new_metric_key,
-                    metricsSummary,
-                    metricRanges,
-                    featureHashMap,
-                    collaborators,
-                    tags
-                  )
-                )
-              }
-              options={[
-                ...filterOptions,
-                { value: filterKey, label: filterLabel },
-              ]}
-            />
+
             {metricBounds != null ? (
               <Slider
                 range={{ draggableTrack: true }}
                 min={metricBounds.min}
                 max={metricBounds.max}
-                style={{ width: 500 }}
+                className="w-full"
                 step={toFixedNumber(metricBounds.step, 2)}
                 value={
                   metricFilters != null
@@ -452,6 +356,7 @@ export function MetricFilter(props: {
                         toFixedNumber(metricBounds.max, 2),
                       ]
                 }
+                // Question: Should it be changed to onAfterChange?
                 onChange={(newRange: [number, number]) =>
                   setFilters(updateValue(filterKey, newRange, "metricFilters"))
                 }
@@ -482,25 +387,6 @@ export function MetricFilter(props: {
           </Row>
         );
       })}
-      <Button
-        icon={<PlusOutlined />}
-        shape="circle"
-        size="small"
-        type="primary"
-        className="bg-black"
-        disabled={filterOptions.length === 0}
-        onClick={() =>
-          setFilters(
-            addNewEntry(
-              metricsSummary,
-              metricRanges,
-              featureHashMap,
-              collaborators,
-              tags
-            )
-          )
-        }
-      />
-    </>
+    </List>
   );
 }

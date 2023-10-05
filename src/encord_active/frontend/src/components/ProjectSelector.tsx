@@ -1,3 +1,4 @@
+import { LeftOutlined } from "@ant-design/icons";
 import { fork } from "radash";
 import { Button, Select, Space } from "antd";
 import { useMemo } from "react";
@@ -20,14 +21,16 @@ export function ProjectSelector({
   );
 
   return (
-    <Space.Compact block size="large">
-      <Button onClick={() => setSelectedProjectHash(undefined)}>
-        View all projects
-      </Button>
+    <Space size="small">
+      <Button
+        className="border-none shadow-none"
+        onClick={() => setSelectedProjectHash(undefined)}
+        icon={<LeftOutlined />}
+      />
       <Select
         value={selectedProjectHash}
         onChange={(projectHash) => setSelectedProjectHash(projectHash)}
-        className="min-w-[192px] max-w-lg"
+        className="max-w-lg"
         options={[
           {
             label: "User Projects",
@@ -45,6 +48,6 @@ export function ProjectSelector({
           },
         ]}
       />
-    </Space.Compact>
+    </Space>
   );
 }

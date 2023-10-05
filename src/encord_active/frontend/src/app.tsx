@@ -1,7 +1,9 @@
 import ErrorBoundary from "antd/lib/alert/ErrorBoundary";
 import { Navigate, Route, Routes, useNavigate } from "react-router";
+import { ConfigProvider } from "antd";
 import { ProjectPage } from "./components/ProjectPage";
 import { ProjectsPage } from "./components/ProjectsPage";
+import { Colors } from "./constants";
 
 export function App() {
   // FIXME: make variable conditionally loaded from parent
@@ -12,28 +14,45 @@ export function App() {
     navigate(projectHash ? `/projects/${projectHash}` : "/");
 
   return (
-    <div className="bg-white p-12">
-      <Routes>
-        <Route
-          path="/"
-          element={<ProjectsPage onSelectLocalProject={selectProject} />}
-        />
-        <Route
-          path="/projects/:projectHash"
-          element={<Navigate to="./summary" replace />}
-        />
-        <Route
-          path="/projects/:projectHash/:tab/:previewItem?"
-          element={
-            <ErrorBoundary message="An error occurred rendering the project">
-              <ProjectPage
-                encordDomain={encordDomain}
-                setSelectedProjectHash={selectProject}
-              />
-            </ErrorBoundary>
-          }
-        />
-      </Routes>
-    </div>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: Colors.purple,
+        },
+        components: {
+          Slider: {
+            dotBorderColor: Colors.darkGray,
+            trackBg: Colors.darkGray,
+            trackHoverBg: Colors.darkGray,
+            handleColor: Colors.darkGray,
+            handleActiveColor: Colors.darkGray,
+          },
+        },
+      }}
+    >
+      <div className="flex h-full flex-col">
+        <Routes>
+          <Route
+            path="/"
+            element={<ProjectsPage onSelectLocalProject={selectProject} />}
+          />
+          <Route
+            path="/projects/:projectHash"
+            element={<Navigate to="./explorer" replace />}
+          />
+          <Route
+            path="/projects/:projectHash/:tab/:previewItem?"
+            element={
+              <ErrorBoundary message="An error occurred rendering the project">
+                <ProjectPage
+                  encordDomain={encordDomain}
+                  setSelectedProjectHash={selectProject}
+                />
+              </ErrorBoundary>
+            }
+          />
+        </Routes>
+      </div>
+    </ConfigProvider>
   );
 }

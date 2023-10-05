@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs } from "antd";
-import { SummaryTab } from "./SummaryTab";
+import { SummaryTab } from "./AnalyticsTab";
 import { ProjectSummary } from "../../openapi/api";
 import { FeatureHashMap } from "../Types";
 
@@ -14,6 +14,7 @@ export function SummaryView(props: {
 
   return (
     <Tabs
+      className="h-full overflow-y-auto p-4"
       items={[
         {
           label: "Data",

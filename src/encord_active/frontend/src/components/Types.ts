@@ -46,3 +46,10 @@ export type ProjectOntology = {
 export type FeatureHashMap = Readonly<
   Record<string, { readonly color: string; readonly name: string }>
 >;
+
+export type ModalName = "subset" | "upload";
+
+export type UserSettings = {
+  explorerGridCount: number;
+  explorerPageSize: number;
+};

@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { FaMagic } from "react-icons/fa";
 
-import { Button, Space, Tooltip, Upload } from "antd";
+import { Button, Tooltip, Upload } from "antd";
 import Search from "antd/es/input/Search";
 import { SearchOutlined, UploadOutlined } from "@ant-design/icons";
 
@@ -34,20 +33,16 @@ export function ExplorerPremiumSearch(props: {
 
   // FIXME: re-add snippet (probably query json - with option to set current filter state to match??)
   return (
-    <Space.Compact size="large">
+    <div className="mr-2 flex h-full items-center gap-2 border-r border-gray-200 px-4">
       <Tooltip overlay="Text Search">
         <Search
-          placeholder="Text Search"
+          className="explorer-premium-search"
+          placeholder="Search Anything"
           onSearch={(value) => setSearch(value || undefined)}
           allowClear
           loading={searchLoading}
           defaultValue={typeof search === "string" ? search : search?.name}
           value={typeof search !== "string" ? search?.name : undefined}
-          enterButton={
-            <Button className="bg-white px-4">
-              <FaMagic color="black" className="bg-white" />
-            </Button>
-          }
           suffix={
             search === undefined ? null : (
               <Tooltip
@@ -61,13 +56,26 @@ export function ExplorerPremiumSearch(props: {
           }
         />
       </Tooltip>
-      <Tooltip overlay="Image Search">
+      <Tooltip
+        overlay={
+          <div>
+            <div>Search Anything Imahge</div>
+            <div>
+              You can search anything using this image searcha s a part of your
+              project and it is very very amazing
+            </div>
+          </div>
+        }
+      >
         <Upload
           onChange={({ file }) => setSearch(file as unknown as File)}
           beforeUpload={() => false}
           showUploadList={false}
         >
-          <Button icon={<UploadOutlined />}>By Image</Button>
+          <Button
+            className="border-none shadow-none"
+            icon={<UploadOutlined />}
+          />
         </Upload>
       </Tooltip>
       {/* <Select */}
@@ -87,6 +95,6 @@ export function ExplorerPremiumSearch(props: {
       {/*     }, */}
       {/*   ]} */}
       {/* /> */}
-    </Space.Compact>
+    </div>
   );
 }

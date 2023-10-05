@@ -1,33 +1,42 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { BiCloudUpload, BiSelectMultiple, BiWindows } from "react-icons/bi";
-import { MdFilterAltOff } from "react-icons/md";
-import { TbSortAscending, TbSortDescending } from "react-icons/tb";
+import {
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  Dispatch,
+  SetStateAction,
+} from "react";
+import { BiSelectMultiple } from "react-icons/bi";
 import { VscClearAll } from "react-icons/vsc";
 import { useDebounce, useToggle } from "usehooks-ts";
 import {
   Button,
+  Col,
+  Dropdown,
   Modal,
   Popover,
-  Select,
-  Slider,
+  Row,
+  Segmented,
   Space,
-  Tooltip,
-  Typography,
+  Tabs,
 } from "antd";
-import { HiOutlineTag } from "react-icons/hi";
 import { useNavigate, useParams } from "react-router";
+import {
+  DotChartOutlined,
+  DownOutlined,
+  TableOutlined,
+} from "@ant-design/icons";
 import { BulkTaggingForm } from "./Tagging";
 import {
   FilterState,
-  MetricFilter,
   DefaultFilters,
+  DefaultAnnotationFilters,
 } from "../util/MetricFilter";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
-import { env, local } from "../../constants";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
 import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
-import { ExplorerDistribution } from "./ExplorerDistribution";
 import {
+  AnalysisDomain,
   DomainSearchFilters,
   Embedding2DFilter,
   PredictionDomain,
@@ -44,10 +53,14 @@ import {
   useExplorerPremiumSearch,
 } from "./ExplorerPremiumSearch";
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
-import { useProjectListCollaborators } from "../../hooks/queries/useProjectListCollaborators";
-import { useProjectListTags } from "../../hooks/queries/useProjectListTags";
-import { FeatureHashMap } from "../Types";
+import { FeatureHashMap, ModalName } from "../Types";
+import { Filters } from "./filters/Filters";
+import { Overview } from "./overview/Overview";
+import { Display } from "./display/Display";
+
+import "./css/explorer.css";
 import { classy } from "../../helpers/classy";
+import { useUserSettings } from "../../hooks/useUserSettings";
 
 export type Props = {
   projectHash: string;
@@ -60,6 +73,11 @@ export type Props = {
   featureHashMap: FeatureHashMap;
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
+  openModal: ModalName | undefined;
+  setOpenModal: Dispatch<SetStateAction<ModalName | undefined>>;
+  selectedItems: ReadonlySet<string> | "ALL";
+  setSelectedItems: Dispatch<SetStateAction<ReadonlySet<string> | "ALL">>;
+  hasSelectedItems: boolean;
 };
 
 export function Explorer({
@@ -71,6 +89,11 @@ export function Explorer({
   annotationMetricsSummary,
   setSelectedProjectHash,
   remoteProject,
+  openModal,
+  setOpenModal,
+  selectedItems,
+  setSelectedItems,
+  hasSelectedItems,
 }: Props) {
   // Item selected for extra analysis operations
   const [similarityItem, setSimilarityItem] = useState<string | undefined>();
@@ -101,17 +124,26 @@ export function Explorer({
   );
 
   // Selection
-  const [selectedItems, setSelectedItems] = useState<
-    ReadonlySet<string> | "ALL"
-  >(new Set<string>());
-  const [selectedMetric, setSelectedMetric] = useState<{
-    domain: "data" | "annotation";
-    metric_key: string;
-  }>({
-    domain: "data",
-    metric_key: "metric_random",
-  });
-  const hasSelectedItems = selectedItems === "ALL" || selectedItems.size > 0;
+
+  const [analysisDomain, setAnalysisDomain] = useState<AnalysisDomain>("data");
+  const [selectedMetricData, setSelectedMetricData] =
+    useState<string>("metric_random");
+  const [selectedMetricLabel, setSelectedMetricLabel] =
+    useState<string>("metric_random");
+
+  const selectedMetric =
+    analysisDomain === AnalysisDomain.Data
+      ? selectedMetricData
+      : selectedMetricLabel;
+
+  const handleMetricChange = (val: string) => {
+    if (analysisDomain === AnalysisDomain.Data) {
+      setSelectedMetricData(val);
+    } else if (analysisDomain === AnalysisDomain.Annotation) {
+      setSelectedMetricLabel(val);
+    }
+  };
+
   const [clearSelectionModalVisible, setClearSelectionModalVisible] =
     useState(false);
   useEffect(() => {
@@ -122,14 +154,26 @@ export function Explorer({
       setClearSelectionModalVisible(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMetric.domain]);
+  }, [analysisDomain]);
 
   // Set show animations view state.
   const [showAnnotations, toggleShowAnnotations, setShowAnnotations] =
     useToggle(true);
   useEffect(() => {
-    setShowAnnotations(selectedMetric.domain === "annotation");
-  }, [selectedMetric.domain, setShowAnnotations]);
+    setShowAnnotations(analysisDomain === AnalysisDomain.Annotation);
+  }, [analysisDomain, setShowAnnotations]);
+
+  // Data or Label selection
+  const analysisDomainOptions: { label: string; value: AnalysisDomain }[] = [
+    {
+      label: "Data",
+      value: AnalysisDomain.Data,
+    },
+    {
+      label: "Labels",
+      value: AnalysisDomain.Annotation,
+    },
+  ];
 
   // Filter State
   const [isAscending, setIsAscending] = useState(true);
@@ -137,8 +181,9 @@ export function Explorer({
     useState<PredictionDomain>("p");
   const [iou, setIou] = useState<number>(0.5);
   const [dataFilters, setDataFilters] = useState<FilterState>(DefaultFilters);
-  const [annotationFilters, setAnnotationFilters] =
-    useState<FilterState>(DefaultFilters);
+  const [annotationFilters, setAnnotationFilters] = useState<FilterState>(
+    DefaultAnnotationFilters
+  );
   const [embeddingFilter, setEmbeddingFilter] = useState<
     Embedding2DFilter | undefined
   >();
@@ -154,14 +199,16 @@ export function Explorer({
       );
 
     return {
-      analysisDomain: selectedMetric.domain,
+      analysisDomain,
       filters: {
         data: {
           // FIXME: the 'as' casts should NOT! be needed
           metrics: dataFilters.metricFilters as DomainSearchFilters["metrics"],
           enums: removeTagFilter(dataFilters.enumFilters),
           reduction:
-            selectedMetric.domain === "data" ? embeddingFilter : undefined,
+            analysisDomain === AnalysisDomain.Data
+              ? embeddingFilter
+              : undefined,
           tags: dataFilters.enumFilters.tags as DomainSearchFilters["tags"],
         },
         annotation: {
@@ -169,14 +216,14 @@ export function Explorer({
             annotationFilters.metricFilters as DomainSearchFilters["metrics"],
           enums: removeTagFilter(annotationFilters.enumFilters),
           reduction:
-            selectedMetric.domain === "annotation"
+            analysisDomain === AnalysisDomain.Annotation
               ? embeddingFilter
               : undefined,
           tags: annotationFilters.enumFilters
             .tags as DomainSearchFilters["tags"],
         },
       },
-      orderBy: selectedMetric.metric_key,
+      orderBy: selectedMetric,
       desc: !isAscending,
       iou,
       predictionOutcome,
@@ -191,21 +238,20 @@ export function Explorer({
     predictionOutcome,
     embeddingFilter,
     iou,
+    analysisDomain,
   ]);
 
   const filters: ExplorerFilterState = useDebounce(rawFilters, 500);
 
-  // Load all collaborators & tags -> needed to support filters
-  const { data: collaborators } = useProjectListCollaborators(projectHash);
-  const { data: tags } = useProjectListTags(projectHash);
-
   // Load metric ranges
-  const { data: dataMetricRanges, isLoading: isLoadingDataMetrics } =
-    useProjectAnalysisSummary(projectHash, "data");
-  const {
-    data: annotationMetricRanges,
-    isLoading: isLoadingAnnotationMetrics,
-  } = useProjectAnalysisSummary(projectHash, "annotation");
+  const { isLoading: isLoadingDataMetrics } = useProjectAnalysisSummary(
+    projectHash,
+    "data"
+  );
+  const { isLoading: isLoadingAnnotationMetrics } = useProjectAnalysisSummary(
+    projectHash,
+    "annotation"
+  );
   const isLoadingMetrics = isLoadingDataMetrics || isLoadingAnnotationMetrics;
 
   // Premium search hooks:
@@ -281,7 +327,8 @@ export function Explorer({
   };
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+
+  const [userDisplaySettings, updateUserDisplaySettings] = useUserSettings();
 
   const itemsToRender: readonly string[] = useMemo(() => {
     if (sortedItems == null) {
@@ -304,20 +351,23 @@ export function Explorer({
   }, [sortedItems, similarityItem]);
   const itemTruncated = sortedItems?.truncated ?? false;
 
-  const toggleImageSelection = useCallback((id: string) => {
-    setSelectedItems((prev) => {
-      if (prev === "ALL") {
-        return "ALL";
-      }
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
+  const toggleImageSelection = useCallback(
+    (id: string) => {
+      setSelectedItems((prev) => {
+        if (prev === "ALL") {
+          return "ALL";
+        }
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        return next;
+      });
+    },
+    [setSelectedItems]
+  );
 
   const closePreview = useCallback(
     () => setPreviewedItem(undefined),
@@ -332,7 +382,7 @@ export function Explorer({
     [closePreview, setSearch]
   );
 
-  const allowTaggingAnnotations = selectedMetric?.domain === "annotation";
+  const allowTaggingAnnotations = analysisDomain === AnalysisDomain.Annotation;
 
   const loadingDescription = useMemo(() => {
     const descriptions = [
@@ -353,25 +403,40 @@ export function Explorer({
   }, [isLoadingMetrics, isLoadingSortedItems]);
 
   // Modal state
-  const [open, setOpen] = useState<undefined | "subset" | "upload">();
-  const close = () => setOpen(undefined);
+  const close = () => setOpenModal(undefined);
+
+  // view state
+  const [activeView, setActiveView] = useState<"gridView" | "embeddingsView">(
+    "gridView"
+  );
+
+  // Load metric ranges
+  const { data: dataMetricRanges } = useProjectAnalysisSummary(
+    projectHash,
+    "data"
+  );
+
+  const { data: annotationMetricRanges } = useProjectAnalysisSummary(
+    projectHash,
+    "annotation"
+  );
 
   return (
-    <div>
+    <div className="h-full">
       <CreateSubsetModal
-        open={open === "subset"}
+        open={openModal === "subset"}
         close={close}
         projectHash={projectHash}
         filters={filters.filters}
       />
       <UploadToEncordModal
-        open={open === "upload"}
+        open={openModal === "upload"}
         close={close}
         projectHash={projectHash}
         setSelectedProjectHash={setSelectedProjectHash}
       />
       <Modal
-        title={`Changing domain to ${selectedMetric.domain}`}
+        title={`Changing domain to ${analysisDomain}`}
         onOk={() => {
           setSelectedItems(new Set());
           setClearSelectionModalVisible(false);
@@ -385,367 +450,291 @@ export function Explorer({
         You have selected items from the previous domain, do you want to clear
         the selection?
       </Modal>
-      <ExplorerEmbeddings
-        projectHash={projectHash}
-        predictionHash={predictionHash}
-        reductionHash={reductionHash}
-        reductionHashLoading={reductionHashLoading}
-        filters={filters}
-        setEmbeddingSelection={setEmbeddingFilter}
-        featureHashMap={featureHashMap}
-      />
       <ItemPreviewModal
         projectHash={projectHash}
         predictionHash={predictionHash}
         previewItem={previewItem}
-        domain={selectedMetric.domain}
+        domain={analysisDomain}
         onClose={closePreview}
         onShowSimilar={() =>
           previewItem != null ? setSimilaritySearch(previewItem) : undefined
         }
         editUrl={editUrl}
       />
-      <ExplorerDistribution
-        projectHash={projectHash}
-        predictionHash={predictionHash}
-        filters={filters}
-        addFilter={(domain, metric, min, max) => {
-          const setFilters =
-            domain === "data" ? setDataFilters : setAnnotationFilters;
-          setFilters((filters) => {
-            if (metric in filters.metricFilters) {
-              return {
-                ...filters,
-                metricFilters: {
-                  ...filters.metricFilters,
-                  [metric]: [min, max],
-                },
-              };
-            } else {
-              return {
-                ...filters,
-                metricFilters: {
-                  [metric]: [min, max],
-                  ...filters.metricFilters,
-                },
-                ordering: [...filters.ordering, metric],
-              };
-            }
-          });
-        }}
-      />
-      <Space wrap>
-        {predictionHash !== undefined && (
-          <PredictionFilters
-            disabled={!!similarityItem}
-            iou={iou}
-            setIou={setIou}
-            predictionOutcome={predictionOutcome}
-            isClassificationOnly={false}
-            setPredictionOutcome={setPredictionOutcome}
-          />
-        )}
-        <Space.Compact size="large">
-          <Select
-            value={`${selectedMetric.domain}-${selectedMetric.metric_key}`}
-            onChange={(strKey: string) => {
-              const [domain, metric_key] = strKey.split("-");
-              setSelectedMetric({
-                domain: domain as "data" | "annotation",
-                metric_key,
-              });
+      <Row className="h-full">
+        <Col span={18} className="h-full">
+          <Tabs
+            centered
+            activeKey={activeView}
+            onChange={setActiveView as (val: string) => void}
+            className="explorer-tabs h-full"
+            tabBarStyle={{
+              margin: 0,
             }}
-            className="w-80"
-            options={[
+            tabBarExtraContent={{
+              left: (
+                <div className=" flex h-full items-center">
+                  <ExplorerPremiumSearch
+                    premiumSearchState={{
+                      ...premiumSearchState,
+                      setSearch: (args) => {
+                        setSimilarityItem(undefined);
+                        premiumSearchState.setSearch(args);
+                      },
+                    }}
+                  />
+                  <Segmented
+                    selected
+                    value={analysisDomain}
+                    options={[
+                      ...analysisDomainOptions,
+                      {
+                        value: "predictions",
+                        label: "Predictions",
+                        disabled: true,
+                      },
+                    ]}
+                    onChange={(val) => {
+                      setAnalysisDomain(val as AnalysisDomain);
+                    }}
+                  />
+                </div>
+              ),
+            }}
+            items={[
               {
-                label: "Data Metrics",
-                options: Object.entries(dataMetricsSummary.metrics)
-                  .map(([metricKey, metric]) => ({
-                    label: `D: ${metric?.title ?? metricKey}`,
-                    value: `data-${metricKey}`,
-                  }))
-                  .sort((a, b) => (a.label > b.label ? 1 : -1)),
+                label: (
+                  <span className="flex items-center gap-2">
+                    <TableOutlined />
+                    Grid View
+                  </span>
+                ),
+                key: "gridView",
+                children: (
+                  <div className="flex h-full flex-col items-center bg-gray-100 py-2">
+                    <div
+                      className={classy(
+                        "top-1.5 z-[1000] flex flex-shrink flex-grow-0 basis-0 items-center gap-3 rounded-md bg-white py-2 px-6 opacity-0",
+                        {
+                          "opacity-100": hasSelectedItems,
+                        }
+                      )}
+                    >
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              label: (
+                                <Button
+                                  onClick={() =>
+                                    setSelectedItems((oldState) => {
+                                      if (oldState === "ALL") {
+                                        return "ALL";
+                                      }
+                                      return new Set([
+                                        ...oldState,
+                                        ...itemsToRender.slice(
+                                          (page - 1) *
+                                            userDisplaySettings.explorerPageSize,
+                                          page *
+                                            userDisplaySettings.explorerPageSize
+                                        ),
+                                      ]);
+                                    })
+                                  }
+                                  disabled={itemsToRender.length === 0}
+                                  icon={<BiSelectMultiple />}
+                                  className="text-md font-medium text-gray-9"
+                                >
+                                  Select page (
+                                  {
+                                    itemsToRender.slice(
+                                      (page - 1) *
+                                        userDisplaySettings.explorerPageSize,
+                                      page *
+                                        userDisplaySettings.explorerPageSize
+                                    ).length
+                                  }
+                                  )
+                                </Button>
+                              ),
+                              key: "0",
+                            },
+                            {
+                              label: (
+                                <Button
+                                  onClick={() => setSelectedItems("ALL")}
+                                  disabled={selectedItems === "ALL"}
+                                  icon={<BiSelectMultiple />}
+                                >
+                                  Select All
+                                </Button>
+                              ),
+                              key: "1",
+                            },
+                          ],
+                        }}
+                        trigger={["click"]}
+                      >
+                        <Space>
+                          Select
+                          <DownOutlined />
+                        </Space>
+                      </Dropdown>
+
+                      <Button
+                        className="border-none bg-gray-9 text-white"
+                        disabled={!hasSelectedItems}
+                        onClick={() => setSelectedItems(new Set())}
+                        icon={<VscClearAll />}
+                      >
+                        Clear selection{" "}
+                        <span className="text-gray-5 w-6">
+                          (
+                          {selectedItems === "ALL" ? "All" : selectedItems.size}
+                          )
+                        </span>
+                      </Button>
+
+                      <Popover
+                        placement="bottomRight"
+                        content={
+                          <BulkTaggingForm
+                            projectHash={projectHash}
+                            selectedItems={selectedItems}
+                            filtersDomain={filters.analysisDomain}
+                            filters={filters.filters}
+                            allowTaggingAnnotations={allowTaggingAnnotations}
+                          />
+                        }
+                        trigger="click"
+                      >
+                        <Button
+                          className="border-none bg-gray-9 text-white"
+                          type="default"
+                          disabled={!hasSelectedItems}
+                        >
+                          Tag
+                        </Button>
+                      </Popover>
+                    </div>
+                    <div className="-mt-10 h-full w-full flex-auto">
+                      <ExplorerSearchResults
+                        projectHash={projectHash}
+                        predictionHash={predictionHash}
+                        itemsToRender={itemsToRender}
+                        itemSimilarities={itemSimilarities}
+                        itemSimilarityItemAtIndex0={similarityItem != null}
+                        truncated={itemTruncated}
+                        loadingDescription={loadingDescription}
+                        selectedMetric={selectedMetric}
+                        analysisDomain={analysisDomain}
+                        toggleImageSelection={toggleImageSelection}
+                        setPreviewedItem={setPreviewedItem}
+                        setSimilaritySearch={setSimilaritySearch}
+                        selectedItems={selectedItems}
+                        showAnnotations={showAnnotations}
+                        featureHashMap={featureHashMap}
+                        iou={iou}
+                        setPage={setPage}
+                        page={page}
+                        setPageSize={(val: number) => {
+                          updateUserDisplaySettings({ explorerPageSize: val });
+                        }}
+                        pageSize={userDisplaySettings.explorerPageSize}
+                        gridCount={userDisplaySettings.explorerGridCount}
+                      />
+                    </div>
+                  </div>
+                ),
               },
               {
-                label:
-                  predictionHash === undefined
-                    ? "Annotation Metrics"
-                    : "Prediction Metrics",
-                options: Object.entries(annotationMetricsSummary.metrics)
-                  .map(([metricKey, metric]) => ({
-                    label: `${predictionHash === undefined ? "A" : "P"}: ${
-                      metric?.title ?? metricKey
-                    }`,
-                    value: `annotation-${metricKey}`,
-                  }))
-                  .sort((a, b) => (a.label > b.label ? 1 : -1)),
+                label: (
+                  <span className="mr-2 flex items-center gap-2">
+                    <DotChartOutlined /> Embeddings View
+                  </span>
+                ),
+                key: "embeddingsView",
+                children: (
+                  <ExplorerEmbeddings
+                    projectHash={projectHash}
+                    predictionHash={predictionHash}
+                    reductionHash={reductionHash}
+                    reductionHashLoading={reductionHashLoading}
+                    filters={filters}
+                    setEmbeddingSelection={setEmbeddingFilter}
+                    featureHashMap={featureHashMap}
+                  />
+                ),
               },
             ]}
           />
-          <Button
-            disabled={!isSortedByMetric}
-            onClick={() => setIsAscending(!isAscending)}
-            icon={isAscending ? <TbSortAscending /> : <TbSortDescending />}
+        </Col>
+        <Col span={6} className=" border-l border-l-gray-200 px-2">
+          <Tabs
+            items={[
+              {
+                label: "Overview",
+                key: "overview",
+                children: (
+                  <Overview
+                    projectHash={projectHash}
+                    analysisDomain={
+                      analysisDomain === "data" ? "data" : "annotation"
+                    }
+                  />
+                ),
+              },
+              {
+                label: "Filter",
+                key: "filter",
+                children: (
+                  <Filters
+                    projectHash={projectHash}
+                    dataMetricsSummary={dataMetricsSummary}
+                    annotationMetricsSummary={annotationMetricsSummary}
+                    annotationFilters={annotationFilters}
+                    setAnnotationFilters={setAnnotationFilters}
+                    dataFilters={dataFilters}
+                    setDataFilters={setDataFilters}
+                    featureHashMap={featureHashMap}
+                    reset={reset}
+                    canResetFilters={canResetFilters}
+                    dataMetricRanges={dataMetricRanges?.metrics}
+                    annotationMetricRanges={annotationMetricRanges?.metrics}
+                  />
+                ),
+              },
+              {
+                label: "Display",
+                key: "display",
+                children: (
+                  <Display
+                    annotationFilters={annotationFilters}
+                    annotationMetricRanges={annotationMetricRanges?.metrics}
+                    selectedMetric={selectedMetric}
+                    analysisDomain={analysisDomain}
+                    isSortedByMetric={isSortedByMetric}
+                    predictionHash={predictionHash}
+                    dataMetricsSummary={dataMetricsSummary}
+                    annotationMetricsSummary={annotationMetricsSummary}
+                    setSelectedMetric={handleMetricChange}
+                    isAscending={isAscending}
+                    setIsAscending={setIsAscending}
+                    showAnnotations={showAnnotations}
+                    toggleShowAnnotations={toggleShowAnnotations}
+                    setConfidenceFilter={setAnnotationFilters}
+                    gridCount={userDisplaySettings.explorerGridCount}
+                    setGridCount={(val: number) => {
+                      updateUserDisplaySettings({ explorerGridCount: val });
+                    }}
+                  />
+                ),
+              },
+            ]}
           />
-          <Button onClick={toggleShowAnnotations}>
-            {`${showAnnotations ? "Show" : "hide"} all annotations`}
-          </Button>
-          <Popover
-            placement="bottomLeft"
-            content={
-              <MetricFilter
-                filters={dataFilters}
-                setFilters={setDataFilters}
-                metricsSummary={dataMetricsSummary}
-                metricRanges={dataMetricRanges?.metrics}
-                featureHashMap={featureHashMap}
-                tags={tags ?? []}
-                collaborators={collaborators ?? []}
-              />
-            }
-            trigger="click"
-          >
-            <Button>
-              Data Filters
-              {` (${dataFilters.ordering.length})`}
-            </Button>
-          </Popover>
-          <Popover
-            placement="bottomLeft"
-            content={
-              <MetricFilter
-                filters={annotationFilters}
-                setFilters={setAnnotationFilters}
-                metricsSummary={annotationMetricsSummary}
-                metricRanges={annotationMetricRanges?.metrics}
-                featureHashMap={featureHashMap}
-                tags={tags ?? []}
-                collaborators={collaborators ?? []}
-              />
-            }
-            trigger="click"
-          >
-            <Button>
-              Annotation Filters
-              {` (${annotationFilters.ordering.length})`}
-            </Button>
-          </Popover>
-          <Button
-            disabled={!canResetFilters}
-            onClick={() => reset()}
-            icon={<MdFilterAltOff />}
-          >
-            Reset filters
-          </Button>
-        </Space.Compact>
-        <Space.Compact size="large">
-          <Popover
-            placement="bottomRight"
-            content={
-              <BulkTaggingForm
-                projectHash={projectHash}
-                selectedItems={selectedItems}
-                filtersDomain={filters.analysisDomain}
-                filters={filters.filters}
-                allowTaggingAnnotations={allowTaggingAnnotations}
-              />
-            }
-            trigger="click"
-          >
-            <Tooltip
-              title={
-                selectedItems !== "ALL" && !selectedItems.size
-                  ? "Select items to tag first"
-                  : ""
-              }
-            >
-              <Button
-                icon={<HiOutlineTag />}
-                disabled={selectedItems !== "ALL" && !selectedItems.size}
-              >
-                Tag
-              </Button>
-            </Tooltip>
-          </Popover>
-          <Button
-            disabled={selectedItems !== "ALL" && !selectedItems.size}
-            onClick={() => setSelectedItems(new Set())}
-            icon={<VscClearAll />}
-          >
-            Clear selection (
-            {selectedItems === "ALL" ? "All" : selectedItems.size})
-          </Button>
-          <Button
-            disabled={selectedItems === "ALL"}
-            onClick={() =>
-              setSelectedItems((oldState) => {
-                if (oldState === "ALL") {
-                  return "ALL";
-                }
-                return new Set([
-                  ...oldState,
-                  ...itemsToRender.slice(
-                    (page - 1) * pageSize,
-                    page * pageSize
-                  ),
-                ]);
-              })
-            }
-            icon={<BiSelectMultiple />}
-          >
-            Select page (
-            {itemsToRender.slice((page - 1) * pageSize, page * pageSize).length}
-            )
-          </Button>
-          <Button
-            onClick={() => setSelectedItems("ALL")}
-            disabled={selectedItems === "ALL"}
-            icon={<BiSelectMultiple />}
-          >
-            Select All
-          </Button>
-        </Space.Compact>
-        {env !== "sandbox" && !(remoteProject || !local) ? (
-          <Space.Compact size="large">
-            <Button
-              onClick={() => setOpen("subset")}
-              disabled={!canResetFilters}
-              icon={<BiWindows />}
-            >
-              Create Project subset
-            </Button>
-            <Button
-              onClick={() => setOpen("upload")}
-              disabled={!!canResetFilters}
-              icon={<BiCloudUpload />}
-            >
-              Upload project
-            </Button>
-          </Space.Compact>
-        ) : (
-          <>
-            <Button
-              onClick={() => setOpen("subset")}
-              disabled={!canResetFilters}
-              hidden={env === "sandbox"}
-              icon={<BiWindows />}
-              size="large"
-            >
-              Create Project subset
-            </Button>
-            <Button
-              onClick={() => setOpen("upload")}
-              disabled={!!canResetFilters}
-              hidden={remoteProject || !local}
-              icon={<BiCloudUpload />}
-              size="large"
-            >
-              Upload project
-            </Button>
-          </>
-        )}
-        <ExplorerPremiumSearch
-          premiumSearchState={{
-            ...premiumSearchState,
-            setSearch: (args) => {
-              setSimilarityItem(undefined);
-              premiumSearchState.setSearch(args);
-            },
-          }}
-        />
-      </Space>
-      <ExplorerSearchResults
-        projectHash={projectHash}
-        predictionHash={predictionHash}
-        itemsToRender={itemsToRender}
-        itemSimilarities={itemSimilarities}
-        itemSimilarityItemAtIndex0={similarityItem != null}
-        truncated={itemTruncated}
-        loadingDescription={loadingDescription}
-        selectedMetric={selectedMetric}
-        toggleImageSelection={toggleImageSelection}
-        setPreviewedItem={setPreviewedItem}
-        setSimilaritySearch={setSimilaritySearch}
-        selectedItems={selectedItems}
-        showAnnotations={showAnnotations}
-        featureHashMap={featureHashMap}
-        iou={iou}
-        page={page}
-        pageSize={pageSize}
-        setPage={setPage}
-        setPageSize={setPageSize}
-      />
+        </Col>
+      </Row>
     </div>
-  );
-}
-function PredictionFilters({
-  iou,
-  setIou,
-  predictionOutcome,
-  setPredictionOutcome,
-  isClassificationOnly,
-  disabled,
-}: {
-  iou: number;
-  setIou: (iou: number) => void;
-  predictionOutcome: PredictionDomain;
-  setPredictionOutcome: (outcome: PredictionDomain) => void;
-  isClassificationOnly: boolean;
-  disabled: boolean;
-}) {
-  return (
-    <Space.Compact size="large">
-      <Select
-        disabled={disabled}
-        onChange={setPredictionOutcome}
-        value={predictionOutcome}
-        options={[
-          {
-            value: "fp",
-            label: "False Positive",
-          },
-          {
-            value: "tp",
-            label: "True Positive",
-          },
-          {
-            value: "fn",
-            label: "False Negative",
-          },
-          {
-            value: "p",
-            label: "All Positive",
-          },
-          {
-            value: "a",
-            label: "All Outcomes",
-          },
-        ]}
-      />
-
-      {!isClassificationOnly && (
-        <div
-          className={classy(
-            "box-border h-10 w-80 rounded-r-lg border-r border-b border-t border-solid border-gray-200",
-            "flex items-center gap-1 px-2"
-          )}
-        >
-          <Typography.Text strong className="min-w-fit">
-            IOU:
-          </Typography.Text>
-          <Slider
-            className="w-full"
-            tooltip={{
-              formatter: (val: number | undefined) => `${val}`,
-            }}
-            value={iou}
-            onChange={setIou}
-            min={0}
-            max={1}
-            step={0.01}
-          />
-        </div>
-      )}
-    </Space.Compact>
   );
 }

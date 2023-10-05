@@ -76,7 +76,7 @@ export function AnnotatedImage(props: {
     <figure
       className={classy(
         className,
-        "relative m-0 flex h-full w-full items-center justify-center overflow-clip"
+        "m-0 flex h-full w-full items-center justify-center overflow-clip"
       )}
       style={figureStyle}
     >
@@ -84,7 +84,7 @@ export function AnnotatedImage(props: {
       {item.timestamp != null ? (
         <video
           ref={video}
-          className="!rounded-none object-contain transition-opacity"
+          className="!rounded-none object-contain "
           style={contentStyle}
           src={imageSrc}
           muted
@@ -99,6 +99,7 @@ export function AnnotatedImage(props: {
       ) : (
         <img
           ref={image}
+          // className="aspect-square !rounded-none object-cover transition-opacity"
           className="!rounded-none object-contain transition-opacity"
           style={contentStyle}
           alt=""
