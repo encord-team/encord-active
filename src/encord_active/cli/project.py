@@ -64,7 +64,7 @@ def download_data(
                 url: str = du.data_uri
             elif encord_project is not None:
                 video, images = encord_project.get_data(str(du.data_hash), get_signed_url=True)
-                if video is not None:
+                if video and video.get("file_link"):
                     url = str(video["file_link"])
                     du.data_uri_is_video = True
                 else:
