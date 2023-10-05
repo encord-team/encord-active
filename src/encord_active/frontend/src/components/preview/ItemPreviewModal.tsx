@@ -1,8 +1,8 @@
-import { Button, Col, Modal, Row, Spin, Table } from "antd";
+import { Button, Col, List, Modal, Row, Spin, Table, Tabs } from "antd";
 
 import { useMemo } from "react";
 import { MdImageSearch } from "react-icons/md";
-import { EditOutlined } from "@ant-design/icons";
+import { EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { loadingIndicator } from "../Spin";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
@@ -92,6 +92,14 @@ export function ItemPreviewModal(props: {
     return metricsList.sort(sortByName);
   }, [preview, projectSummary, annotationHash, domain]);
 
+  const metadataList: { name: string; value: string }[] = useMemo(() => {
+    const metadataList: { name: string; value: string }[] = [
+      { name: "Data title", value: preview?.data_title ?? "" },
+      { name: "Dataset", value: preview?.dataset_title ?? "" },
+    ];
+    return metadataList;
+  }, [preview, projectSummary, annotationHash, domain]);
+
   const columns = [
     {
       title: domain === "data" ? "Data Metric" : "Annotation Metric",
@@ -139,24 +147,103 @@ export function ItemPreviewModal(props: {
         <Spin indicator={loadingIndicator} />
       ) : (
         <Row className="vh-100 vw-100">
-          <Col span={12}>
-            <Row className="[&>*]:w-full">
-              <Table
-                dataSource={metricsList}
-                columns={columns}
-                pagination={{ pageSize: 5 }}
-                id="key"
-              />
-            </Row>
-            <ItemTags tags={preview.tags} annotationHash={annotationHash} />
-          </Col>
-          <Col span={12}>
+          <Col span={16}>
             <AnnotatedImage
               key={`preview-image-${previewItem ?? ""}`}
               item={preview}
               annotationHash={annotationHash}
               mode="large"
               predictionTruePositive={undefined}
+            />
+          </Col>
+          <Col span={8}>
+            <Tabs
+              className="h-full px-2"
+              items={[
+                {
+                  label: "MetaData",
+                  key: "metadata",
+                  children: (
+                    <div className="relative h-full overflow-y-auto ">
+                      <div className="absolute">
+                        <List
+                          dataSource={metadataList}
+                          renderItem={(item) => (
+                            <List.Item>
+                              <div className="flex flex-col">
+                                <div className="text-xs text-gray-7">
+                                  {item.name} <InfoCircleOutlined />
+                                </div>
+                                <div className="text-xs text-gray-9">
+                                  {item.value}
+                                </div>
+                              </div>
+                            </List.Item>
+                          )}
+                        />
+                        <ItemTags
+                          tags={preview.tags}
+                          annotationHash={annotationHash}
+                        />
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  label: "Metrics",
+                  key: "metrics",
+                  children: (
+                    <div className="relative h-full overflow-y-auto ">
+                      <List
+                        className="absolute"
+                        dataSource={metricsList}
+                        renderItem={(item) => (
+                          <List.Item>
+                            <div className="flex flex-col">
+                              <div className="text-xs text-gray-7">
+                                {item.name} <InfoCircleOutlined />
+                              </div>
+                              <div className="text-xs text-gray-9">
+                                {item.value}
+                              </div>
+                            </div>
+                          </List.Item>
+                        )}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  label: "Labels & Predictions",
+                  key: "labels",
+                  children: (
+                    <div className="relative h-full overflow-y-auto ">
+                      <div className="absolute">
+                        {JSON.stringify(preview.annotation_enums)}
+                        <List
+                          dataSource={metadataList}
+                          renderItem={(item) => (
+                            <List.Item>
+                              <div className="flex flex-col">
+                                <div className="text-xs text-gray-7">
+                                  {item.name} <InfoCircleOutlined />
+                                </div>
+                                <div className="text-xs text-gray-9">
+                                  {item.value}
+                                </div>
+                              </div>
+                            </List.Item>
+                          )}
+                        />
+                        <ItemTags
+                          tags={preview.tags}
+                          annotationHash={annotationHash}
+                        />
+                      </div>
+                    </div>
+                  ),
+                },
+              ]}
             />
           </Col>
         </Row>
