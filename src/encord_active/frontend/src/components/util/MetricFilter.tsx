@@ -29,7 +29,7 @@ export const DefaultFilters: FilterState = {
 };
 
 export const DefaultAnnotationFilters: FilterState = {
-  metricFilters: { metric_confidence: [0.0, 1.0] },
+  metricFilters: {},
   enumFilters: {},
   ordering: [],
 };

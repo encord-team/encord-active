@@ -62,8 +62,8 @@ import { Display } from "./display/Display";
 import "./css/explorer.css";
 import { classy } from "../../helpers/classy";
 import { useUserSettings } from "../../hooks/useUserSettings";
-import { Filters } from "./filters/Filters";
 import { CustomTooltip } from "../util/CustomTooltip";
+import { Filters } from "./filters/FIlters";
 
 export type Props = {
   projectHash: string;
