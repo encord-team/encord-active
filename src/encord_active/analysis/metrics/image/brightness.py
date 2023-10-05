@@ -32,7 +32,7 @@ class BrightnessMetric(OneImageMetric):
         self, deps: MetricDependencies, image: ImageTensor, mask: Optional[MaskTensor], bb: Optional[BoundingBoxTensor]
     ) -> MetricResult:
         grayscale_image = cast(torch.Tensor, deps["ephemeral_grayscale_image"])
-        return torch.mean(grayscale_image, dtype=torch.float).cpu() / 255.0
+        return min(torch.mean(grayscale_image, dtype=torch.float).cpu().item() / 255.0, 1.0)
 
     def calculate_batched(
         self, deps: MetricBatchDependencies, image: ImageBatchTensor, annotation: Optional[ObjectOnlyBatchInput]
