@@ -1,6 +1,6 @@
 <p align="center">
 <a href="https://docs.encord.com/docs/active-overview" target="_blank">Documentation</a> |
-<a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank">Try it Now</a> |
+<a href="https://github.com/encord-team/encord-notebooks" target="_blank">Try it Now</a> |
 <a href="https://encord.com/encord_active/" target="_blank">Website</a> |
 <a href="https://encord.com/blog/" target="_blank">Blog</a> |
 <a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank">Join our Community</a>
@@ -18,7 +18,7 @@
     <a href="https://github.com/encord-team/encord-notebooks" target="_blank" style="text-decoration:none">
       <img alt="Encord Notebooks" src="https://img.shields.io/badge/Encord_Notebooks-blue?logo=github&label=&labelColor=181717">
     </a>
-    <a href="https://colab.research.google.com/drive/11iZE1CCFIGlkWdTmhf5XACDojtGeIRGS?usp=sharing" target="_blank" style="text-decoration:none">
+    <a href="https://github.com/encord-team/encord-notebooks" target="_blank" style="text-decoration:none">
       <img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
     </a>
     <a href="https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q" target="_blank" style="text-decoration:none">
@@ -73,7 +73,19 @@ pip install encord-active
 
 > `encord-active` requires [python3.9][python-39].
 > If you have trouble installing `encord-active`, you find more detailed instructions on
-> installing it [here](https://docs.encord.com/docs/active-installation). If just want to see it in action try out [this Colab notebook][colab-notebook].
+> installing it [here](https://docs.encord.com/docs/active-installation). If just want to see it in action try out [this Colab notebook](https://colab.research.google.com/github/encord-team/encord-notebooks/blob/main/colab-notebooks/01_Encord_Active_Notebooks_Download_sandbox_project.ipynb).
+
+### 🖥️ Supported Platforms
+🚨 Note: Currently, this library does not support Linux 🚫🐧.
+
+Supported platforms include:
+
+* Windows
+* macOS
+
+#### 🐧 Linux Support
+
+We understand the importance of Linux in many development environments. We are actively exploring ways to bring Linux support in the future 🔍. If you're interested in contributing or have suggestions, please read the [contribution guidelines][contribute-url] 🤝.
 
 ## 👋 Quickstart
 
