@@ -748,7 +748,7 @@ class SimpleExecutor(Executor):
                 du_hash = uuid.UUID(image["image_hash"])
                 signed_url = str(image["file_link"])
                 self.encord_project_urls[(project_hash, du_hash)] = signed_url
-            if video and video.get("file_link"):
+            if not images and video and video.get("file_link"):
                 du_hash = uuid.UUID(video["data_hash"]) if "data_hash" in video else data_hash
                 signed_url = str(video["file_link"])
                 self.encord_project_urls[(project_hash, du_hash)] = signed_url

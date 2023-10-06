@@ -94,7 +94,7 @@ def import_encord(
                         store_symlinks=False,
                         database_dir=database_dir,
                     )
-                if video and video.get("file_link"):
+                if not images and video and video.get("file_link"):
                     du_hash_local_storage[data_hash] = get_data_uri(
                         url_or_path=str(video["file_link"]),
                         store_data_locally=True,

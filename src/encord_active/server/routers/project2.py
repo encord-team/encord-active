@@ -415,7 +415,7 @@ def _cache_encord_img_lookup(
     encord_url_dict = {}
     for image in images or []:
         encord_url_dict[uuid.UUID(image["image_hash"])] = str(image["file_link"])
-    if video and video.get("file_link"):
+    if not images and video and video.get("file_link"):
         encord_url_dict[data_hash] = str(video["file_link"])
     return encord_url_dict
 
