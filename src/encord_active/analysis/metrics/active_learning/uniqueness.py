@@ -29,4 +29,4 @@ class ImageUniqueness(DerivedMetric):
         else:
             # Clamp large distances to (unique)
             # FIXME: filter out nearby frames / same video?
-            return min(max(nearest_neighbours.similarities[0], -1.0), 1.0)
+            return min(max((1 - nearest_neighbours.similarities[0]) / 2, 0.0), 1.0)
