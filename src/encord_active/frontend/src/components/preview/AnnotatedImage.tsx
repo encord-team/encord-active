@@ -16,6 +16,7 @@ export function AnnotatedImage(props: {
   mode: "preview" | "full" | "large";
   predictionTruePositive: ReadonlySet<string> | undefined;
   children?: ReactNode | undefined;
+  objectsToHide?: string[];
 }) {
   const {
     item,
@@ -25,6 +26,7 @@ export function AnnotatedImage(props: {
     children,
     mode,
     predictionTruePositive,
+    objectsToHide,
   } = props;
 
   const image = useRef<HTMLImageElement>(null);
@@ -123,6 +125,7 @@ export function AnnotatedImage(props: {
             annotationHash={annotationHash}
             predictionTruePositive={predictionTruePositive}
             hideExtraAnnotations={hideExtraAnnotations ?? false}
+            objectsToHide={objectsToHide ?? []}
           />
         </ErrorBoundary>
       ) : null}
@@ -230,6 +233,7 @@ function AnnotationRenderLayerRaw({
   annotationHash,
   hideExtraAnnotations,
   predictionTruePositive,
+  objectsToHide,
 }: {
   objects: AnnotationObject[];
   width: number;
@@ -237,7 +241,9 @@ function AnnotationRenderLayerRaw({
   annotationHash: string | undefined;
   hideExtraAnnotations: boolean;
   predictionTruePositive: ReadonlySet<string> | undefined;
+  objectsToHide: string[];
 }) {
+  console.log("Objects to hide", objectsToHide);
   const fillOpacity = (select: boolean | undefined): string => {
     if (select === undefined) {
       return "20%";
@@ -418,7 +424,9 @@ function AnnotationRenderLayerRaw({
       className="absolute h-full w-full overflow-hidden"
       style={{ width, height }}
     >
-      {objects.map(renderObject)}
+      {objects
+        .filter((o) => !objectsToHide.includes(o.objectHash))
+        .map(renderObject)}
     </svg>
   );
 }

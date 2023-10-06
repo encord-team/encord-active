@@ -7,11 +7,18 @@ import {
   Spin,
   Table,
   Tabs,
+  Tree,
   Typography,
 } from "antd";
 
-import { useMemo } from "react";
-import { MdImageSearch } from "react-icons/md";
+import { useMemo, useState } from "react";
+import {
+  MdImageSearch,
+  MdOutlineVisibility,
+  MdOutlineVisibilityOff,
+  MdVisibility,
+  MdVisibilityOff,
+} from "react-icons/md";
 import { EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { loadingIndicator } from "../Spin";
@@ -21,8 +28,24 @@ import { ItemTags } from "../explorer/Tagging";
 import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 import { AnnotationType } from "../../openapi/api";
 import { AnnotationShapeIcon } from "../icons/AnnotationShapeIcon";
-import { VscSymbolClass } from "react-icons/vsc";
 import { FeatureHashMap } from "../Types";
+import { BasicDataNode, DataNode } from "antd/es/tree";
+import { VscSymbolClass } from "react-icons/vsc";
+
+type LabelObjectOrClassification = {
+  readonly confidence: number;
+  readonly createdAt: string;
+  readonly createdBy: string;
+  readonly featureHash: string;
+  readonly lastEditedAt: string;
+  readonly lastEditedBy: string;
+  readonly manualAnnotation: boolean;
+  readonly objectHash?: string;
+  readonly classificationHash?: string;
+  name?: string | null;
+  shape?: AnnotationType | null;
+  color?: string | null;
+};
 
 export function ItemPreviewModal(props: {
   featureHashMap: FeatureHashMap;
@@ -129,51 +152,122 @@ export function ItemPreviewModal(props: {
     },
   ];
 
-  const objectsAndClassiciations: {
-    readonly confidence: number;
-    readonly createdAt: string;
-    readonly createdBy: string;
-    readonly featureHash: string;
-    readonly lastEditedAt: string;
-    readonly lastEditedBy: string;
-    readonly manualAnnotation: boolean;
-    readonly objectHash?: string;
-    readonly classificationHash?: string;
-    readonly name?: string;
-    readonly color?: string;
-    readonly shape?: AnnotationType;
-  }[] = useMemo(() => {
-    console.log(annotationHash, preview);
-    if (preview === undefined) {
-      return [];
-    }
-    const objOrClassList = [
-      ...preview.objects,
-      ...preview.classifications,
-    ] as readonly {
-      readonly confidence: number;
-      readonly createdAt: string;
-      readonly createdBy: string;
-      readonly featureHash: string;
-      readonly lastEditedAt: string;
-      readonly lastEditedBy: string;
-      readonly manualAnnotation: boolean;
-      readonly objectHash?: string;
-      readonly classificationHash?: string;
-      readonly name?: string;
-      readonly shape?: AnnotationType;
-    }[];
+  const objectsAndClassiciations: LabelObjectOrClassification[] =
+    useMemo(() => {
+      if (preview === undefined) {
+        return [];
+      }
+      const objOrClassList = [
+        ...preview.objects,
+        ...preview.classifications,
+      ] as readonly LabelObjectOrClassification[];
 
-    return objOrClassList.filter(
-      (elem: { objectHash?: string; classificationHash?: string }) =>
-        elem.objectHash === annotationHash ||
-        elem.classificationHash === annotationHash
-    );
-  }, [annotationHash, preview]);
+      return objOrClassList.filter(
+        (elem: { objectHash?: string; classificationHash?: string }) =>
+          elem.objectHash === annotationHash ||
+          elem.classificationHash === annotationHash
+      );
+    }, [annotationHash, preview]);
 
   const objects = objectsAndClassiciations.filter(
     (elem) => elem.objectHash !== undefined
   );
+
+  const [objectsHashToHide, setObjectsHashToHide] = useState<string[]>([]);
+  const toggleObjectVisibility = (objectHash: string) => {
+    if (objectsHashToHide.includes(objectHash)) {
+      setObjectsHashToHide(
+        objectsHashToHide.filter((elem) => elem !== objectHash)
+      );
+    } else {
+      setObjectsHashToHide([...objectsHashToHide, objectHash]);
+    }
+  };
+
+  const treeObjects = useMemo(() => {
+    if (objects && objects.length > 0) {
+      let groupedObjects: Record<string, LabelObjectOrClassification[]> = {};
+      objects.forEach((item) => {
+        item = enrichObject(item);
+        const val = item.name;
+        if (val) {
+          groupedObjects[val] = groupedObjects[val] || [];
+          groupedObjects[val].push(item);
+        }
+      });
+
+      let tree: (BasicDataNode | DataNode)[] = [];
+      Object.entries(groupedObjects).forEach(([key, value], index) => {
+        tree.push(
+          value.length > 1
+            ? {
+                title: `${key} - (${value.length})`,
+                key: index,
+                icon:
+                  value[0].shape && value[0].color ? (
+                    <AnnotationShapeIcon
+                      shape={value[0].shape}
+                      color={value[0].color}
+                    />
+                  ) : (
+                    <VscSymbolClass />
+                  ),
+                children: value.map((item: any, subIndex) => ({
+                  title: (
+                    <div className="flex w-[200px] items-center justify-between">
+                      <div className="flex gap-1">
+                        <AnnotationShapeIcon
+                          shape={item.shape}
+                          color={item.color}
+                        />
+                        <div>{item.name}</div>
+                      </div>
+                      <Button
+                        onClick={() => toggleObjectVisibility(item.objectHash)}
+                        className="border-none p-0 shadow-none"
+                        icon={
+                          objectsHashToHide.includes(item.objectHash) ? (
+                            <MdOutlineVisibilityOff />
+                          ) : (
+                            <MdOutlineVisibility />
+                          )
+                        }
+                      />
+                    </div>
+                  ),
+                  key: `${index}-${subIndex}`,
+                })),
+              }
+            : {
+                title: key,
+                key: index,
+                icon:
+                  value[0].shape && value[0].color ? (
+                    <AnnotationShapeIcon
+                      shape={value[0].shape}
+                      color={value[0].color}
+                    />
+                  ) : (
+                    <VscSymbolClass />
+                  ),
+              }
+        );
+      });
+
+      tree.sort((a, b) => {
+        if (
+          Object.prototype.hasOwnProperty.call(a, "children") &&
+          Object.prototype.hasOwnProperty.call(b, "children")
+        ) {
+          return 0;
+        }
+        return Object.prototype.hasOwnProperty.call(a, "children") ? -1 : 1;
+      });
+      return tree;
+    }
+
+    return [];
+  }, [objects]);
 
   const classifications = objectsAndClassiciations.filter(
     (elem) => elem.classificationHash !== undefined
@@ -184,6 +278,50 @@ export function ItemPreviewModal(props: {
       ? null
       : preview.annotation_enums[annotationHash ?? ""]?.annotation_type;
 
+  function enrichObject(
+    obj: LabelObjectOrClassification
+  ): LabelObjectOrClassification {
+    if (obj == null || preview == null) {
+      return obj;
+    }
+    let { featureHash } = obj;
+    const classificationAnswer = preview.classification_answers[
+      obj.classificationHash ?? ""
+    ] as {
+      readonly classifications?: {
+        readonly featureHash: string;
+        readonly answers?: readonly { readonly featureHash: string }[];
+      }[];
+    };
+    if (classificationAnswer !== undefined) {
+      const { classifications } = classificationAnswer;
+      if (classifications !== undefined && classifications.length > 0) {
+        const { answers } = classifications[0];
+        if (answers !== undefined && answers.length > 0) {
+          const { featureHash: classificationFeatureHash } = answers[0];
+          featureHash = classificationFeatureHash;
+        }
+      }
+    }
+    const featureMeta = featureHashMap[featureHash];
+    if (featureMeta == null) {
+      const name = obj?.name ?? null;
+
+      return name === null
+        ? { ...obj, name: null, color: "#00ffffff" }
+        : {
+            ...obj,
+            name: name,
+            color: obj.color ?? "#00ffffff",
+          };
+    }
+    return {
+      ...obj,
+      name: featureMeta.name,
+      color: featureMeta.color,
+      shape: preview.annotation_enums[obj.objectHash ?? ""]?.annotation_type,
+    };
+  }
   const objectLabels = useMemo((): {
     labelObjectName: string | null;
     labelObjectColor: string;
@@ -341,6 +479,7 @@ export function ItemPreviewModal(props: {
               annotationHash={annotationHash}
               mode="large"
               predictionTruePositive={undefined}
+              objectsToHide={objectsHashToHide}
             />
           </Col>
           <Col span={8}>
@@ -359,7 +498,7 @@ export function ItemPreviewModal(props: {
                             <List.Item>
                               <div className="flex flex-col">
                                 <div className="text-xs text-gray-7">
-                                  {item.name} <InfoCircleOutlined />
+                                  {item.name}
                                 </div>
                                 <div className="text-xs text-gray-9">
                                   {item.value}
@@ -388,7 +527,7 @@ export function ItemPreviewModal(props: {
                           <List.Item>
                             <div className="flex flex-col">
                               <div className="text-xs text-gray-7">
-                                {item.name} <InfoCircleOutlined />
+                                {item.name}
                               </div>
                               <div className="text-xs text-gray-9">
                                 {item.value}
@@ -406,31 +545,8 @@ export function ItemPreviewModal(props: {
                   children: (
                     <div className="relative h-full overflow-y-auto ">
                       <div className="absolute">
-                        {objectLabels && objectLabels.length > 0 && (
-                          <>
-                            <div className="font-semibold">Objects</div>
-                            <List
-                              dataSource={objectLabels}
-                              renderItem={(item) => (
-                                <Row>
-                                  {item.labelShape && (
-                                    <AnnotationShapeIcon
-                                      shape={item.labelShape}
-                                      color={item.labelObjectColor}
-                                    />
-                                  )}
-
-                                  <Typography.Text
-                                    className="ml-1"
-                                    color={item.labelObjectColor}
-                                  >
-                                    {item.labelObjectName}
-                                  </Typography.Text>
-                                </Row>
-                              )}
-                            />
-                          </>
-                        )}
+                        <div className="font-semibold">Objects</div>
+                        <Tree treeData={treeObjects} showIcon showLine />
 
                         {classificationLabels &&
                           classificationLabels.length > 0 && (
