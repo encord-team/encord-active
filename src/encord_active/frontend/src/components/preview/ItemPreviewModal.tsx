@@ -161,16 +161,17 @@ export function ItemPreviewModal(props: {
     return objList;
   }, [preview]);
 
-  const classifications: LabelObjectOrClassification[] = useMemo(() => {
-    if (preview === undefined) {
-      return [];
-    }
-    const objList = [
-      ...preview.classifications,
-    ] as LabelObjectOrClassification[];
+  const classifications: readonly LabelObjectOrClassification[] =
+    useMemo(() => {
+      if (preview === undefined) {
+        return [];
+      }
+      const objList = [
+        ...preview.classifications,
+      ] as readonly LabelObjectOrClassification[];
 
-    return objList;
-  }, [preview]);
+      return objList;
+    }, [preview]);
 
   const [objectsHashToHide, setObjectsHashToHide] = useState<string[]>([]);
   const toggleObjectVisibility = (objectHash: string) => {
@@ -274,6 +275,48 @@ export function ItemPreviewModal(props: {
       };
     } else return obj;
   }
+
+  const classificationLabels: LabelObjectOrClassification[] = useMemo(() => {
+    return classifications.map((labelObject) => {
+      if (labelObject == null || preview == null) {
+        return labelObject;
+      }
+      let { featureHash } = labelObject;
+      const classificationAnswer = preview.classification_answers[
+        labelObject.classificationHash ?? ""
+      ] as {
+        readonly classifications?: {
+          readonly featureHash: string;
+          readonly answers?: readonly { readonly featureHash: string }[];
+        }[];
+      };
+      if (classificationAnswer !== undefined) {
+        const { classifications } = classificationAnswer;
+        if (classifications !== undefined && classifications.length > 0) {
+          const { answers } = classifications[0];
+          if (answers !== undefined && answers.length > 0) {
+            const { featureHash: classificationFeatureHash } = answers[0];
+            featureHash = classificationFeatureHash;
+          }
+        }
+      }
+      const featureMeta = featureHashMap[featureHash];
+      if (featureMeta == null) {
+        const name = labelObject?.name ?? null;
+
+        return name === null
+          ? labelObject
+          : {
+              ...labelObject,
+              name: name,
+            };
+      }
+      return {
+        ...labelObject,
+        name: featureMeta.name,
+      };
+    });
+  }, [featureHashMap, classifications]);
 
   return (
     <Modal
@@ -383,26 +426,30 @@ export function ItemPreviewModal(props: {
                   children: (
                     <div className="relative h-full w-full overflow-y-auto">
                       <div className="absolute w-full">
-                        <div className="font-semibold">Objects</div>
+                        {treeObjects && treeObjects.length > 0 && (
+                          <div className="font-semibold">Objects</div>
+                        )}
                         <Tree treeData={treeObjects} showIcon showLine />
 
-                        {classifications && classifications.length > 0 && (
-                          <>
-                            <div className="font-semibold">Classifications</div>
-                            <List
-                              dataSource={classifications}
-                              renderItem={(item) => (
-                                <Row>
-                                  <VscSymbolClass />
-
-                                  <Typography.Text className="ml-1">
-                                    {item.name}
-                                  </Typography.Text>
-                                </Row>
-                              )}
-                            />
-                          </>
-                        )}
+                        {classificationLabels &&
+                          classificationLabels.length > 0 && (
+                            <>
+                              <div className="font-semibold">
+                                Classifications
+                              </div>
+                              <List
+                                dataSource={classificationLabels}
+                                renderItem={(item) => (
+                                  <Row>
+                                    <VscSymbolClass />
+                                    <Typography.Text className="ml-1">
+                                      {item.name}
+                                    </Typography.Text>
+                                  </Row>
+                                )}
+                              />
+                            </>
+                          )}
 
                         <ItemTags
                           tags={preview.tags}
