@@ -27,17 +27,22 @@ class NearestNeighborAgreement(DerivedMetric):
         #  find one that works the best.
         # calculate
         nearest_neighbours: NearestNeighbors = cast(NearestNeighbors, deps["derived_clip_nearest_cosine"])
+
         if len(nearest_neighbours.similarities) == 0:
             # No nearest neighbours for agreement, hence score of 1
             return 1.0
 
+        distances = [(1 - similarity) / 2 for similarity in nearest_neighbours.similarities]
+
         feature_hash: str = cast(str, deps["feature_hash"])
         matches = [float(dep["feature_hash"] == feature_hash) for dep in nearest_neighbours.metric_deps]
-        similarity_sum = sum(nearest_neighbours.similarities)
-        if similarity_sum > 0.0:
+        distances_sum = sum(distances)
+        if distances_sum > 0.0:
             # Weight by similarities
-            # Relatively higher values (higher similarity, lower distance) should contribute more to the total
-            matches = [m * (s / similarity_sum) for m, s in zip(matches, nearest_neighbours.similarities)]
+            # More similar neighbors (lower distance) should contribute more to the total
+            weights = [1.0 / max(d, 0.01) for d in distances]
+
+            matches = [m * (w / sum(weights)) for m, w in zip(matches, weights)]
             return min(sum(matches), 1.0)
         else:
             return min(sum(matches) / len(matches), 1.0)
