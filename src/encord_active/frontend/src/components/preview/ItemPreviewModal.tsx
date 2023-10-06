@@ -17,6 +17,8 @@ import {
   MdOutlineVisibilityOff,
 } from "react-icons/md";
 import { EditOutlined } from "@ant-design/icons";
+import { BasicDataNode, DataNode } from "antd/es/tree";
+import { VscSymbolClass } from "react-icons/vsc";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { loadingIndicator } from "../Spin";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
@@ -26,8 +28,6 @@ import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
 import { AnnotationType } from "../../openapi/api";
 import { AnnotationShapeIcon } from "../icons/AnnotationShapeIcon";
 import { FeatureHashMap } from "../Types";
-import { BasicDataNode, DataNode } from "antd/es/tree";
-import { VscSymbolClass } from "react-icons/vsc";
 import "./itemPreviewModal.css";
 
 type LabelObjectOrClassification = {
@@ -134,21 +134,9 @@ export function ItemPreviewModal(props: {
       { name: "Data title", value: preview?.data_title ?? "" },
       { name: "Dataset", value: preview?.dataset_title ?? "" },
     ];
-    return metadataList;
-  }, [preview, projectSummary, annotationHash, domain]);
 
-  const columns = [
-    {
-      title: domain === "data" ? "Data Metric" : "Annotation Metric",
-      dataIndex: "name",
-      key: "name",
-    },
-    {
-      title: "Value",
-      dataIndex: "value",
-      key: "value",
-    },
-  ];
+    return metadataList;
+  }, [preview?.data_title, preview?.dataset_title]);
 
   const objects: readonly LabelObjectOrClassification[] = useMemo(() => {
     if (preview === undefined) {
@@ -174,18 +162,23 @@ export function ItemPreviewModal(props: {
     }, [preview]);
 
   const [objectsHashToHide, setObjectsHashToHide] = useState<string[]>([]);
-  const toggleObjectVisibility = (objectHash: string) => {
-    if (objectsHashToHide.includes(objectHash)) {
-      setObjectsHashToHide(
-        objectsHashToHide.filter((elem) => elem !== objectHash)
-      );
-    } else {
-      setObjectsHashToHide([...objectsHashToHide, objectHash]);
-    }
-  };
 
-  const getTreeObjectElement = (item: LabelObjectOrClassification) => {
-    return (
+  const toggleObjectVisibility = useMemo(() => {
+    const fn = (objectHash: string) => {
+      if (objectsHashToHide.includes(objectHash)) {
+        setObjectsHashToHide(
+          objectsHashToHide.filter((elem) => elem !== objectHash)
+        );
+      } else {
+        setObjectsHashToHide([...objectsHashToHide, objectHash]);
+      }
+    };
+
+    return fn;
+  }, [objectsHashToHide]);
+
+  const getTreeObjectElement = useMemo(() => {
+    const fn = (item: LabelObjectOrClassification) => (
       <div className="flex w-full items-center justify-between">
         <div className="flex gap-1">
           {item.shape && item.color && (
@@ -208,21 +201,41 @@ export function ItemPreviewModal(props: {
         )}
       </div>
     );
-  };
+
+    return fn;
+  }, [objectsHashToHide, toggleObjectVisibility]);
+
+  const enrichObject = useMemo(() => {
+    const fn = (
+      obj: LabelObjectOrClassification
+    ): LabelObjectOrClassification => {
+      if (preview != null) {
+        return {
+          ...obj,
+          shape:
+            preview.annotation_enums[obj.objectHash ?? ""]?.annotation_type,
+        };
+      } else {
+        return obj;
+      }
+    };
+
+    return fn;
+  }, [preview]);
 
   const treeObjects = useMemo(() => {
     if (objects && objects.length > 0) {
-      let groupedObjects: Record<string, LabelObjectOrClassification[]> = {};
+      const groupedObjects: Record<string, LabelObjectOrClassification[]> = {};
       objects.forEach((item) => {
-        item = enrichObject(item);
-        const val = item.name;
+        const enrichedItem = enrichObject(item);
+        const val = enrichedItem.name;
         if (val) {
           groupedObjects[val] = groupedObjects[val] || [];
-          groupedObjects[val].push(item);
+          groupedObjects[val].push(enrichedItem);
         }
       });
 
-      let tree: (BasicDataNode | DataNode)[] = [];
+      const tree: (BasicDataNode | DataNode)[] = [];
       Object.entries(groupedObjects).forEach(([key, value], index) => {
         tree.push(
           value.length > 1
@@ -263,60 +276,51 @@ export function ItemPreviewModal(props: {
     }
 
     return [];
-  }, [objects, objectsHashToHide]);
+  }, [objects, getTreeObjectElement, enrichObject]);
 
-  function enrichObject(
-    obj: LabelObjectOrClassification
-  ): LabelObjectOrClassification {
-    if (preview != null) {
-      return {
-        ...obj,
-        shape: preview.annotation_enums[obj.objectHash ?? ""]?.annotation_type,
-      };
-    } else return obj;
-  }
-
-  const classificationLabels: LabelObjectOrClassification[] = useMemo(() => {
-    return classifications.map((labelObject) => {
-      if (labelObject == null || preview == null) {
-        return labelObject;
-      }
-      let { featureHash } = labelObject;
-      const classificationAnswer = preview.classification_answers[
-        labelObject.classificationHash ?? ""
-      ] as {
-        readonly classifications?: {
-          readonly featureHash: string;
-          readonly answers?: readonly { readonly featureHash: string }[];
-        }[];
-      };
-      if (classificationAnswer !== undefined) {
-        const { classifications } = classificationAnswer;
-        if (classifications !== undefined && classifications.length > 0) {
-          const { answers } = classifications[0];
-          if (answers !== undefined && answers.length > 0) {
-            const { featureHash: classificationFeatureHash } = answers[0];
-            featureHash = classificationFeatureHash;
+  const classificationLabels: LabelObjectOrClassification[] = useMemo(
+    () =>
+      classifications.map((labelObject) => {
+        if (labelObject == null || preview == null) {
+          return labelObject;
+        }
+        let { featureHash } = labelObject;
+        const classificationAnswer = preview.classification_answers[
+          labelObject.classificationHash ?? ""
+        ] as {
+          readonly classifications?: {
+            readonly featureHash: string;
+            readonly answers?: readonly { readonly featureHash: string }[];
+          }[];
+        };
+        if (classificationAnswer !== undefined) {
+          const { classifications } = classificationAnswer;
+          if (classifications !== undefined && classifications.length > 0) {
+            const { answers } = classifications[0];
+            if (answers !== undefined && answers.length > 0) {
+              const { featureHash: classificationFeatureHash } = answers[0];
+              featureHash = classificationFeatureHash;
+            }
           }
         }
-      }
-      const featureMeta = featureHashMap[featureHash];
-      if (featureMeta == null) {
-        const name = labelObject?.name ?? null;
+        const featureMeta = featureHashMap[featureHash];
+        if (featureMeta == null) {
+          const name = labelObject?.name ?? null;
 
-        return name === null
-          ? labelObject
-          : {
-              ...labelObject,
-              name: name,
-            };
-      }
-      return {
-        ...labelObject,
-        name: featureMeta.name,
-      };
-    });
-  }, [featureHashMap, classifications]);
+          return name === null
+            ? labelObject
+            : {
+                ...labelObject,
+                name,
+              };
+        }
+        return {
+          ...labelObject,
+          name: featureMeta.name,
+        };
+      }),
+    [featureHashMap, classifications, preview]
+  );
 
   return (
     <Modal
