@@ -243,7 +243,6 @@ function AnnotationRenderLayerRaw({
   predictionTruePositive: ReadonlySet<string> | undefined;
   objectsToHide: string[];
 }) {
-  console.log("Objects to hide", objectsToHide);
   const fillOpacity = (select: boolean | undefined): string => {
     if (select === undefined) {
       return "20%";

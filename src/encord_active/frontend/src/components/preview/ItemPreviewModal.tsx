@@ -5,7 +5,6 @@ import {
   Modal,
   Row,
   Spin,
-  Table,
   Tabs,
   Tree,
   Typography,
@@ -16,10 +15,8 @@ import {
   MdImageSearch,
   MdOutlineVisibility,
   MdOutlineVisibilityOff,
-  MdVisibility,
-  MdVisibilityOff,
 } from "react-icons/md";
-import { EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { EditOutlined } from "@ant-design/icons";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { loadingIndicator } from "../Spin";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
@@ -31,6 +28,7 @@ import { AnnotationShapeIcon } from "../icons/AnnotationShapeIcon";
 import { FeatureHashMap } from "../Types";
 import { BasicDataNode, DataNode } from "antd/es/tree";
 import { VscSymbolClass } from "react-icons/vsc";
+import "./itemPreviewModal.css";
 
 type LabelObjectOrClassification = {
   readonly confidence: number;
@@ -152,26 +150,27 @@ export function ItemPreviewModal(props: {
     },
   ];
 
-  const objectsAndClassiciations: LabelObjectOrClassification[] =
-    useMemo(() => {
-      if (preview === undefined) {
-        return [];
-      }
-      const objOrClassList = [
-        ...preview.objects,
-        ...preview.classifications,
-      ] as readonly LabelObjectOrClassification[];
+  const objects: readonly LabelObjectOrClassification[] = useMemo(() => {
+    if (preview === undefined) {
+      return [];
+    }
+    const objList = [
+      ...preview.objects,
+    ] as readonly LabelObjectOrClassification[];
 
-      return objOrClassList.filter(
-        (elem: { objectHash?: string; classificationHash?: string }) =>
-          elem.objectHash === annotationHash ||
-          elem.classificationHash === annotationHash
-      );
-    }, [annotationHash, preview]);
+    return objList;
+  }, [preview]);
 
-  const objects = objectsAndClassiciations.filter(
-    (elem) => elem.objectHash !== undefined
-  );
+  const classifications: LabelObjectOrClassification[] = useMemo(() => {
+    if (preview === undefined) {
+      return [];
+    }
+    const objList = [
+      ...preview.classifications,
+    ] as LabelObjectOrClassification[];
+
+    return objList;
+  }, [preview]);
 
   const [objectsHashToHide, setObjectsHashToHide] = useState<string[]>([]);
   const toggleObjectVisibility = (objectHash: string) => {
@@ -182,6 +181,32 @@ export function ItemPreviewModal(props: {
     } else {
       setObjectsHashToHide([...objectsHashToHide, objectHash]);
     }
+  };
+
+  const getTreeObjectElement = (item: LabelObjectOrClassification) => {
+    return (
+      <div className="flex w-full items-center justify-between">
+        <div className="flex gap-1">
+          {item.shape && item.color && (
+            <AnnotationShapeIcon shape={item.shape} color={item.color} />
+          )}
+          <div>{item.name}</div>
+        </div>
+        {item.objectHash && (
+          <Button
+            onClick={() => toggleObjectVisibility(item.objectHash ?? "")}
+            className="border-none p-0 shadow-none"
+            icon={
+              objectsHashToHide.includes(item.objectHash) ? (
+                <MdOutlineVisibilityOff />
+              ) : (
+                <MdOutlineVisibility />
+              )
+            }
+          />
+        )}
+      </div>
+    );
   };
 
   const treeObjects = useMemo(() => {
@@ -213,43 +238,13 @@ export function ItemPreviewModal(props: {
                     <VscSymbolClass />
                   ),
                 children: value.map((item: any, subIndex) => ({
-                  title: (
-                    <div className="flex w-[200px] items-center justify-between">
-                      <div className="flex gap-1">
-                        <AnnotationShapeIcon
-                          shape={item.shape}
-                          color={item.color}
-                        />
-                        <div>{item.name}</div>
-                      </div>
-                      <Button
-                        onClick={() => toggleObjectVisibility(item.objectHash)}
-                        className="border-none p-0 shadow-none"
-                        icon={
-                          objectsHashToHide.includes(item.objectHash) ? (
-                            <MdOutlineVisibilityOff />
-                          ) : (
-                            <MdOutlineVisibility />
-                          )
-                        }
-                      />
-                    </div>
-                  ),
+                  title: getTreeObjectElement(item),
                   key: `${index}-${subIndex}`,
                 })),
               }
             : {
-                title: key,
+                title: getTreeObjectElement(value[0]),
                 key: index,
-                icon:
-                  value[0].shape && value[0].color ? (
-                    <AnnotationShapeIcon
-                      shape={value[0].shape}
-                      color={value[0].color}
-                    />
-                  ) : (
-                    <VscSymbolClass />
-                  ),
               }
         );
       });
@@ -267,179 +262,22 @@ export function ItemPreviewModal(props: {
     }
 
     return [];
-  }, [objects]);
-
-  const classifications = objectsAndClassiciations.filter(
-    (elem) => elem.classificationHash !== undefined
-  );
-
-  const annotationShape =
-    preview === undefined
-      ? null
-      : preview.annotation_enums[annotationHash ?? ""]?.annotation_type;
+  }, [objects, objectsHashToHide]);
 
   function enrichObject(
     obj: LabelObjectOrClassification
   ): LabelObjectOrClassification {
-    if (obj == null || preview == null) {
-      return obj;
-    }
-    let { featureHash } = obj;
-    const classificationAnswer = preview.classification_answers[
-      obj.classificationHash ?? ""
-    ] as {
-      readonly classifications?: {
-        readonly featureHash: string;
-        readonly answers?: readonly { readonly featureHash: string }[];
-      }[];
-    };
-    if (classificationAnswer !== undefined) {
-      const { classifications } = classificationAnswer;
-      if (classifications !== undefined && classifications.length > 0) {
-        const { answers } = classifications[0];
-        if (answers !== undefined && answers.length > 0) {
-          const { featureHash: classificationFeatureHash } = answers[0];
-          featureHash = classificationFeatureHash;
-        }
-      }
-    }
-    const featureMeta = featureHashMap[featureHash];
-    if (featureMeta == null) {
-      const name = obj?.name ?? null;
-
-      return name === null
-        ? { ...obj, name: null, color: "#00ffffff" }
-        : {
-            ...obj,
-            name: name,
-            color: obj.color ?? "#00ffffff",
-          };
-    }
-    return {
-      ...obj,
-      name: featureMeta.name,
-      color: featureMeta.color,
-      shape: preview.annotation_enums[obj.objectHash ?? ""]?.annotation_type,
-    };
+    if (preview != null) {
+      return {
+        ...obj,
+        shape: preview.annotation_enums[obj.objectHash ?? ""]?.annotation_type,
+      };
+    } else return obj;
   }
-  const objectLabels = useMemo((): {
-    labelObjectName: string | null;
-    labelObjectColor: string;
-    labelShape: AnnotationType | null | undefined;
-  }[] => {
-    return objects.map((labelObject) => {
-      if (labelObject == null || preview == null) {
-        return {
-          labelObjectName: null,
-          labelObjectColor: "#00ffffff",
-          labelShape: null,
-        };
-      }
-      let { featureHash } = labelObject;
-      const classificationAnswer = preview.classification_answers[
-        labelObject.classificationHash ?? ""
-      ] as {
-        readonly classifications?: {
-          readonly featureHash: string;
-          readonly answers?: readonly { readonly featureHash: string }[];
-        }[];
-      };
-      if (classificationAnswer !== undefined) {
-        const { classifications } = classificationAnswer;
-        if (classifications !== undefined && classifications.length > 0) {
-          const { answers } = classifications[0];
-          if (answers !== undefined && answers.length > 0) {
-            const { featureHash: classificationFeatureHash } = answers[0];
-            featureHash = classificationFeatureHash;
-          }
-        }
-      }
-      const featureMeta = featureHashMap[featureHash];
-      if (featureMeta == null) {
-        const name = labelObject?.name ?? null;
-
-        return name === null
-          ? {
-              labelObjectName: null,
-              labelObjectColor: "#00ffffff",
-              labelShape: labelObject.shape,
-            }
-          : {
-              labelObjectName: name,
-              labelObjectColor: labelObject.color ?? "#00ffffff",
-              labelShape: null,
-            };
-      }
-      return {
-        labelObjectName: featureMeta.name,
-        labelObjectColor: featureMeta.color,
-        labelShape:
-          preview.annotation_enums[labelObject.objectHash ?? ""]
-            ?.annotation_type,
-      };
-    });
-  }, [featureHashMap, objects, preview]);
-
-  const classificationLabels = useMemo((): {
-    labelObjectName: string | null;
-    labelObjectColor: string;
-    labelShape: AnnotationType | null | undefined;
-  }[] => {
-    return classifications.map((labelObject) => {
-      if (labelObject == null || preview == null) {
-        return {
-          labelObjectName: null,
-          labelObjectColor: "#00ffffff",
-          labelShape: null,
-        };
-      }
-      let { featureHash } = labelObject;
-      const classificationAnswer = preview.classification_answers[
-        labelObject.classificationHash ?? ""
-      ] as {
-        readonly classifications?: {
-          readonly featureHash: string;
-          readonly answers?: readonly { readonly featureHash: string }[];
-        }[];
-      };
-      if (classificationAnswer !== undefined) {
-        const { classifications } = classificationAnswer;
-        if (classifications !== undefined && classifications.length > 0) {
-          const { answers } = classifications[0];
-          if (answers !== undefined && answers.length > 0) {
-            const { featureHash: classificationFeatureHash } = answers[0];
-            featureHash = classificationFeatureHash;
-          }
-        }
-      }
-      const featureMeta = featureHashMap[featureHash];
-      if (featureMeta == null) {
-        const name = labelObject?.name ?? null;
-
-        return name === null
-          ? {
-              labelObjectName: null,
-              labelObjectColor: "#00ffffff",
-              labelShape: labelObject.shape,
-            }
-          : {
-              labelObjectName: name,
-              labelObjectColor: labelObject.color ?? "#00ffffff",
-              labelShape: null,
-            };
-      }
-      return {
-        labelObjectName: featureMeta.name,
-        labelObjectColor: featureMeta.color,
-        labelShape:
-          preview.annotation_enums[labelObject.objectHash ?? ""]
-            ?.annotation_type,
-      };
-    });
-  }, [featureHashMap, classifications, preview]);
 
   return (
     <Modal
+      className="item-preview-modal"
       title={preview?.data_title ?? ""}
       open={dataId !== undefined}
       onCancel={onClose}
@@ -543,39 +381,28 @@ export function ItemPreviewModal(props: {
                   label: "Labels & Predictions",
                   key: "labels",
                   children: (
-                    <div className="relative h-full overflow-y-auto ">
-                      <div className="absolute">
+                    <div className="relative h-full w-full overflow-y-auto">
+                      <div className="absolute w-full">
                         <div className="font-semibold">Objects</div>
                         <Tree treeData={treeObjects} showIcon showLine />
 
-                        {classificationLabels &&
-                          classificationLabels.length > 0 && (
-                            <>
-                              <div className="font-semibold">
-                                Classifications
-                              </div>
-                              <List
-                                dataSource={classificationLabels}
-                                renderItem={(item) => (
-                                  <Row>
-                                    {item.labelShape && (
-                                      <AnnotationShapeIcon
-                                        shape={item.labelShape}
-                                        color={item.labelObjectColor}
-                                      />
-                                    )}
+                        {classifications && classifications.length > 0 && (
+                          <>
+                            <div className="font-semibold">Classifications</div>
+                            <List
+                              dataSource={classifications}
+                              renderItem={(item) => (
+                                <Row>
+                                  <VscSymbolClass />
 
-                                    <Typography.Text
-                                      className="ml-1"
-                                      color={item.labelObjectColor}
-                                    >
-                                      {item.labelObjectName}
-                                    </Typography.Text>
-                                  </Row>
-                                )}
-                              />
-                            </>
-                          )}
+                                  <Typography.Text className="ml-1">
+                                    {item.name}
+                                  </Typography.Text>
+                                </Row>
+                              )}
+                            />
+                          </>
+                        )}
 
                         <ItemTags
                           tags={preview.tags}
