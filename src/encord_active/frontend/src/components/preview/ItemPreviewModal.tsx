@@ -368,7 +368,7 @@ export function ItemPreviewModal(props: {
               className="h-full px-2"
               items={[
                 {
-                  label: "MetaData",
+                  label: "Metadata",
                   key: "metadata",
                   children: (
                     <div className="relative h-full overflow-y-auto ">
