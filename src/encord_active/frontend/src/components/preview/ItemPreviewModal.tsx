@@ -1,16 +1,52 @@
-import { Button, Col, Modal, Row, Spin, Table } from "antd";
+import {
+  Button,
+  Col,
+  List,
+  Modal,
+  Row,
+  Spin,
+  Tabs,
+  Tree,
+  Typography,
+} from "antd";
 
-import { useMemo } from "react";
-import { MdImageSearch } from "react-icons/md";
+import { useMemo, useState } from "react";
+import {
+  MdImageSearch,
+  MdOutlineVisibility,
+  MdOutlineVisibilityOff,
+} from "react-icons/md";
 import { EditOutlined } from "@ant-design/icons";
+import { BasicDataNode, DataNode } from "antd/es/tree";
+import { VscSymbolClass } from "react-icons/vsc";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
 import { loadingIndicator } from "../Spin";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { AnnotatedImage } from "./AnnotatedImage";
 import { ItemTags } from "../explorer/Tagging";
 import { usePredictionItem } from "../../hooks/queries/usePredictionItem";
+import { AnnotationType } from "../../openapi/api";
+import { AnnotationShapeIcon } from "../icons/AnnotationShapeIcon";
+import { FeatureHashMap } from "../Types";
+import "./itemPreviewModal.css";
+
+type LabelObjectOrClassification = {
+  readonly confidence: number;
+  readonly createdAt: string;
+  readonly createdBy: string;
+  readonly featureHash: string;
+  readonly lastEditedAt: string;
+  readonly lastEditedBy: string;
+  readonly manualAnnotation: boolean;
+  readonly objectHash?: string;
+  readonly classificationHash?: string;
+  name?: string | null;
+  shape?: AnnotationType | null;
+  color?: string | null;
+};
 
 export function ItemPreviewModal(props: {
+  featureHashMap: FeatureHashMap;
   projectHash: string;
   predictionHash: string | undefined;
   previewItem: string | undefined;
@@ -22,6 +58,7 @@ export function ItemPreviewModal(props: {
     | undefined;
 }) {
   const {
+    featureHashMap,
     previewItem,
     domain,
     projectHash,
@@ -92,21 +129,202 @@ export function ItemPreviewModal(props: {
     return metricsList.sort(sortByName);
   }, [preview, projectSummary, annotationHash, domain]);
 
-  const columns = [
-    {
-      title: domain === "data" ? "Data Metric" : "Annotation Metric",
-      dataIndex: "name",
-      key: "name",
-    },
-    {
-      title: "Value",
-      dataIndex: "value",
-      key: "value",
-    },
-  ];
+  const metadataList: { name: string; value: string }[] = useMemo(() => {
+    const metadataList: { name: string; value: string }[] = [
+      { name: "Data title", value: preview?.data_title ?? "" },
+      { name: "Dataset", value: preview?.dataset_title ?? "" },
+    ];
+
+    return metadataList;
+  }, [preview?.data_title, preview?.dataset_title]);
+
+  const objects: readonly LabelObjectOrClassification[] = useMemo(() => {
+    if (preview === undefined) {
+      return [];
+    }
+    const objList = [
+      ...preview.objects,
+    ] as readonly LabelObjectOrClassification[];
+
+    return objList;
+  }, [preview]);
+
+  const classifications: readonly LabelObjectOrClassification[] =
+    useMemo(() => {
+      if (preview === undefined) {
+        return [];
+      }
+      const objList = [
+        ...preview.classifications,
+      ] as readonly LabelObjectOrClassification[];
+
+      return objList;
+    }, [preview]);
+
+  const [objectsHashToHide, setObjectsHashToHide] = useState<string[]>([]);
+
+  const toggleObjectVisibility = useMemo(() => {
+    const fn = (objectHash: string) => {
+      if (objectsHashToHide.includes(objectHash)) {
+        setObjectsHashToHide(
+          objectsHashToHide.filter((elem) => elem !== objectHash)
+        );
+      } else {
+        setObjectsHashToHide([...objectsHashToHide, objectHash]);
+      }
+    };
+
+    return fn;
+  }, [objectsHashToHide]);
+
+  const getTreeObjectElement = useMemo(() => {
+    const fn = (item: LabelObjectOrClassification) => (
+      <div className="flex w-full items-center justify-between">
+        <div className="flex gap-1">
+          {item.shape && item.color && (
+            <AnnotationShapeIcon shape={item.shape} color={item.color} />
+          )}
+          <div>{item.name}</div>
+        </div>
+        {item.objectHash && (
+          <Button
+            onClick={() => toggleObjectVisibility(item.objectHash ?? "")}
+            className="border-none p-0 shadow-none"
+            icon={
+              objectsHashToHide.includes(item.objectHash) ? (
+                <MdOutlineVisibilityOff />
+              ) : (
+                <MdOutlineVisibility />
+              )
+            }
+          />
+        )}
+      </div>
+    );
+
+    return fn;
+  }, [objectsHashToHide, toggleObjectVisibility]);
+
+  const enrichObject = useMemo(() => {
+    const fn = (
+      obj: LabelObjectOrClassification
+    ): LabelObjectOrClassification => {
+      if (preview != null) {
+        return {
+          ...obj,
+          shape:
+            preview.annotation_enums[obj.objectHash ?? ""]?.annotation_type,
+        };
+      } else {
+        return obj;
+      }
+    };
+
+    return fn;
+  }, [preview]);
+
+  const treeObjects = useMemo(() => {
+    if (objects && objects.length > 0) {
+      const groupedObjects: Record<string, LabelObjectOrClassification[]> = {};
+      objects.forEach((item) => {
+        const enrichedItem = enrichObject(item);
+        const val = enrichedItem.name;
+        if (val) {
+          groupedObjects[val] = groupedObjects[val] || [];
+          groupedObjects[val].push(enrichedItem);
+        }
+      });
+
+      const tree: (BasicDataNode | DataNode)[] = [];
+      Object.entries(groupedObjects).forEach(([key, value], index) => {
+        tree.push(
+          value.length > 1
+            ? {
+                title: `${key} - (${value.length})`,
+                key: index,
+                icon:
+                  value[0].shape && value[0].color ? (
+                    <AnnotationShapeIcon
+                      shape={value[0].shape}
+                      color={value[0].color}
+                    />
+                  ) : (
+                    <VscSymbolClass />
+                  ),
+                children: value.map((item: any, subIndex) => ({
+                  title: getTreeObjectElement(item),
+                  key: `${index}-${subIndex}`,
+                })),
+              }
+            : {
+                title: getTreeObjectElement(value[0]),
+                key: index,
+              }
+        );
+      });
+
+      tree.sort((a, b) => {
+        if (
+          Object.prototype.hasOwnProperty.call(a, "children") &&
+          Object.prototype.hasOwnProperty.call(b, "children")
+        ) {
+          return 0;
+        }
+        return Object.prototype.hasOwnProperty.call(a, "children") ? -1 : 1;
+      });
+      return tree;
+    }
+
+    return [];
+  }, [objects, getTreeObjectElement, enrichObject]);
+
+  const classificationLabels: LabelObjectOrClassification[] = useMemo(
+    () =>
+      classifications.map((labelObject) => {
+        if (labelObject == null || preview == null) {
+          return labelObject;
+        }
+        let { featureHash } = labelObject;
+        const classificationAnswer = preview.classification_answers[
+          labelObject.classificationHash ?? ""
+        ] as {
+          readonly classifications?: {
+            readonly featureHash: string;
+            readonly answers?: readonly { readonly featureHash: string }[];
+          }[];
+        };
+        if (classificationAnswer !== undefined) {
+          const { classifications } = classificationAnswer;
+          if (classifications !== undefined && classifications.length > 0) {
+            const { answers } = classifications[0];
+            if (answers !== undefined && answers.length > 0) {
+              const { featureHash: classificationFeatureHash } = answers[0];
+              featureHash = classificationFeatureHash;
+            }
+          }
+        }
+        const featureMeta = featureHashMap[featureHash];
+        if (featureMeta == null) {
+          const name = labelObject?.name ?? null;
+
+          return name === null
+            ? labelObject
+            : {
+                ...labelObject,
+                name,
+              };
+        }
+        return {
+          ...labelObject,
+          name: featureMeta.name,
+        };
+      }),
+    [featureHashMap, classifications, preview]
+  );
 
   return (
     <Modal
+      className="item-preview-modal"
       title={preview?.data_title ?? ""}
       open={dataId !== undefined}
       onCancel={onClose}
@@ -139,24 +357,113 @@ export function ItemPreviewModal(props: {
         <Spin indicator={loadingIndicator} />
       ) : (
         <Row className="vh-100 vw-100">
-          <Col span={12}>
-            <Row className="[&>*]:w-full">
-              <Table
-                dataSource={metricsList}
-                columns={columns}
-                pagination={{ pageSize: 5 }}
-                id="key"
-              />
-            </Row>
-            <ItemTags tags={preview.tags} annotationHash={annotationHash} />
-          </Col>
-          <Col span={12}>
+          <Col span={16}>
             <AnnotatedImage
               key={`preview-image-${previewItem ?? ""}`}
               item={preview}
               annotationHash={annotationHash}
               mode="large"
               predictionTruePositive={undefined}
+              objectsToHide={objectsHashToHide}
+            />
+          </Col>
+          <Col span={8}>
+            <Tabs
+              className="h-full px-2"
+              items={[
+                {
+                  label: "Metadata",
+                  key: "metadata",
+                  children: (
+                    <div className="relative h-full overflow-y-auto ">
+                      <div className="absolute">
+                        <List
+                          dataSource={metadataList}
+                          renderItem={(item) => (
+                            <List.Item>
+                              <div className="flex flex-col">
+                                <div className="text-xs text-gray-7">
+                                  {item.name}
+                                </div>
+                                <div className="text-xs text-gray-9">
+                                  {item.value}
+                                </div>
+                              </div>
+                            </List.Item>
+                          )}
+                        />
+                        <ItemTags
+                          tags={preview.tags}
+                          annotationHash={annotationHash}
+                        />
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  label: "Metrics",
+                  key: "metrics",
+                  children: (
+                    <div className="relative h-full overflow-y-auto ">
+                      <List
+                        className="absolute"
+                        dataSource={metricsList}
+                        renderItem={(item) => (
+                          <List.Item>
+                            <div className="flex flex-col">
+                              <div className="text-xs text-gray-7">
+                                {item.name}
+                              </div>
+                              <div className="text-xs text-gray-9">
+                                {item.value}
+                              </div>
+                            </div>
+                          </List.Item>
+                        )}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  label: "Labels & Predictions",
+                  key: "labels",
+                  children: (
+                    <div className="relative h-full w-full overflow-y-auto">
+                      <div className="absolute w-full">
+                        {treeObjects && treeObjects.length > 0 && (
+                          <div className="font-semibold">Objects</div>
+                        )}
+                        <Tree treeData={treeObjects} showIcon showLine />
+
+                        {classificationLabels &&
+                          classificationLabels.length > 0 && (
+                            <>
+                              <div className="font-semibold">
+                                Classifications
+                              </div>
+                              <List
+                                dataSource={classificationLabels}
+                                renderItem={(item) => (
+                                  <Row>
+                                    <VscSymbolClass />
+                                    <Typography.Text className="ml-1">
+                                      {item.name}
+                                    </Typography.Text>
+                                  </Row>
+                                )}
+                              />
+                            </>
+                          )}
+
+                        <ItemTags
+                          tags={preview.tags}
+                          annotationHash={annotationHash}
+                        />
+                      </div>
+                    </div>
+                  ),
+                },
+              ]}
             />
           </Col>
         </Row>

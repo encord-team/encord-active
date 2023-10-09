@@ -1,3 +1,4 @@
+import React from "react";
 import { Tooltip } from "antd";
 
 export function CustomTooltip(props: {
@@ -6,6 +7,7 @@ export function CustomTooltip(props: {
   children: React.ReactNode;
 }) {
   const { title, description, children } = props;
+
   return (
     <Tooltip
       overlay={

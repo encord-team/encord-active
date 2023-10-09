@@ -454,6 +454,7 @@ export function Explorer({
         the selection?
       </Modal>
       <ItemPreviewModal
+        featureHashMap={featureHashMap}
         projectHash={projectHash}
         predictionHash={predictionHash}
         previewItem={previewItem}
