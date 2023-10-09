@@ -139,7 +139,7 @@ class DatasetIterator(Iterator):
                             project_dir=self.project_file_structure.project_dir,
                             destination=video_path,
                         )
-                        extract_frames(video_path, video_images_dir, self.du_hash)
+                        extract_frames(video_path, video_images_dir, self.du_hash, data_unit["data_fps"])
 
                         fake_data_unit = deepcopy(data_unit)
 

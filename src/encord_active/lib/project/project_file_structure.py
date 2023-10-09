@@ -252,7 +252,9 @@ class LabelRowStructure:
                         download_file(
                             data_unit_struct.signed_url, project_dir=self._project.project_dir, destination=video_file
                         )
-                        extract_frames(video_file, images_dir, data_unit_struct.du_hash)
+                        extract_frames(
+                            video_file, images_dir, data_unit_struct.du_hash, data_unit_struct.frames_per_second
+                        )
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)
                 else:
@@ -284,7 +286,9 @@ class LabelRowStructure:
                     else:
                         video_file = video_dir / label_row_json["data_title"]
                         download_file(data_unit_struct.signed_url, project_dir=self._project, destination=video_file)
-                        extract_frames(video_file, images_dir, data_unit_struct.du_hash)
+                        extract_frames(
+                            video_file, images_dir, data_unit_struct.du_hash, data_unit_struct.frames_per_second
+                        )
                     downloaded_image = next(images_dir.glob(f"{data_unit_struct.du_hash}_{data_unit_struct.frame}.*"))
                     yield data_unit_struct, Image.open(downloaded_image)
                 else:
