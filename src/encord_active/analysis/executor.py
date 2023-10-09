@@ -1333,7 +1333,8 @@ class SimpleExecutor(Executor):
                                 if isinstance(v, NearestNeighbors)
                                 else EmbeddingDistanceMetric.RANDOM,
                                 distance_index=idx,
-                                similarity=v.similarities[idx] if isinstance(v, NearestNeighbors) else None,
+                                # FIXME: only correct due to always using cosine values.
+                                similarity=(1.0 - v.similarities[idx]) if isinstance(v, NearestNeighbors) else None,
                                 dep_du_hash=dep_du_hash,
                                 dep_frame=dep_frame,
                             )
@@ -1393,7 +1394,8 @@ class SimpleExecutor(Executor):
                                 if isinstance(v, NearestNeighbors)
                                 else EmbeddingDistanceMetric.RANDOM,
                                 distance_index=idx,
-                                similarity=v.similarities[idx] if isinstance(v, NearestNeighbors) else None,
+                                # FIXME: only correct due to always using cosine values.
+                                similarity=(1.0 - v.similarities[idx]) if isinstance(v, NearestNeighbors) else None,
                                 dep_du_hash=dep_du_hash,
                                 dep_frame=dep_frame,
                                 dep_annotation_hash=dep_annotation_hash,
@@ -1486,7 +1488,8 @@ class SimpleExecutor(Executor):
                                 if isinstance(v, NearestNeighbors)
                                 else EmbeddingDistanceMetric.RANDOM,
                                 distance_index=idx,
-                                similarity=v.similarities[idx] if isinstance(v, NearestNeighbors) else None,
+                                # FIXME: only correct due to always using cosine values.
+                                similarity=(1.0 - v.similarities[idx]) if isinstance(v, NearestNeighbors) else None,
                                 dep_du_hash=dep_du_hash,
                                 dep_frame=dep_frame,
                                 dep_annotation_hash=dep_annotation_hash,
