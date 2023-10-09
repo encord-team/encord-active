@@ -1056,12 +1056,11 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
             frame = int(frame_str)
             metrics_dict: Dict[str, Union[int, float]]
             if (du_hash, frame) not in data_metrics:
-                print(
+                raise ValueError(
                     f"Metric references invalid frame!:\n"
                     f"du_hash={du_hash}, frame={frame}, objects?={object_hash_list}\n"
                     f"identifier={metric_entry['identifier']} metric={metric}\n"
                 )
-                continue
 
             # 1 classification metric - does not actually assign classification metric hash
             if len(object_hash_list) == 0 and metric_column_name in DATA_LEVEL_ACTUALLY_CLASSIFICATION_METRICS:
