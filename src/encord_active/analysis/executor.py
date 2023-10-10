@@ -942,7 +942,7 @@ class SimpleExecutor(Executor):
                             f"DEBUG Exception BB-Gen Failure: {mask.shape}, {torch.min(mask)}, "
                             f"{torch.max(mask)}, {annotation_type} => {obj}"
                         )
-                        raise
+                        continue
                 annotations[obj_hash] = AnnotationMetadata(
                     feature_hash=feature_hash,
                     annotation_type=annotation_type,
