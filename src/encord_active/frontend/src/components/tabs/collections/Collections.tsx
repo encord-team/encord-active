@@ -1,19 +1,13 @@
 import { Button, Table, TableProps } from "antd";
 import { Key, TableRowSelection } from "antd/es/table/interface";
 import { useMemo, useState } from "react";
-import { AnalysisDomain, AnnotationType } from "../../../openapi/api";
 import { DatabaseOutlined } from "@ant-design/icons";
-import { useProjectItemsListTags } from "../../../hooks/queries/useProjectItemsListTags";
-import { useProjectListTags } from "../../../hooks/queries/useProjectListTags";
 import { useProjectListTagsMeta } from "../../../hooks/queries/useProjectListTagsMeta";
+import { getReadableDatetime } from "../../../utils/time";
 const columns = [
   {
     title: "Name",
     dataIndex: "name",
-  },
-  {
-    title: "Type",
-    dataIndex: "type",
   },
   {
     title: "Data Units",
@@ -23,14 +17,23 @@ const columns = [
     title: "Label Units",
     dataIndex: "labelUnits",
   },
+  {
+    title: "Created at",
+    dataIndex: "createdAt",
+  },
+  {
+    title: "Updated at",
+    dataIndex: "updatedAt",
+  },
 ];
 
 type Collection = {
   key: string;
-  name: string;
-  type: AnalysisDomain;
+  name: JSX.Element;
   dataUnits: number;
   labelUnits: number;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type props = {
@@ -43,13 +46,31 @@ export function Collections({ projectHash, selectedItems }: props) {
   const { data: projectTagsMeta = [] } = useProjectListTagsMeta(projectHash);
   const collections: Collection[] = useMemo<Collection[]>(
     () =>
-      projectTagsMeta.map(({ hash, name, dataCount, labelCount }) => ({
-        name: name,
-        key: hash,
-        type: AnalysisDomain.Annotation,
-        dataUnits: dataCount,
-        labelUnits: labelCount,
-      })),
+      projectTagsMeta.map(
+        ({
+          hash,
+          name,
+          description,
+          dataCount,
+          labelCount,
+          createdAt,
+          lastEditedAt,
+        }) => ({
+          name: (
+            <div>
+              <div className="text-xs font-medium text-gray-9">{name}</div>
+              <div className="text-xs font-medium text-gray-7">
+                {description}
+              </div>
+            </div>
+          ),
+          key: hash,
+          dataUnits: dataCount,
+          labelUnits: labelCount,
+          createdAt: getReadableDatetime(createdAt?.toLocaleString()),
+          updatedAt: getReadableDatetime(lastEditedAt?.toLocaleString()),
+        })
+      ),
     [projectTagsMeta]
   );
 

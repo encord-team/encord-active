@@ -71,7 +71,7 @@ export function AddToCollectionModal(props: {
 
   const [newCollectionForm] = Form.useForm<{
     collection_title: string;
-    collecrion_description?: string | undefined;
+    collection_description?: string | undefined;
   }>();
 
   const { mutateAsync: createTag, isLoading: isMutatingCreateTag } =
@@ -84,6 +84,8 @@ export function AddToCollectionModal(props: {
     setExistingOrNew("existing");
     close();
   };
+
+  let isMutating = isMutatingItemsAdd || isMutatingCreateTag;
   return (
     <div>
       <Modal
@@ -92,10 +94,10 @@ export function AddToCollectionModal(props: {
         okText="Submit"
         onCancel={closeModal}
         okButtonProps={{
-          loading: isMutatingItemsAdd,
+          loading: isMutating,
           style: { backgroundColor: "#5555ff" },
         }}
-        cancelButtonProps={{ disabled: isMutatingItemsAdd }}
+        cancelButtonProps={{ disabled: isMutating }}
         onOk={() => {
           if (existingOrNew == "existing") {
             addTags(checkedList.map((tag) => tag.hash))
@@ -107,7 +109,14 @@ export function AddToCollectionModal(props: {
             // write logic for adding new collection and then adding items to it.
             newCollectionForm
               .validateFields()
-              .then((fields) => createTag([fields.collection_title]))
+              .then((fields) =>
+                createTag([
+                  {
+                    name: fields.collection_title,
+                    description: fields.collection_description ?? "Hello",
+                  },
+                ])
+              )
               .then((newTagsDict) => {
                 const newTagHash =
                   newTagsDict[

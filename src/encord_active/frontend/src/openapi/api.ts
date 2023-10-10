@@ -1336,6 +1336,18 @@ export interface ProjectTag {
    * @memberof ProjectTag
    */
   description: string;
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTag
+   */
+  created_at: string;
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTag
+   */
+  last_edited_at: string;
 }
 /**
  *
@@ -1376,6 +1388,12 @@ export interface ProjectTagEntryMeta {
   name: string;
   /**
    *
+   * @type {string}
+   * @memberof ProjectTagEntryMeta
+   */
+  description: string;
+  /**
+   *
    * @type {number}
    * @memberof ProjectTagEntryMeta
    */
@@ -1386,6 +1404,37 @@ export interface ProjectTagEntryMeta {
    * @memberof ProjectTagEntryMeta
    */
   labelCount: number;
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTagEntryMeta
+   */
+  createdAt: string;
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTagEntryMeta
+   */
+  lastEditedAt: string;
+}
+/**
+ *
+ * @export
+ * @interface ProjectTagRequest
+ */
+export interface ProjectTagRequest {
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTagRequest
+   */
+  name: string;
+  /**
+   *
+   * @type {string}
+   * @memberof ProjectTagRequest
+   */
+  description: string;
 }
 /**
  *
@@ -1962,13 +2011,13 @@ export const PredictionApiAxiosParamCreator = function (
      *
      * @summary Route Create Tags
      * @param {string} projectHash
-     * @param {Array<string>} requestBody
+     * @param {Array<ProjectTagRequest>} projectTagRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     routeCreateTagsApiProjectsV2ProjectHashTagsPost: async (
       projectHash: string,
-      requestBody: Array<string>,
+      projectTagRequest: Array<ProjectTagRequest>,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
@@ -1977,11 +2026,11 @@ export const PredictionApiAxiosParamCreator = function (
         "projectHash",
         projectHash
       );
-      // verify required parameter 'requestBody' is not null or undefined
+      // verify required parameter 'projectTagRequest' is not null or undefined
       assertParamExists(
         "routeCreateTagsApiProjectsV2ProjectHashTagsPost",
-        "requestBody",
-        requestBody
+        "projectTagRequest",
+        projectTagRequest
       );
       const localVarPath = `/api/projects_v2/{project_hash}/tags/`.replace(
         `{${"project_hash"}}`,
@@ -2022,7 +2071,7 @@ export const PredictionApiAxiosParamCreator = function (
         ...options.headers,
       };
       localVarRequestOptions.data = serializeDataIfNeeded(
-        requestBody,
+        projectTagRequest,
         localVarRequestOptions,
         configuration
       );
@@ -3980,13 +4029,13 @@ export const PredictionApiFp = function (configuration?: Configuration) {
      *
      * @summary Route Create Tags
      * @param {string} projectHash
-     * @param {Array<string>} requestBody
+     * @param {Array<ProjectTagRequest>} projectTagRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async routeCreateTagsApiProjectsV2ProjectHashTagsPost(
       projectHash: string,
-      requestBody: Array<string>,
+      projectTagRequest: Array<ProjectTagRequest>,
       options?: AxiosRequestConfig
     ): Promise<
       (
@@ -3997,7 +4046,7 @@ export const PredictionApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.routeCreateTagsApiProjectsV2ProjectHashTagsPost(
           projectHash,
-          requestBody,
+          projectTagRequest,
           options
         );
       return createRequestFunction(
@@ -4761,19 +4810,19 @@ export const PredictionApiFactory = function (
      *
      * @summary Route Create Tags
      * @param {string} projectHash
-     * @param {Array<string>} requestBody
+     * @param {Array<ProjectTagRequest>} projectTagRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     routeCreateTagsApiProjectsV2ProjectHashTagsPost(
       projectHash: string,
-      requestBody: Array<string>,
+      projectTagRequest: Array<ProjectTagRequest>,
       options?: any
     ): AxiosPromise<{ [key: string]: string | undefined }> {
       return localVarFp
         .routeCreateTagsApiProjectsV2ProjectHashTagsPost(
           projectHash,
-          requestBody,
+          projectTagRequest,
           options
         )
         .then((request) => request(axios, basePath));
@@ -5365,20 +5414,20 @@ export class PredictionApi extends BaseAPI {
    *
    * @summary Route Create Tags
    * @param {string} projectHash
-   * @param {Array<string>} requestBody
+   * @param {Array<ProjectTagRequest>} projectTagRequest
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof PredictionApi
    */
   public routeCreateTagsApiProjectsV2ProjectHashTagsPost(
     projectHash: string,
-    requestBody: Array<string>,
+    projectTagRequest: Array<ProjectTagRequest>,
     options?: AxiosRequestConfig
   ) {
     return PredictionApiFp(this.configuration)
       .routeCreateTagsApiProjectsV2ProjectHashTagsPost(
         projectHash,
-        requestBody,
+        projectTagRequest,
         options
       )
       .then((request) => request(this.axios, this.basePath));
@@ -6324,13 +6373,13 @@ export const ProjectApiAxiosParamCreator = function (
      *
      * @summary Route Create Tags
      * @param {string} projectHash
-     * @param {Array<string>} requestBody
+     * @param {Array<ProjectTagRequest>} projectTagRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     routeCreateTagsApiProjectsV2ProjectHashTagsPost: async (
       projectHash: string,
-      requestBody: Array<string>,
+      projectTagRequest: Array<ProjectTagRequest>,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
@@ -6339,11 +6388,11 @@ export const ProjectApiAxiosParamCreator = function (
         "projectHash",
         projectHash
       );
-      // verify required parameter 'requestBody' is not null or undefined
+      // verify required parameter 'projectTagRequest' is not null or undefined
       assertParamExists(
         "routeCreateTagsApiProjectsV2ProjectHashTagsPost",
-        "requestBody",
-        requestBody
+        "projectTagRequest",
+        projectTagRequest
       );
       const localVarPath = `/api/projects_v2/{project_hash}/tags/`.replace(
         `{${"project_hash"}}`,
@@ -6384,7 +6433,7 @@ export const ProjectApiAxiosParamCreator = function (
         ...options.headers,
       };
       localVarRequestOptions.data = serializeDataIfNeeded(
-        requestBody,
+        projectTagRequest,
         localVarRequestOptions,
         configuration
       );
@@ -6398,13 +6447,13 @@ export const ProjectApiAxiosParamCreator = function (
      *
      * @summary Route Create Tags
      * @param {string} projectHash
-     * @param {Array<string>} requestBody
+     * @param {Array<ProjectTagRequest>} projectTagRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     routeCreateTagsApiProjectsV2ProjectHashTagsPost_3: async (
       projectHash: string,
-      requestBody: Array<string>,
+      projectTagRequest: Array<ProjectTagRequest>,
       options: AxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
       // verify required parameter 'projectHash' is not null or undefined
@@ -6413,11 +6462,11 @@ export const ProjectApiAxiosParamCreator = function (
         "projectHash",
         projectHash
       );
-      // verify required parameter 'requestBody' is not null or undefined
+      // verify required parameter 'projectTagRequest' is not null or undefined
       assertParamExists(
         "routeCreateTagsApiProjectsV2ProjectHashTagsPost_3",
-        "requestBody",
-        requestBody
+        "projectTagRequest",
+        projectTagRequest
       );
       const localVarPath = `/api/projects_v2/{project_hash}/tags/`.replace(
         `{${"project_hash"}}`,
@@ -6458,7 +6507,7 @@ export const ProjectApiAxiosParamCreator = function (
         ...options.headers,
       };
       localVarRequestOptions.data = serializeDataIfNeeded(
-        requestBody,
+        projectTagRequest,
         localVarRequestOptions,
         configuration
       );
@@ -10390,13 +10439,13 @@ export const ProjectApiFp = function (configuration?: Configuration) {
      *
      * @summary Route Create Tags
      * @param {string} projectHash
-     * @param {Array<string>} requestBody
+     * @param {Array<ProjectTagRequest>} projectTagRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async routeCreateTagsApiProjectsV2ProjectHashTagsPost(
       projectHash: string,
-      requestBody: Array<string>,
+      projectTagRequest: Array<ProjectTagRequest>,
       options?: AxiosRequestConfig
     ): Promise<
       (
@@ -10407,7 +10456,7 @@ export const ProjectApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.routeCreateTagsApiProjectsV2ProjectHashTagsPost(
           projectHash,
-          requestBody,
+          projectTagRequest,
           options
         );
       return createRequestFunction(
@@ -10421,13 +10470,13 @@ export const ProjectApiFp = function (configuration?: Configuration) {
      *
      * @summary Route Create Tags
      * @param {string} projectHash
-     * @param {Array<string>} requestBody
+     * @param {Array<ProjectTagRequest>} projectTagRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     async routeCreateTagsApiProjectsV2ProjectHashTagsPost_3(
       projectHash: string,
-      requestBody: Array<string>,
+      projectTagRequest: Array<ProjectTagRequest>,
       options?: AxiosRequestConfig
     ): Promise<
       (
@@ -10438,7 +10487,7 @@ export const ProjectApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.routeCreateTagsApiProjectsV2ProjectHashTagsPost_3(
           projectHash,
-          requestBody,
+          projectTagRequest,
           options
         );
       return createRequestFunction(
@@ -12070,19 +12119,19 @@ export const ProjectApiFactory = function (
      *
      * @summary Route Create Tags
      * @param {string} projectHash
-     * @param {Array<string>} requestBody
+     * @param {Array<ProjectTagRequest>} projectTagRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     routeCreateTagsApiProjectsV2ProjectHashTagsPost(
       projectHash: string,
-      requestBody: Array<string>,
+      projectTagRequest: Array<ProjectTagRequest>,
       options?: any
     ): AxiosPromise<{ [key: string]: string | undefined }> {
       return localVarFp
         .routeCreateTagsApiProjectsV2ProjectHashTagsPost(
           projectHash,
-          requestBody,
+          projectTagRequest,
           options
         )
         .then((request) => request(axios, basePath));
@@ -12091,19 +12140,19 @@ export const ProjectApiFactory = function (
      *
      * @summary Route Create Tags
      * @param {string} projectHash
-     * @param {Array<string>} requestBody
+     * @param {Array<ProjectTagRequest>} projectTagRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
     routeCreateTagsApiProjectsV2ProjectHashTagsPost_3(
       projectHash: string,
-      requestBody: Array<string>,
+      projectTagRequest: Array<ProjectTagRequest>,
       options?: any
     ): AxiosPromise<{ [key: string]: string | undefined }> {
       return localVarFp
         .routeCreateTagsApiProjectsV2ProjectHashTagsPost_3(
           projectHash,
-          requestBody,
+          projectTagRequest,
           options
         )
         .then((request) => request(axios, basePath));
@@ -13358,20 +13407,20 @@ export class ProjectApi extends BaseAPI {
    *
    * @summary Route Create Tags
    * @param {string} projectHash
-   * @param {Array<string>} requestBody
+   * @param {Array<ProjectTagRequest>} projectTagRequest
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectApi
    */
   public routeCreateTagsApiProjectsV2ProjectHashTagsPost(
     projectHash: string,
-    requestBody: Array<string>,
+    projectTagRequest: Array<ProjectTagRequest>,
     options?: AxiosRequestConfig
   ) {
     return ProjectApiFp(this.configuration)
       .routeCreateTagsApiProjectsV2ProjectHashTagsPost(
         projectHash,
-        requestBody,
+        projectTagRequest,
         options
       )
       .then((request) => request(this.axios, this.basePath));
@@ -13381,20 +13430,20 @@ export class ProjectApi extends BaseAPI {
    *
    * @summary Route Create Tags
    * @param {string} projectHash
-   * @param {Array<string>} requestBody
+   * @param {Array<ProjectTagRequest>} projectTagRequest
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    * @memberof ProjectApi
    */
   public routeCreateTagsApiProjectsV2ProjectHashTagsPost_3(
     projectHash: string,
-    requestBody: Array<string>,
+    projectTagRequest: Array<ProjectTagRequest>,
     options?: AxiosRequestConfig
   ) {
     return ProjectApiFp(this.configuration)
       .routeCreateTagsApiProjectsV2ProjectHashTagsPost_3(
         projectHash,
-        requestBody,
+        projectTagRequest,
         options
       )
       .then((request) => request(this.axios, this.basePath));

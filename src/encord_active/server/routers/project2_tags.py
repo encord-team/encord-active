@@ -1,6 +1,6 @@
 import uuid
 from typing import Dict, List, Optional, Tuple
-
+from datetime import datetime
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import Text, delete, insert, literal, tuple_, func
@@ -43,11 +43,15 @@ class ProjectTagEntry(BaseModel):
     hash: uuid.UUID
     name: str
 
+
 class ProjectTagEntryMeta(BaseModel):
     hash: uuid.UUID
     name: str
+    description: str
     dataCount: int
     labelCount: int
+    createdAt: datetime
+    lastEditedAt: datetime
 
 
 @router.get("/")
@@ -61,22 +65,26 @@ def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine
 @router.get("/meta")
 def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> List[ProjectTagEntryMeta]:
     with Session(engine) as sess:
-        data_tags = sess.exec(
-            select(ProjectTag.tag_hash, ProjectTag.name, func.count(ProjectTaggedDataUnit.du_hash), func.count(ProjectTaggedAnnotation.du_hash) ).where(ProjectTag.project_hash == project_hash)
+        tags = sess.exec(
+            select(ProjectTag.tag_hash, ProjectTag.name, ProjectTag.description, func.count(ProjectTaggedDataUnit.du_hash), ProjectTag.created_at, ProjectTag.last_edited_at ).where(ProjectTag.project_hash == project_hash)
             .outerjoin( ProjectTaggedDataUnit, ProjectTag.tag_hash == ProjectTaggedDataUnit.tag_hash)
-            .outerjoin( ProjectTaggedAnnotation, ProjectTag.tag_hash == ProjectTaggedAnnotation.tag_hash)
             .group_by(ProjectTag.tag_hash )
         ).fetchall()
-    return [ProjectTagEntryMeta(hash=tag_hash, name=name, dataCount=dataCount, labelCount=labelCount) for tag_hash, name, dataCount, labelCount in data_tags]
+    return[ProjectTagEntryMeta(hash=tag_hash, name=name, description=description, dataCount=dataCount, labelCount=32, createdAt = created_at, lastEditedAt=last_edited_at) for tag_hash, name, description, dataCount, created_at, last_edited_at in tags]
+
+
+class ProjectTagRequest(BaseModel):
+    name: str
+    description: str
 
 @router.post("/")
 def route_create_tags(
-    project_hash: uuid.UUID, tag_names: List[str], engine=Depends(dep_engine)
+    project_hash: uuid.UUID, tags: List[ProjectTagRequest], engine=Depends(dep_engine)
 ) -> Dict[str, uuid.UUID]:
     with Session(engine) as sess:
         project_tags = [
-            ProjectTag(tag_hash=uuid.uuid4(), name=name, description="", project_hash=project_hash)
-            for name in tag_names
+            ProjectTag(tag_hash=uuid.uuid4(), name=tag.name, description=tag.description, project_hash=project_hash, created_at=datetime.now(), last_edited_at=datetime.now())
+            for tag in tags
         ]
         sess.add_all(project_tags)
         sess.commit()
