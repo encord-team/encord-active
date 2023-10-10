@@ -30,28 +30,6 @@ export function ProjectsPage({ onSelectLocalProject }: Props) {
 
   return (
     <div className="flex h-max w-full flex-col gap-5 p-5">
-      {env !== "production" && (
-        <>
-          <h1 className="text-3xl font-medium">Let’s get started!</h1>
-          <div className="flex flex-row flex-wrap gap-5">
-            <NewProjectButton
-              title="Import from Encord Annotate"
-              description="Bring in existing Encord project"
-              iconUrl={encordImportUrl}
-            />
-            <NewProjectButton
-              title="Import a COCO project"
-              description="Bring in your COCO projects"
-              iconUrl={importUrl}
-            />
-            <NewProjectButton
-              title="Initialize from directory"
-              description="Upload all images within a folder"
-              iconUrl={importUrl}
-            />
-          </div>
-        </>
-      )}
       <h2 className="text-xl font-light text-neutral-700">Your projects</h2>
       <Space wrap>
         {userProjects.length ? (
