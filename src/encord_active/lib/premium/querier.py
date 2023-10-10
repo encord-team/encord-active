@@ -78,7 +78,6 @@ class Querier:
     def search_semantics(self, query: SemanticQuery) -> Optional[SearchResponse]:
         res = self._search_clip(query)
         if res is None:
-            __import__("pdb").set_trace()
             return res
         return SearchResponse.parse_obj(res)
 
