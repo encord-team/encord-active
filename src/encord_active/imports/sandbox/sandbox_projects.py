@@ -46,8 +46,8 @@ BASE_PROJECTS: dict[uuid.UUID, PrebuiltProject] = {
         image_filename="covid_segmentations.jpeg",
         stats=SandboxProjectStats(data_hash_count=100, annotation_count=588, class_count=13),
     ),
-    uuid.UUID("5c96df58-beac-4e42-a74d-fce16622c5af"): PrebuiltProject(
-        url="https://storage.googleapis.com/encord-active-sandbox-projects/project-dbs/5c96df58-beac-4e42-a74d-fce16622c5af.json",
+    uuid.UUID("b37a48e0-6462-472d-baaa-2fcaf5ab9521"): PrebuiltProject(
+        url="https://storage.googleapis.com/encord-active-sandbox-projects/project-dbs/b37a48e0-6462-472d-baaa-2fcaf5ab9521.json",
         hash=uuid.UUID("b37a48e0-6462-472d-baaa-2fcaf5ab9521"),
         name="[open-source][validation]-bdd-dataset",
         image_filename="bdd.jpeg",
