@@ -64,6 +64,8 @@ import { classy } from "../../helpers/classy";
 import { useUserSettings } from "../../hooks/useUserSettings";
 import { CustomTooltip } from "../util/CustomTooltip";
 import { Filters } from "./filters/FIlters";
+import { RemoveFromCollectionModal } from "../tabs/modals/RemoveFromCollectionModal";
+import { AddToCollectionModal } from "../tabs/modals/AddToCollectionModal";
 
 export type Props = {
   projectHash: string;
@@ -438,6 +440,20 @@ export function Explorer({
         projectHash={projectHash}
         setSelectedProjectHash={setSelectedProjectHash}
       />
+      <RemoveFromCollectionModal
+        selectedItems={selectedItems}
+        open={openModal === "removeFromCollection"}
+        close={close}
+        projectHash={projectHash}
+        analysisDomain={analysisDomain}
+      />
+      <AddToCollectionModal
+        selectedItems={selectedItems}
+        open={openModal === "addToCollection"}
+        close={close}
+        projectHash={projectHash}
+        analysisDomain={analysisDomain}
+      />
       <Modal
         title={`Changing domain to ${analysisDomain}`}
         onOk={() => {
@@ -606,7 +622,14 @@ export function Explorer({
                           )
                         </span>
                       </Button>
-
+                      <Button
+                        className="border-none bg-gray-9 text-white"
+                        type="default"
+                        disabled={!hasSelectedItems}
+                        onClick={() => setOpenModal("removeFromCollection")}
+                      >
+                        Remove from collection
+                      </Button>
                       <Popover
                         placement="bottomRight"
                         content={
@@ -620,14 +643,16 @@ export function Explorer({
                         }
                         trigger="click"
                       >
-                        <Button
-                          className="border-none bg-gray-9 text-white"
-                          type="default"
-                          disabled={!hasSelectedItems}
-                        >
-                          Tag
-                        </Button>
+                        s
                       </Popover>
+                      <Button
+                        className="border-none bg-gray-9 text-white"
+                        type="default"
+                        disabled={!hasSelectedItems}
+                        onClick={() => setOpenModal("addToCollection")}
+                      >
+                        Add to a Collection
+                      </Button>
                     </div>
                     <div className="-mt-10 h-full w-full flex-auto">
                       <ExplorerSearchResults

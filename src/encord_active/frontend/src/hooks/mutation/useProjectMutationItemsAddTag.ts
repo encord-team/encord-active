@@ -31,6 +31,11 @@ export function useProjectMutationItemsAddTag(projectHash: string) {
       await queryClient.invalidateQueries({
         queryKey: ["useProjectItemsListTags", querier.baseUrl, projectHash],
       });
+      await queryClient.invalidateQueries([
+        "useProjectListTagsMeta",
+        querier.baseUrl,
+        projectHash,
+      ]);
     }
   );
 }

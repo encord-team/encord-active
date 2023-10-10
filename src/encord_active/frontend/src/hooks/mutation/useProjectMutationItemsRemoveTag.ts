@@ -28,9 +28,16 @@ export function useProjectMutationItemsRemoveTag(projectHash: string) {
           })
         )
       );
-      await queryClient.invalidateQueries({
-        queryKey: ["useProjectItemsListTags", querier.baseUrl, projectHash],
-      });
+      await queryClient.invalidateQueries([
+        "useProjectItemsListTags",
+        querier.baseUrl,
+        projectHash,
+      ]);
+      await queryClient.invalidateQueries([
+        "useProjectListTagsMeta",
+        querier.baseUrl,
+        projectHash,
+      ]);
     }
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Spin, Tabs } from "antd";
+import { Button, Col, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
 import { PlusOutlined } from "@ant-design/icons";
 import {
@@ -18,6 +18,7 @@ import { useProjectHash } from "../hooks/useProjectHash";
 import { env } from "../constants";
 import { classy } from "../helpers/classy";
 import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
+import { Collections } from "./tabs/collections/Collections";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -200,18 +201,16 @@ export function ProjectPage(props: {
             />
           ),
         },
-
-        // {
-        //   label: "Project Comparison",
-        //   key: "comparison",
-        //   children: (
-        //     <ProjectComparisonTab
-        //       projectHash={projectHash}
-        //       dataMetricsSummary={projectSummary.data}
-        //       annotationMetricsSummary={projectSummary.annotation}
-        //     />
-        //   ),
-        // },
+        {
+          label: "Collections",
+          key: "collections",
+          children: (
+            <Collections
+              projectHash={projectHash}
+              selectedItems={selectedItems}
+            />
+          ),
+        },
       ]}
       activeKey={tab}
       onChange={(key) => navigate(`../${key}`, { relative: "path" })}

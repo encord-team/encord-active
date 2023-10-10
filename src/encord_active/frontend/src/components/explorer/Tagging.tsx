@@ -100,7 +100,7 @@ export function BulkTaggingForm(props: {
 
   const getDomainItems = useCallback(
     (items: ReadonlySet<string>): string[] => {
-      if (domain === "data") {
+      if (domain === AnalysisDomain.Data) {
         const dataItems = new Set([...items].map(toDataItemID));
 
         return [...dataItems];

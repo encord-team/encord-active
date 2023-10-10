@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import Text, delete, insert, literal, tuple_
+from sqlalchemy import Text, delete, insert, literal, tuple_, func
 from sqlalchemy.engine import Dialect, Engine
 from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
@@ -43,6 +43,12 @@ class ProjectTagEntry(BaseModel):
     hash: uuid.UUID
     name: str
 
+class ProjectTagEntryMeta(BaseModel):
+    hash: uuid.UUID
+    name: str
+    dataCount: int
+    labelCount: int
+
 
 @router.get("/")
 def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> List[ProjectTagEntry]:
@@ -52,6 +58,16 @@ def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine
         ).fetchall()
     return [ProjectTagEntry(hash=tag_hash, name=name) for tag_hash, name in tags]
 
+@router.get("/meta")
+def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> List[ProjectTagEntryMeta]:
+    with Session(engine) as sess:
+        data_tags = sess.exec(
+            select(ProjectTag.tag_hash, ProjectTag.name, func.count(ProjectTaggedDataUnit.du_hash), func.count(ProjectTaggedAnnotation.du_hash) ).where(ProjectTag.project_hash == project_hash)
+            .outerjoin( ProjectTaggedDataUnit, ProjectTag.tag_hash == ProjectTaggedDataUnit.tag_hash)
+            .outerjoin( ProjectTaggedAnnotation, ProjectTag.tag_hash == ProjectTaggedAnnotation.tag_hash)
+            .group_by(ProjectTag.tag_hash )
+        ).fetchall()
+    return [ProjectTagEntryMeta(hash=tag_hash, name=name, dataCount=dataCount, labelCount=labelCount) for tag_hash, name, dataCount, labelCount in data_tags]
 
 @router.post("/")
 def route_create_tags(
