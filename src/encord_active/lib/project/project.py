@@ -509,7 +509,7 @@ def split_lr_video(label_row: LabelRow, project_file_structure: ProjectFileStruc
             num_frames = count_frames(video_path)
             frames_per_second = get_frames_per_second(video_path)
             video_images = Path(video_dir) / "images"
-            extract_frames(video_path, video_images, data_hash)
+            extract_frames(video_path, video_images, data_hash, frames_per_second)
             image_path = next(video_images.iterdir())
             image = Image.open(image_path)
 

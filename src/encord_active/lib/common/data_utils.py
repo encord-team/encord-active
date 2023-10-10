@@ -21,7 +21,13 @@ _EXTRACT_FRAMES_CACHE: Dict[str, int] = {}
 _EXTRACT_FRAMES_FOLDER: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory()
 
 
-def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink_folder: bool = True) -> None:
+def extract_frames(
+    video_file_name: Path,
+    img_dir: Path,
+    data_hash: str,
+    frame_rate: Optional[float] = None,
+    symlink_folder: bool = True,
+) -> None:
     if data_hash not in _EXTRACT_FRAMES_CACHE:
         while True:
             try:
@@ -34,7 +40,7 @@ def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink
                 pass
 
         try:
-            _extract_frames(video_file_name, tempdir, data_hash)
+            _extract_frames(video_file_name, tempdir, data_hash, frame_rate)
         except Exception:
             shutil.rmtree(tempdir, ignore_errors=True)
             raise
@@ -50,10 +56,17 @@ def extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, symlink
             (img_dir / frame.name).symlink_to(frame, target_is_directory=False)
 
 
-def _extract_frames(video_file_name: Path, img_dir: Path, data_hash: str) -> None:
+def _extract_frames(video_file_name: Path, img_dir: Path, data_hash: str, frame_rate: Optional[float]) -> None:
     # DENIS: for the rest to work, I will need to throw if the current directory exists and give a nice user warning.
     img_dir.mkdir(parents=True, exist_ok=True)
-    command = f'ffmpeg -i "{video_file_name}" -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner'
+
+    if frame_rate:
+        command = (
+            f'ffmpeg -i "{video_file_name}" -r {frame_rate} -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner'
+        )
+    else:
+        command = f'ffmpeg -i "{video_file_name}" -start_number 0 {img_dir}/{data_hash}_%d.png -hide_banner'
+
     if subprocess.run(command, shell=True, capture_output=True, stdout=None, check=False).returncode != 0:
         raise RuntimeError(
             "Failed to split the video into multiple image files. Please ensure that you have FFMPEG "

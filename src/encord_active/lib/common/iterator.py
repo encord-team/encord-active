@@ -1,4 +1,5 @@
 import json
+import re
 import tempfile
 from abc import abstractmethod
 from collections.abc import Sized
@@ -130,14 +131,15 @@ class DatasetIterator(Iterator):
                     # Create temporary folder containing the video
                     with tempfile.TemporaryDirectory() as working_dir:
                         working_path = Path(working_dir)
-                        video_path = working_path / str(data_unit["data_title"])
+                        safe_data_title = re.sub(r'[\\/:*?"<>|\x00-\x1F\x7F ]', "_", data_unit["data_title"])
+                        video_path = working_path / safe_data_title
                         video_images_dir = working_path / "images"
                         download_file(
                             video_metadata.signed_url,
                             project_dir=self.project_file_structure.project_dir,
                             destination=video_path,
                         )
-                        extract_frames(video_path, video_images_dir, self.du_hash)
+                        extract_frames(video_path, video_images_dir, self.du_hash, data_unit["data_fps"])
 
                         fake_data_unit = deepcopy(data_unit)
 
