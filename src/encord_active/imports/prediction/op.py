@@ -1,15 +1,22 @@
+import random
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import List
 
+import numpy as np
 from pydantic import BaseModel
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
 from encord_active.analysis.config import create_analysis, default_torch_device
 from encord_active.analysis.executor import SimpleExecutor
+from encord_active.analysis.reductions.op import (
+    apply_embedding_reduction,
+    create_reduction,
+    serialize_reduction,
+)
 from encord_active.db.models import (
     Project,
     ProjectCollaborator,
@@ -18,6 +25,16 @@ from encord_active.db.models import (
     ProjectPrediction,
     ProjectPredictionDataMetadata,
     ProjectPredictionDataUnitMetadata,
+)
+from encord_active.db.models.project_embedding_reduction import (
+    EmbeddingReductionType,
+    ProjectEmbeddingReduction,
+)
+from encord_active.db.models.project_prediction_analytics_extra import (
+    ProjectPredictionAnalyticsExtra,
+)
+from encord_active.db.models.project_prediction_analytics_reduced import (
+    ProjectPredictionAnalyticsReduced,
 )
 
 
@@ -164,6 +181,36 @@ def import_prediction(engine: Engine, database_dir: Path, ssh_key: str, predicti
         for du in prediction_data_unit_metadata
     ]
 
+    reduction_train_samples = random.choices(prediction_analytics_extra, k=min(len(prediction_analytics_extra), 50_000))
+    reduction_train_samples.sort(key=lambda x: (x.du_hash, x.frame, x.annotation_hash))
+    reduction = create_reduction(
+        EmbeddingReductionType.UMAP,
+        train_samples=[
+            np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in reduction_train_samples
+        ],
+    )
+    reduction_hash = sess.exec(
+        select(ProjectEmbeddingReduction.reduction_hash).where(ProjectEmbeddingReduction.project_hash == project_hash)
+    ).fetchall()[0]
+
+    reduced_annotation_clip_raw = apply_embedding_reduction(
+        [np.frombuffer(sample.embedding_clip or b"", dtype=np.float64) for sample in prediction_analytics_extra],
+        reduction,
+    )
+    prediction_analytics_reduced = [
+        ProjectPredictionAnalyticsReduced(
+            reduction_hash=reduction_hash,
+            prediction_hash=prediction_hash,
+            project_hash=project_hash,
+            du_hash=extra.du_hash,
+            frame=extra.frame,
+            annotation_hash=extra.annotation_hash,
+            x=x,
+            y=y,
+        )
+        for (extra, (x, y)) in zip(prediction_analytics_extra, reduced_annotation_clip_raw)
+    ]
+
     # Store to the database
     with Session(engine) as sess:
         sess.add(prediction.prediction)
@@ -172,6 +219,7 @@ def import_prediction(engine: Engine, database_dir: Path, ssh_key: str, predicti
         sess.add_all(prediction_db_data_unit_meta)
         sess.add_all(prediction_analytics)
         sess.add_all(prediction_analytics_extra)
+        sess.add_all(prediction_analytics_reduced)
         sess.add_all(prediction_analytics_derived)
         sess.add_all(prediction_analytics_false_negatives)
         sess.commit()
