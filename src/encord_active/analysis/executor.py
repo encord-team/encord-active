@@ -1040,17 +1040,18 @@ class SimpleExecutor(Executor):
                             for data_key, data_embedding in zip(data_keys, data_list):
                                 if metric.similarity == EmbeddingDistanceMetric.EUCLIDEAN:
                                     data_raw_offsets = data - data_embedding
-                                    data_raw_similarities = np.linalg.norm(data_raw_offsets, axis=1)
+                                    data_raw_distances = np.linalg.norm(data_raw_offsets, axis=1)
                                 elif metric.similarity == EmbeddingDistanceMetric.COSINE:
                                     data_raw_dot = np.dot(data, data_embedding)
                                     data_raw_data_dist = np.linalg.norm(data, axis=1)
                                     data_raw_dist = np.linalg.norm(data_embedding)
                                     data_raw_similarities = data_raw_dot / (data_raw_data_dist * data_raw_dist)
+                                    data_raw_distances = 1.0 - data_raw_similarities
                                 else:
                                     raise RuntimeError(f"Unknown similarity metric: {metric.similarity}")
-                                data_raw_index = np.flip(np.argsort(data_raw_similarities)[:max_neighbours])
+                                data_raw_index = np.flip(np.argsort(data_raw_distances)[:max_neighbours])
                                 data_indices_list.append(data_raw_index)
-                                data_distances_list.append(data_raw_similarities[data_raw_index])
+                                data_distances_list.append(data_raw_distances[data_raw_index])
                             data_indices = np.stack(data_indices_list)
                             data_distances = np.stack(data_distances_list)
                         else:
@@ -1332,9 +1333,8 @@ class SimpleExecutor(Executor):
                                 distance_metric=v.embedding_type
                                 if isinstance(v, NearestNeighbors)
                                 else EmbeddingDistanceMetric.RANDOM,
-                                distance_index=idx,
-                                # FIXME: only correct due to always using cosine values.
-                                similarity=(1.0 - v.similarities[idx]) if isinstance(v, NearestNeighbors) else None,
+                                distance_index=idx,  # FIXME: only correct due to always using cosine values.
+                                similarity=v.similarities[idx] if isinstance(v, NearestNeighbors) else None,
                                 dep_du_hash=dep_du_hash,
                                 dep_frame=dep_frame,
                             )
@@ -1394,8 +1394,7 @@ class SimpleExecutor(Executor):
                                 if isinstance(v, NearestNeighbors)
                                 else EmbeddingDistanceMetric.RANDOM,
                                 distance_index=idx,
-                                # FIXME: only correct due to always using cosine values.
-                                similarity=(1.0 - v.similarities[idx]) if isinstance(v, NearestNeighbors) else None,
+                                similarity=v.similarities[idx] if isinstance(v, NearestNeighbors) else None,
                                 dep_du_hash=dep_du_hash,
                                 dep_frame=dep_frame,
                                 dep_annotation_hash=dep_annotation_hash,
@@ -1488,8 +1487,7 @@ class SimpleExecutor(Executor):
                                 if isinstance(v, NearestNeighbors)
                                 else EmbeddingDistanceMetric.RANDOM,
                                 distance_index=idx,
-                                # FIXME: only correct due to always using cosine values.
-                                similarity=(1.0 - v.similarities[idx]) if isinstance(v, NearestNeighbors) else None,
+                                similarity=v.similarities[idx] if isinstance(v, NearestNeighbors) else None,
                                 dep_du_hash=dep_du_hash,
                                 dep_frame=dep_frame,
                                 dep_annotation_hash=dep_annotation_hash,
