@@ -63,7 +63,7 @@ def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine
     return [ProjectTagEntry(hash=tag_hash, name=name) for tag_hash, name in tags]
 
 @router.get("/meta")
-def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> List[ProjectTagEntryMeta]:
+def route_tags_meta(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> List[ProjectTagEntryMeta]:
     with Session(engine) as sess:
         tags = sess.exec(
             select(ProjectTag.tag_hash, ProjectTag.name, ProjectTag.description, func.count(ProjectTaggedDataUnit.du_hash), ProjectTag.created_at, ProjectTag.last_edited_at ).where(ProjectTag.project_hash == project_hash)

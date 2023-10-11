@@ -15,9 +15,8 @@ export function AddToCollectionModal(props: {
   close: () => void;
   projectHash: string;
   selectedItems: ReadonlySet<string> | "ALL";
-  analysisDomain: AnalysisDomain;
 }) {
-  const { open, close, projectHash, selectedItems, analysisDomain } = props;
+  const { open, close, projectHash, selectedItems } = props;
   const { data: projectTags = [] } = useProjectListTags(projectHash);
   const selectedItemsList: string[] = useMemo(
     () => (selectedItems === "ALL" ? [] : [...selectedItems]),
@@ -38,17 +37,10 @@ export function AddToCollectionModal(props: {
   const { mutateAsync: itemsAddTags, isLoading: isMutatingItemsAdd } =
     useProjectMutationItemsAddTag(projectHash);
 
-  const getDomainItems = useCallback(
-    (items: ReadonlySet<string>): string[] => {
-      if (analysisDomain === "data") {
-        const dataItems = new Set([...items].map(toDataItemID));
-        return [...dataItems];
-      } else {
-        return [...items];
-      }
-    },
-    [analysisDomain]
-  );
+  const getDomainItems = useCallback((items: ReadonlySet<string>): string[] => {
+    const dataItems = new Set([...items].map(toDataItemID));
+    return [...dataItems];
+  }, []);
   const addTags = async (tagList: string[]) => {
     if (selectedItems === "ALL") {
       //   filtersAddTags({ domain, filters, tags: [tagHash] });
@@ -181,6 +173,7 @@ export function AddToCollectionModal(props: {
             </div>
           )}
         </div>
+        {selectedItems}
       </Modal>
     </div>
   );
