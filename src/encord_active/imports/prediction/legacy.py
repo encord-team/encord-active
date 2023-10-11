@@ -2,6 +2,7 @@ import uuid
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+import numpy as np
 from encord.objects import OntologyStructure
 from pydantic import parse_file_as
 
@@ -44,7 +45,14 @@ def import_legacy_predictions(
             shape = predict.object.data
             if predict.object.format == Format.POLYGON:
                 annotation_type = AnnotationType.POLYGON
-                raise TypeError("Polygon predictions currently not supported")
+                if not (
+                    isinstance(predict.object.data, np.ndarray)
+                    and predict.object.data.ndim == 2
+                    and predict.object.data.shape[1] == 2
+                ):
+                    raise TypeError("Only [n,2] shaped polygons are supported atm")
+                shape = {str(i): {"x": r[0], "y": r[1]} for i, r in enumerate(predict.object.data)}
+                ontology_object = ontology_structure.get_child_by_hash(predict.object.feature_hash)
             elif predict.object.format == Format.BOUNDING_BOX:
                 annotation_type = AnnotationType.BOUNDING_BOX
                 assert isinstance(predict.object.data, BoundingBox)
