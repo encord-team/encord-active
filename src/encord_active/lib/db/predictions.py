@@ -47,7 +47,9 @@ class ObjectDetection(BaseModel):
     def format_and_data_valid(cls, v, values):  # pylint: disable=no-self-argument
         format = values.get("format")
         if format == Format.BOUNDING_BOX:
-            assert v.x + v.w <= 1 and v.y + v.h <= 1, f"{v} is not a valid relative bounding box."
+            assert (
+                v.x + v.w <= 1 and v.y + v.h <= 1 and all(val >= 0.0 for val in [v.x, v.y, v.w, v.h])
+            ), f"{v} is not a valid relative bounding box."
         elif format == Format.MASK:
             uni = set(np.unique(v))
             assert (uni - {0, 1}) == set()

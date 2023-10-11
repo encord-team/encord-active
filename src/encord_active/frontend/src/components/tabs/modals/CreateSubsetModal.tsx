@@ -33,7 +33,7 @@ export function CreateSubsetModal(props: {
         Click{" "}
         <a
           className="link"
-          href={`https://app.encord.com/projects/view/${newProjectHash}`}
+          href={`https://app.encord.com/projects/view/${newProjectHash}/summary`}
         >
           here
         </a>{" "}
