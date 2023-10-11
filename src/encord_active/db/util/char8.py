@@ -9,10 +9,9 @@ __all__ = ["Char8"]
 
 
 class Char8(TypeDecorator):
-    """Platform-independent GUID type.
+    """Platform-independent Char8 type.
 
-    Uses PostgreSQL's UUID type, otherwise uses
-    CHAR(32), storing as stringified hex values.
+    Uses CHAR(32), storing as stringified hex values.
 
     """
 

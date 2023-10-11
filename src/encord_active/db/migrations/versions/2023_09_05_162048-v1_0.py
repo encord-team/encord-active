@@ -17,14 +17,13 @@ import sqlalchemy as sa
 from alembic import op
 from cryptography.fernet import Fernet
 from pycocotools import mask
+from sqlmodel import JSON, LargeBinary
 from sqlmodel.sql.sqltypes import GUID, AutoString
 from tqdm import tqdm
 
 from encord_active.db.util.char8 import Char8
 from encord_active.db.util.encrypted_annotation_json import EncryptedAnnotationJSON
 from encord_active.db.util.encrypted_str import EncryptedStr
-from encord_active.db.util.pgvector import PGVector
-from encord_active.db.util.strdict import StrDict
 
 # revision identifiers, used by Alembic.
 revision = "20230905162048"
@@ -34,15 +33,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # if postgresql: ensure extension exist.
-    bind = op.get_bind()
-    if bind.engine.name == "postgresql":
-        for ext in ["vector", "hstore", "intarray"]:
-            r = bind.execute(f"SELECT extname FROM pg_extension WHERE extname = '{ext}'").all()
-            if len(r) == 0:
-                op.execute(f"CREATE EXTENSION {ext}")
-
-    # if sqlite: detect partial migration
     bind = op.get_bind()
     if bind.engine.name == "sqlite":
         try:
@@ -493,9 +483,9 @@ def upgrade() -> None:
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("annotation_hash", Char8(), nullable=False),
         sa.Column("project_hash", GUID(), nullable=False),
-        sa.Column("embedding_clip", PGVector(512), nullable=True),
-        sa.Column("embedding_hu", PGVector(7), nullable=True),
-        sa.Column("metric_metadata", StrDict(text_type=sa.Text()), nullable=True),
+        sa.Column("embedding_clip", LargeBinary(512), nullable=True),
+        sa.Column("embedding_hu", LargeBinary(7), nullable=True),
+        sa.Column("metric_metadata", JSON(), nullable=True),
         sa.CheckConstraint("frame >= 0", name="prediction_analytics_frame"),
         sa.ForeignKeyConstraint(
             ["prediction_hash", "du_hash", "frame", "annotation_hash"],
@@ -1059,9 +1049,9 @@ def upgrade() -> None:
         sa.Column("du_hash", GUID(), nullable=False),
         sa.Column("frame", sa.Integer(), nullable=False),
         sa.Column("annotation_hash", Char8(), nullable=False),
-        sa.Column("embedding_clip", PGVector(512), nullable=True),
-        sa.Column("embedding_hu", PGVector(7), nullable=True),
-        sa.Column("metric_metadata", StrDict(text_type=sa.Text()), nullable=True),
+        sa.Column("embedding_clip", LargeBinary(512), nullable=True),
+        sa.Column("embedding_hu", LargeBinary(7), nullable=True),
+        sa.Column("metric_metadata", JSON(), nullable=True),
         sa.CheckConstraint("frame >= 0", name="project_analytics_annotation_extra_frame"),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame", "annotation_hash"],
@@ -1145,8 +1135,8 @@ def upgrade() -> None:
         sa.Column("project_hash", GUID(), nullable=False),
         sa.Column("du_hash", GUID(), nullable=False),
         sa.Column("frame", sa.Integer(), nullable=False),
-        sa.Column("embedding_clip", PGVector(512), nullable=True),
-        sa.Column("metric_metadata", StrDict(text_type=sa.Text()), nullable=True),
+        sa.Column("embedding_clip", LargeBinary(512), nullable=True),
+        sa.Column("metric_metadata", JSON(), nullable=True),
         sa.CheckConstraint("frame >= 0", name="project_analytics_data_extra_frame"),
         sa.ForeignKeyConstraint(
             ["project_hash", "du_hash", "frame"],

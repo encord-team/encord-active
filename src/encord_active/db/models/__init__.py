@@ -4,8 +4,6 @@ from pathlib import Path
 from sqlite3 import Connection as SqliteConnection
 from typing import Set, Union
 
-if typing.TYPE_CHECKING:
-    from psycopg2.extensions import connection as pg_connection
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlmodel import create_engine
@@ -46,7 +44,7 @@ _init_metadata: Set[str] = set()
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_fk_pragma(
-    dbapi_connection: Union["pg_connection", SqliteConnection],
+    dbapi_connection: SqliteConnection,
     connection_record: None,
 ) -> None:
     # For sqlite - enable foreign_keys support

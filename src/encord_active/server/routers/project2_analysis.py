@@ -128,18 +128,6 @@ def _find_similar_items(
     extra_where_has_filters: bool,
     limit: int,
 ) -> List[similarity_query.SimilarityResult]:
-    if engine.dialect.name == "postgresql":
-        with Session(engine) as sess:
-            return similarity_query.pg_similarity_query(
-                sess=sess,
-                tables=tables,
-                project_hash=project_hash,
-                embedding=src_embedding,
-                extra_where=extra_where if extra_where_has_filters else None,
-                exclude_item=similarity_exclude,
-                limit=limit,
-            )
-
     similarity_query_impl = _get_similarity_query_index(project_hash, domain, engine)
     return similarity_query_impl.filter_query(
         engine=engine,

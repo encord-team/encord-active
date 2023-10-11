@@ -27,8 +27,6 @@ from encord_active.db.enums import (
 from encord_active.db.util.char8 import Char8
 from encord_active.db.util.encrypted_annotation_json import EncryptedAnnotationJSON
 from encord_active.db.util.encrypted_str import EncryptedStr
-from encord_active.db.util.pgvector import PGVector
-from encord_active.db.util.strdict import StrDict
 
 
 def fk_constraint(
@@ -104,11 +102,11 @@ EmbeddingVector = bytes  # FIXME: Union[list[float], bytes]
 
 
 def field_embedding_vector(dim: int, nullable: bool = False) -> EmbeddingVector:
-    return Field(sa_column=Column(PGVector(dim), nullable=nullable))
+    return Field(sa_column=Column(LargeBinary(dim), nullable=nullable))
 
 
 def field_string_dict(nullable: bool = False) -> dict[str, str]:
-    return Field(sa_column=Column(StrDict(), nullable=nullable))
+    return Field(sa_column=Column(JSON(), nullable=nullable))
 
 
 def field_metric_normal(nullable: bool = True) -> float:

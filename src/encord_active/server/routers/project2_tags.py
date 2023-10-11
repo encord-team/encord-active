@@ -79,25 +79,7 @@ def _where_tag_items(dialect: Dialect, items: List[str]) -> Tuple[Optional[list]
         for unpacked_item in unpacked_items
         if unpacked_item.annotation_hash is not None
     ]
-    if dialect.name == "postgresql":
-        pg_data_list = None
-        pg_annotation_list = None
-        if len(unpacked_data) > 0:
-            pg_data_list = [in_op(tuple_(ProjectTaggedDataUnit.du_hash, ProjectTaggedDataUnit.frame), unpacked_data)]
-        if len(unpacked_annotation) > 0:
-            pg_annotation_list = [
-                in_op(
-                    tuple_(
-                        ProjectTaggedAnnotation.du_hash,
-                        ProjectTaggedAnnotation.frame,
-                        ProjectTaggedAnnotation.annotation_hash,
-                    ),
-                    unpacked_annotation,
-                )
-            ]
-        return pg_data_list, pg_annotation_list
 
-    # Sqlite fallback implementation
     sqlite_data_list = None
     sqlite_annotation_list = None
     guid = GUID().bind_processor(dialect)
@@ -211,44 +193,26 @@ def route_items_untag_all(
 ) -> None:
     where_tag_data, where_tag_annotation = _where_tag_items(engine.dialect, items)
     with Session(engine) as sess:
-        if engine.dialect.name == "postgresql":
-            if where_tag_data is not None:
-                sess.execute(
-                    delete(ProjectTaggedDataUnit).where(
-                        ProjectTaggedDataUnit.project_hash == project_hash,
-                        in_op(ProjectTaggedDataUnit.tag_hash, tags),
-                        *where_tag_data,
-                    )
+        if where_tag_data is not None:
+            data_tags = sess.exec(
+                select(ProjectTaggedDataUnit).where(
+                    ProjectTaggedDataUnit.project_hash == project_hash,
+                    in_op(ProjectTaggedDataUnit.tag_hash, tags),
+                    *where_tag_data,
                 )
-            if where_tag_annotation is not None:
-                sess.execute(
-                    delete(ProjectTaggedAnnotation).where(
-                        ProjectTaggedAnnotation.project_hash == project_hash,
-                        in_op(ProjectTaggedAnnotation.tag_hash, tags),
-                        *where_tag_annotation,
-                    )
+            ).fetchall()
+            for data_tag in data_tags:
+                sess.delete(data_tag)
+        if where_tag_annotation is not None:
+            annotation_tags = sess.exec(
+                select(ProjectTaggedAnnotation).where(
+                    ProjectTaggedAnnotation.project_hash == project_hash,
+                    in_op(ProjectTaggedAnnotation.tag_hash, tags),
+                    *where_tag_annotation,
                 )
-        else:
-            if where_tag_data is not None:
-                data_tags = sess.exec(
-                    select(ProjectTaggedDataUnit).where(
-                        ProjectTaggedDataUnit.project_hash == project_hash,
-                        in_op(ProjectTaggedDataUnit.tag_hash, tags),
-                        *where_tag_data,
-                    )
-                ).fetchall()
-                for data_tag in data_tags:
-                    sess.delete(data_tag)
-            if where_tag_annotation is not None:
-                annotation_tags = sess.exec(
-                    select(ProjectTaggedAnnotation).where(
-                        ProjectTaggedAnnotation.project_hash == project_hash,
-                        in_op(ProjectTaggedAnnotation.tag_hash, tags),
-                        *where_tag_annotation,
-                    )
-                ).fetchall()
-                for annotation_tag in annotation_tags:
-                    sess.delete(annotation_tag)
+            ).fetchall()
+            for annotation_tag in annotation_tags:
+                sess.delete(annotation_tag)
         sess.commit()
 
 

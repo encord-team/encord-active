@@ -282,9 +282,7 @@ def route_action_create_project_subset(
         insert_data_overrides = {
             **overrides,
             "dataset_hash": literal(guid_bind(new_local_dataset_hash)),
-            "label_hash": func.gen_random_uuid()
-            if engine.dialect.name == "postgresql"
-            else func.lower(func.hex(func.randomblob(16))),
+            "label_hash": func.lower(func.hex(func.randomblob(16))),
         }
         insert_data_unit_names = sorted(ProjectDataUnitMetadata.__fields__.keys())
         sess.execute(

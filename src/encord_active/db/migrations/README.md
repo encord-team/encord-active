@@ -12,7 +12,6 @@ if this database has been used for encord-active development).
 
 Then generate new version file, this will attempt to generate a new migration
 automatically from the schema defined in src/db/models.py - it is normally correct
-but for the migration to work correctly on all database types we want to support, please test
-against both sqlite and postgresql instances:
+but for the migration to work correctly on all database types we want to suppor.
 
 > alembic revision —autogenerate -m "{migration_identifier}”

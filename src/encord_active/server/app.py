@@ -27,13 +27,7 @@ def get_app(engine: Engine, settings: Settings) -> FastAPI:
     app.include_router(project2.router, dependencies=[Depends(verify_token)], prefix="/api")
 
     # Create read-only engine
-    if engine.dialect.name == "postgresql":
-        readonly_engine = engine.execution_options(
-            isolation_level="AUTOCOMMIT",
-            postgresql_readonly=True,
-        )
-    else:
-        readonly_engine = engine.execution_options()
+    readonly_engine = engine.execution_options()
 
     # Hook dependencies
     app.dependency_overrides = {
