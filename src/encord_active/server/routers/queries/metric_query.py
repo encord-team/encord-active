@@ -193,10 +193,10 @@ def query_metric_attr_summary(
         or 0
     )
 
-    metric_iqr = metric_q3 - metric_q1
+    metric_iqr = max(metric_q3 - metric_q1, 0.00000001)  # epsilon
     moderate_lb, moderate_ub = metric_q1 - MODERATE_IQR_SCALE * metric_iqr, metric_q3 + MODERATE_IQR_SCALE * metric_iqr
     severe_lb, severe_ub = metric_q1 - SEVERE_IQR_SCALE * metric_iqr, metric_q3 + SEVERE_IQR_SCALE * metric_iqr
-    if metric_name != "metric_random":
+    if metric_name != "metric_random" and metric_count > 0 and metric_min != metric_max:
         metric_severe = (
             sess.exec(
                 select(func.count()).where(*where, not_between_op(metric_attr, severe_lb, severe_ub))  # type: ignore
