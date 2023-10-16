@@ -338,16 +338,21 @@ def route_project_list_reductions(
     project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)
 ) -> ProjectList2DEmbeddingReductionResult:
     with Session(engine) as sess:
-        r = sess.exec(
-            select(ProjectEmbeddingReduction).where(ProjectEmbeddingReduction.project_hash == project_hash)
+        r: List[Tuple[str, str, uuid.UUID, EmbeddingReductionType]] = sess.exec(
+            select(  # type: ignore
+                ProjectEmbeddingReduction.reduction_name,
+                ProjectEmbeddingReduction.reduction_description,
+                ProjectEmbeddingReduction.reduction_hash,
+                ProjectEmbeddingReduction.reduction_type,
+            ).where(ProjectEmbeddingReduction.project_hash == project_hash)
         ).fetchall()
     return ProjectList2DEmbeddingReductionResult(
         total=len(r),
         results=[
             ProjectList2DEmbeddingReductionResultEntry(
-                name=e.reduction_name, description=e.reduction_description, hash=e.reduction_hash, type=e.reduction_type
+                name=name, description=description, hash=reduction_hash, type=reduction_ty
             )
-            for e in r
+            for name, description, reduction_hash, reduction_ty in r
         ],
     )
 
