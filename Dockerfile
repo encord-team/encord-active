@@ -37,13 +37,13 @@ COPY ./pyproject.toml ./poetry.lock /home/appuser/
 RUN poetry cache clear pypi --all
 RUN poetry config virtualenvs.create true  \
     && poetry config virtualenvs.in-project true  \
-    && poetry install --no-root --without dev --extras psycopg2\
+    && poetry install --no-root --without dev \
     && poetry run poe torch-linux
 
 COPY ./src/ /home/appuser/src/
 COPY ./README.md /home/appuser/
 
-RUN poetry install --only-root --extras psycopg2
+RUN poetry install --only-root
 
 WORKDIR /data
 

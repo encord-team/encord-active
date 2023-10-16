@@ -8,8 +8,6 @@
     "dev": "vite",
     "build": "tsc && concurrently npm:build:* ",
     "build:packaged": "vite build --mode packaged --outDir dist/packaged",
-    "build:sandbox": "vite build --mode sandbox --outDir dist/sandbox",
-    "build:production": "vite build --outDir dist/production",
     "tsc": "tsc",
     "lint:es": "eslint src --ext .js,.jsx,.ts,.tsx",
     "lint:es:fix": "eslint src --fix --ext .js,.jsx,.ts,.tsx",
