@@ -73,7 +73,7 @@ Made by Encord. [bold]Get in touch[/bold]:
 """,
 )
 cli.add_typer(config_cli, name="config", help="[green bold]Configure[/green bold] global settings 🔧")
-cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] projects or predictions ⬇️")
+cli.add_typer(import_cli, name="import", help="[green bold]Import[/green bold] projects ⬇️")
 cli.add_typer(print_cli, name="print")
 cli.add_typer(metric_cli, name="metric", help="[green bold]Manage[/green bold] project metrics :clipboard:")
 cli.add_typer(project_cli, name="project", help="[green bold]Manage[/green bold] project settings ⚙️")

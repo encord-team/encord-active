@@ -548,7 +548,11 @@ export function Explorer({
                       ...analysisDomainOptions,
                       {
                         value: "predictions",
-                        label: "Predictions",
+                        label: (
+                          <CustomTooltip title="Only available on the hoseted version">
+                            <div>Predictions</div>
+                          </CustomTooltip>
+                        ),
                         disabled: true,
                       },
                     ]}

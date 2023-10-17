@@ -1,13 +1,9 @@
 import { Card, Space, Spin, Tooltip } from "antd";
 import Meta from "antd/es/card/Meta";
 import emptyUrl from "../../assets/empty.svg";
-import importUrl from "../../assets/import.svg";
-import encordImportUrl from "../../assets/encord-import.svg";
 import fileImageUrl from "../../assets/file-image.svg";
 import annotationsUrl from "../../assets/annotations.svg";
 import classesUrl from "../../assets/classes.svg";
-import { classy } from "../helpers/classy";
-import { env } from "../constants";
 import { useImageSrc } from "../hooks/useImageSrc";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
@@ -44,55 +40,6 @@ export function ProjectsPage({ onSelectLocalProject }: Props) {
           <ProjectNotFoundCard />
         )}
       </Space>
-    </div>
-  );
-}
-
-function NewProjectButton({
-  title,
-  description,
-  iconUrl,
-  onClick,
-}: {
-  title: string;
-  description: string;
-  iconUrl: string;
-  onClick?: () => void;
-}) {
-  const disabled = !onClick;
-
-  return (
-    <div
-      className={disabled ? "tooltip" : undefined}
-      data-tip="Coming soon, please use the CLI"
-    >
-      <button
-        className={classy(
-          "felx-row border-1 btn btn-ghost flex h-28 w-96 justify-start gap-3 border-zinc-50 p-3.5 normal-case",
-          { "shadow-lg": !disabled }
-        )}
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-      >
-        <div className="flex h-20	w-20 items-center justify-center rounded-md bg-zinc-50">
-          <img src={iconUrl} alt="import-project" className="rounded" />
-        </div>
-        <div className="flex flex-col items-start gap-1">
-          <span
-            className={classy("font-semibol text-sm", {
-              "text-gray-500": disabled,
-            })}
-          >
-            {title}
-          </span>
-          {description && (
-            <span className="text-xs font-normal text-gray-400">
-              {description}
-            </span>
-          )}
-        </div>
-      </button>
     </div>
   );
 }

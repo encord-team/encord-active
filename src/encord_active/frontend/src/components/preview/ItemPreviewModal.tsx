@@ -398,7 +398,7 @@ export function ItemPreviewModal(props: {
                           renderItem={(item) => (
                             <List.Item>
                               <div className="flex flex-col">
-                                <div className="text-xs text-gray-7">
+                                <div className="text-gray-7 text-xs">
                                   {item.name}
                                 </div>
                                 <div className="text-xs text-gray-9">
@@ -428,7 +428,7 @@ export function ItemPreviewModal(props: {
                         renderItem={(item) => (
                           <List.Item>
                             <div className="flex flex-col">
-                              <div className="text-xs text-gray-7">
+                              <div className="text-gray-7 text-xs">
                                 {item.name}
                               </div>
                               <div className="text-xs text-gray-9">

@@ -3,7 +3,7 @@ import { Tooltip } from "antd";
 
 export function CustomTooltip(props: {
   title: string;
-  description: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   const { title, description, children } = props;
@@ -11,9 +11,9 @@ export function CustomTooltip(props: {
   return (
     <Tooltip
       overlay={
-        <div className="flex flex-col divide-y divide-gray-7">
+        <div className="divide-gray-7 flex flex-col divide-y">
           <div className="p-1 text-sm font-semibold">{title}</div>
-          <div className="p-1 text-sm">{description}</div>
+          {description && <div className="p-1 text-sm">{description}</div>}
         </div>
       }
     >

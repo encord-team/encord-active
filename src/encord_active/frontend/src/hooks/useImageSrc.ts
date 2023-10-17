@@ -5,7 +5,11 @@ import { apiUrl } from "../constants";
 import { useQuerier } from "./Context";
 import { useAuth } from "../authContext";
 
-const NO_AUTH_PATTERNS = ["ea-sandbox-static", "storage.googleapis.com", "s3.amazonaws.com"];
+const NO_AUTH_PATTERNS = [
+  "ea-sandbox-static",
+  "storage.googleapis.com",
+  "s3.amazonaws.com",
+];
 
 export function useImageSrc(url: string | undefined): string | undefined {
   const { token } = useAuth();

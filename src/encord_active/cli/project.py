@@ -13,9 +13,7 @@ from tqdm import tqdm
 from encord_active.cli.app_config import app_config
 from encord_active.cli.common import (
     TYPER_ENCORD_DATABASE_DIR,
-    TYPER_SELECT_PREDICTION_NAME,
     TYPER_SELECT_PROJECT_NAME,
-    select_prediction_hash_from_name,
     select_project_hash_from_name,
 )
 
@@ -88,48 +86,7 @@ def download_data(
         sess.commit()
 
 
-@project_cli.command(name="delete-prediction", short_help="Delete a prediction from the project")
-def delete_prediction(
-    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
-    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
-    prediction_name: Optional[str] = TYPER_SELECT_PREDICTION_NAME,
-) -> None:
-    from encord_active.db.models import get_engine
-    from encord_active.db.scripts.delete_prediction import delete_prediction_from_db
-
-    #
-    project_hash = select_project_hash_from_name(database_dir, project_name or "")
-    prediction_hash = select_prediction_hash_from_name(database_dir, project_hash, prediction_name or "")
-    path = database_dir / "encord-active.sqlite"
-    engine = get_engine(path)
-    try:
-        delete_prediction_from_db(
-            engine=engine,
-            project_hash=project_hash,
-            prediction_hash=prediction_hash,
-            error_on_missing=True,
-        )
-    except ValueError as e:
-        rich.print(
-            Panel(
-                f"Could not delete prediction {project_hash} - not present in database\nError = {e}",
-                title=":fire: No files found from data glob :fire:",
-                expand=False,
-                style="yellow",
-            )
-        )
-        raise typer.Abort()
-    else:
-        rich.print(
-            Panel(
-                "Project prediction deleted from database",
-                expand=False,
-                style="green",
-            )
-        )
-
-
-@project_cli.command(name="delete", short_help="Delete a prediction from the project")
+@project_cli.command(name="delete", short_help="Delete a project")
 def delete_project(
     database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
     project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
@@ -206,6 +163,9 @@ def deserialize_project(
         help="Export folder name",
     ),
 ) -> None:
+    """
+    Populate a serialized project into the database.
+    """
     from encord_active.db.models import get_engine
     from encord_active.imports.sandbox.deserialize import import_serialized_project
 

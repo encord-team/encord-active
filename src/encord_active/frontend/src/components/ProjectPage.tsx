@@ -19,6 +19,9 @@ import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 import { Collections } from "./tabs/collections/Collections";
 import { DefaultFilters, FilterState } from "./util/MetricFilter";
 import { useProjectListTagsMeta } from "../hooks/queries/useProjectListTagsMeta";
+import { env } from "../constants";
+import { classy } from "../helpers/classy";
+import { CustomTooltip } from "./util/CustomTooltip";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -42,7 +45,7 @@ export function ProjectPage(props: {
     projectSummary === undefined || projectSummary.local_project
       ? undefined
       : (dataHash: string, projectHash: string, frame: number): string =>
-          `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
+        `${encordDomain}/label_editor/${dataHash}&${projectHash}/${frame}`;
 
   // Go to parent in the error case (project does not exist).
   useEffect(() => {
@@ -176,22 +179,12 @@ export function ProjectPage(props: {
           ),
         },
         {
-          label: "Model Evaluation",
+          label: (
+            <CustomTooltip title="Only available on the hoseted version">
+              <div>Model Evaluation</div>
+            </CustomTooltip>),
           key: "predictions",
-          children: (
-            <PredictionsTab
-              projectHash={projectHash}
-              annotationMetricsSummary={projectSummary.annotation}
-              dataMetricsSummary={projectSummary.data}
-              featureHashMap={featureHashMap}
-              setSelectedProjectHash={setSelectedProjectHash}
-              selectedItems={selectedItems}
-              setSelectedItems={setSelectedItems}
-              hasSelectedItems={hasSelectedItems}
-              dataFilters={dataFilters}
-              setDataFilters={setDataFilters}
-            />
-          ),
+          disabled: true
         },
         {
           label: (
@@ -212,7 +205,7 @@ export function ProjectPage(props: {
               openModal={openModal}
               setOpenModal={setOpenModal}
             />
-          ),
+          )
         },
       ]}
       activeKey={tab}

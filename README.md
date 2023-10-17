@@ -151,7 +151,7 @@ You can find more details on the `init` command in the [documentation][encord-ac
 
 ### Import from COCO
 
-To import your data, labels, and predictions from COCO, save your data in a directory and run the command:
+To import your data, labels from COCO, save your data in a directory and run the command:
 
 ```shell
 # install COCO extras
@@ -159,9 +159,6 @@ To import your data, labels, and predictions from COCO, save your data in a dire
 
 # import samples with COCO annotations
 encord-active import project --coco -i ./images -a ./annotations.json
-
-# import COCO model predictions
-encord-active import predictions --coco results.json
 ```
 
 ### Import from the Encord platform
@@ -180,7 +177,7 @@ The command will allow you to search through your Encord projects and choose whi
 
 ### Quality metrics:
 
-Quality metrics are applied to your data, labels, and predictions to assign them quality metric scores.
+Quality metrics are applied to your data and labels to assign them quality metric scores.
 Plug in your own or rely on Encord Active's prebuilt quality metrics.
 The quality metrics automatically decompose your data, label, and model quality to show you how to improve your model performance from a data-centric perspective.
 Encord Active ships with 25+ metrics and more are coming; [contributions][contribute-url] are also very welcome.
@@ -202,11 +199,11 @@ Visit our [documentation][encord-active-docs] to learn more.
 ### Supported data:
 
 | Data Types |     | Labels          |     | Project sizes |               |
-|------------|-----|-----------------|-----|---------------|---------------|
-| `jpg`      | ✅   | Bounding Boxes  | ✅   | Images        | 25.000        |
-| `png`      | ✅   | Polygons        | ✅   | Videos \*     | 25.000 frames |
-| `tiff`     | ✅   | Segmentations   | ✅   |               |               |
-| `mp4` \*   | ✅   | Classifications | ✅   |               |               |
+| ---------- | --- | --------------- | --- | ------------- | ------------- |
+| `jpg`      | ✅  | Bounding Boxes  | ✅  | Images        | 25.000        |
+| `png`      | ✅  | Polygons        | ✅  | Videos \*     | 25.000 frames |
+| `tiff`     | ✅  | Segmentations   | ✅  |               |               |
+| `mp4` \*   | ✅  | Classifications | ✅  |               |               |
 |            |     | Polylines       | 🟡  |               |               |
 
 \* Requires an Encord Annotate account
@@ -218,7 +215,7 @@ Visit our [documentation][encord-active-docs] to learn more.
 Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧.
 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic.
 
-If you need help or guidance feel free to ping us in our  **[Slack workspace][slack-join]**!
+If you need help or guidance feel free to ping us in our **[Slack workspace][slack-join]**!
 
 ## 👪 Community and support
 
