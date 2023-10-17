@@ -13,15 +13,12 @@ from typer.core import TyperGroup
 from encord_active.cli.common import (
     TYPER_ENCORD_DATABASE_DIR,
     TYPER_SELECT_PROJECT_NAME,
-    select_project_hash_from_name,
 )
 from encord_active.cli.project import project_cli
 
 load_dotenv()
 
 import encord_active.cli.utils.typer  # pylint: disable=unused-import
-import encord_active.db.models as __fixme_debugging
-from encord_active.cli.app_config import APP_NAME, app_config
 from encord_active.cli.config import config_cli
 from encord_active.cli.imports import import_cli
 from encord_active.cli.metric import metric_cli
@@ -38,7 +35,6 @@ class OrderedPanelGroup(TyperGroup):
         "start",
         "init",
         "import",
-        "refresh",
         "project",
         "metric",
         "print",
@@ -349,48 +345,6 @@ def import_local_project(
         label_paths=label_result,
     )
     success_with_vizualise_command(database_dir, "Project initialised :+1:")
-
-
-@cli.command(name="refresh")
-def refresh(
-    database_dir: Path = TYPER_ENCORD_DATABASE_DIR,
-    project_name: Optional[str] = TYPER_SELECT_PROJECT_NAME,
-    include_unlabeled: bool = typer.Option(
-        False,
-        "--include-unlabeled",
-        "-i",
-        help="Include unlabeled data. [blue]Note:[/blue] this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.",
-    ),
-    force: bool = typer.Option(False, help="Force full refresh of the project"),
-):
-    """
-    [green bold]Sync[/green bold] data and labels from a remote Encord project :arrows_counterclockwise:
-
-    The local project should have a reference to the remote Encord project in its config file (`project_meta.yaml`).
-    The required attributes are:
-    1. The remote flag set to `true` (has_remote: true).
-    2. The hash of the remote Encord project (project_hash: remote-encord-project-hash).
-    3. The path to the private Encord user SSH key (ssh_key_path: private/encord/user/ssh/key/path).
-    """
-    try:
-        from encord_active.imports.op import refresh_encord_project
-
-        project_hash = select_project_hash_from_name(database_dir, project_name or "")
-        ssh_key = app_config.get_or_query_ssh_key()
-        changes = refresh_encord_project(
-            database_dir=database_dir,
-            encord_project_hash=project_hash,
-            # FIXME: include_unlabeled=include_unlabeled,
-            force=force,
-            ssh_key=ssh_key,
-        )
-    except Exception as e:
-        rich.print(f"[red]ERROR: The data sync failed. Log: {e}.")
-    else:
-        if not changes:
-            rich.print("[green]No changes detected, already synced with the remote project[/green]")
-        else:
-            rich.print("[green]Data and labels successfully synced from the remote project[/green]")
 
 
 @cli.command(name="start")
