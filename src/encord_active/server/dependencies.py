@@ -100,8 +100,3 @@ async def verify_token(
             raise _http_exception(detail="Cannot access deployment")
     except BaseException:
         raise _http_exception(detail="Cannot access deployment")
-
-
-async def verify_premium(settings: Annotated[Settings, Depends(dep_settings)]):
-    if not settings.ENV != Env.PACKAGED:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Search is not enabled")

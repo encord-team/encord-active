@@ -8,7 +8,7 @@ import Icon, {
 import { MdImageSearch } from "react-icons/md";
 import { VscSymbolClass } from "react-icons/vsc";
 import { RiUserLine } from "react-icons/ri";
-import { Button, Card, Checkbox, Row, Tag, Typography } from "antd";
+import { Button, Card, Checkbox, Row, Tag, Tooltip, Typography } from "antd";
 import React, { memo, useMemo } from "react";
 import { useProjectSummary } from "../../hooks/queries/useProjectSummary";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
@@ -175,25 +175,6 @@ function GalleryCardRaw(props: {
   const labelObject:
     | undefined
     | {
-        readonly confidence: number;
-        readonly createdAt: string;
-        readonly createdBy: string;
-        readonly featureHash: string;
-        readonly lastEditedAt: string;
-        readonly lastEditedBy: string;
-        readonly manualAnnotation: boolean;
-        readonly objectHash?: string;
-        readonly classificationHash?: string;
-        readonly name?: string;
-        readonly color?: string;
-      } = useMemo(() => {
-    if (annotationHash === undefined || preview === undefined) {
-      return undefined;
-    }
-    const objOrClassList = [
-      ...preview.objects,
-      ...preview.classifications,
-    ] as readonly {
       readonly confidence: number;
       readonly createdAt: string;
       readonly createdBy: string;
@@ -204,27 +185,46 @@ function GalleryCardRaw(props: {
       readonly objectHash?: string;
       readonly classificationHash?: string;
       readonly name?: string;
-    }[];
+      readonly color?: string;
+    } = useMemo(() => {
+      if (annotationHash === undefined || preview === undefined) {
+        return undefined;
+      }
+      const objOrClassList = [
+        ...preview.objects,
+        ...preview.classifications,
+      ] as readonly {
+        readonly confidence: number;
+        readonly createdAt: string;
+        readonly createdBy: string;
+        readonly featureHash: string;
+        readonly lastEditedAt: string;
+        readonly lastEditedBy: string;
+        readonly manualAnnotation: boolean;
+        readonly objectHash?: string;
+        readonly classificationHash?: string;
+        readonly name?: string;
+      }[];
 
-    return objOrClassList.find(
-      (elem: { objectHash?: string; classificationHash?: string }) =>
-        elem.objectHash === annotationHash ||
-        elem.classificationHash === annotationHash
-    );
-  }, [annotationHash, preview]);
+      return objOrClassList.find(
+        (elem: { objectHash?: string; classificationHash?: string }) =>
+          elem.objectHash === annotationHash ||
+          elem.classificationHash === annotationHash
+      );
+    }, [annotationHash, preview]);
 
   const labelAnswers:
     | undefined
     | {
-        classifications?: readonly {
-          readonly answers?: string | any[];
-          readonly featureHash: string;
-        }[];
-      } =
+      classifications?: readonly {
+        readonly answers?: string | any[];
+        readonly featureHash: string;
+      }[];
+    } =
     preview === undefined || annotationHash === undefined
       ? undefined
       : preview.classification_answers[annotationHash] ??
-        (preview.object_answers[annotationHash] as any);
+      (preview.object_answers[annotationHash] as any);
 
   const isLoading = projectItem
     ? isLoadingProject
@@ -363,7 +363,7 @@ function GalleryCardRaw(props: {
                     )}
                     checked={selected}
                   />
-                  <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100">
+                  <div onClick={e => e.stopPropagation()} className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100">
                     <Button
                       className="bg-white"
                       icon={<FullscreenOutlined />}
@@ -372,33 +372,22 @@ function GalleryCardRaw(props: {
                         setItemPreview(itemId);
                       }}
                     />
-                    <Button
-                      className="bg-white"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSimilaritySearch(itemId);
-                      }}
-                      icon={<Icon component={MdImageSearch} />}
-                    />
+                    <Tooltip title="Similarity search is only available on the hosted version." className="rounded-lg">
+                      <Button
+                        className="bg-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        disabled
+                        icon={<Icon component={MdImageSearch} />}
+                      />
+                    </Tooltip>
                   </div>
-                  {
-                    /* <div className="absolute top-7 flex h-5/6 w-full flex-col gap-3 overflow-y-auto p-2 pb-8 group-hover:opacity-100">
-                    {description && (
-                      <div className="flex flex-col">
-                        <div className="inline-flex items-center gap-1">
-                          <BsCardText className="text-base" />
-                          <span>Description:</span>
-                        </div>
-                        <span>{description}</span>
-                      </div>
-                    )}
-                  </div> */ null
-                  }
                 </div>
               )}
             </AnnotatedImage>
           )}
-        </div>
+        </div >
       }
     >
       {itemSimilarity != null ? (
@@ -415,81 +404,85 @@ function GalleryCardRaw(props: {
           <span className="font-bold">{displayValue.toFixed(5)}</span>
         </Tag>
       </Row>
-      {preview?.tags &&
-      (((labelObject == null
-        ? 0
-        : (preview?.tags?.label ?? {})[
-            labelObject?.objectHash ?? labelObject?.classificationHash ?? ""
-          ]?.length) ?? 0) > 0 ||
-        (preview?.tags?.data?.length ?? 0) > 0) ? (
-        <Row className="mt-1">
-          <ItemTags
-            tags={preview?.tags}
-            annotationHash={
-              labelObject?.objectHash ?? labelObject?.classificationHash
-            }
-            limit={4}
-          />
-        </Row>
-      ) : null}
-      {labelObject != null ? (
-        <>
+      {
+        preview?.tags &&
+          (((labelObject == null
+            ? 0
+            : (preview?.tags?.label ?? {})[
+              labelObject?.objectHash ?? labelObject?.classificationHash ?? ""
+            ]?.length) ?? 0) > 0 ||
+            (preview?.tags?.data?.length ?? 0) > 0) ? (
           <Row className="mt-1">
-            <Tag bordered={false} color="magenta" className="rounded-xl">
-              <Row>
-                {annotationShape != null ? (
-                  <AnnotationShapeIcon
-                    shape={annotationShape}
-                    color={labelObjectColor}
-                  />
-                ) : (
-                  <VscSymbolClass />
-                )}
-                <Typography.Text className="ml-1" color={labelObjectColor}>
-                  {labelObjectName}
-                </Typography.Text>
-              </Row>
-            </Tag>
+            <ItemTags
+              tags={preview?.tags}
+              annotationHash={
+                labelObject?.objectHash ?? labelObject?.classificationHash
+              }
+              limit={4}
+            />
           </Row>
-          {(labelAnswers?.classifications ?? [])
-            .filter((v) => typeof v.answers === "string")
-            .map((v) => (
-              <Row className="mt-1" key={v.featureHash}>
-                <Tag bordered={false} color="geekblue" className="rounded-xl">
-                  <Row>
-                    <FontSizeOutlined />
-                    <Typography.Text className="ml-1">
-                      {v.answers}
-                    </Typography.Text>
-                  </Row>
+        ) : null
+      }
+      {
+        labelObject != null ? (
+          <>
+            <Row className="mt-1">
+              <Tag bordered={false} color="magenta" className="rounded-xl">
+                <Row>
+                  {annotationShape != null ? (
+                    <AnnotationShapeIcon
+                      shape={annotationShape}
+                      color={labelObjectColor}
+                    />
+                  ) : (
+                    <VscSymbolClass />
+                  )}
+                  <Typography.Text className="ml-1" color={labelObjectColor}>
+                    {labelObjectName}
+                  </Typography.Text>
+                </Row>
+              </Tag>
+            </Row>
+            {(labelAnswers?.classifications ?? [])
+              .filter((v) => typeof v.answers === "string")
+              .map((v) => (
+                <Row className="mt-1" key={v.featureHash}>
+                  <Tag bordered={false} color="geekblue" className="rounded-xl">
+                    <Row>
+                      <FontSizeOutlined />
+                      <Typography.Text className="ml-1">
+                        {v.answers}
+                      </Typography.Text>
+                    </Row>
+                  </Tag>
+                </Row>
+              ))}
+            {predictionTy != null ? (
+              <Row className="mt-1">
+                <Tag bordered={false} color="volcano" className="rounded-xl">
+                  {getPredictionIcon(predictionTy)}
+                  <Typography.Text className="ml-1" color={labelObjectColor}>
+                    {getPredictionName(predictionTy)}
+                    {getPredictionIOUPostfix(
+                      preview as any, // FIXME: any?
+                      annotationHash ?? "",
+                      predictionTy
+                    )}
+                  </Typography.Text>
                 </Tag>
               </Row>
-            ))}
-          {predictionTy != null ? (
+            ) : null}
             <Row className="mt-1">
-              <Tag bordered={false} color="volcano" className="rounded-xl">
-                {getPredictionIcon(predictionTy)}
-                <Typography.Text className="ml-1" color={labelObjectColor}>
-                  {getPredictionName(predictionTy)}
-                  {getPredictionIOUPostfix(
-                    preview as any, // FIXME: any?
-                    annotationHash ?? "",
-                    predictionTy
-                  )}
+              <Tag bordered={false} color="cyan" className="rounded-xl">
+                <Icon component={RiUserLine} />
+                <Typography.Text className="ml-1">
+                  {labelObject.lastEditedBy}
                 </Typography.Text>
               </Tag>
             </Row>
-          ) : null}
-          <Row className="mt-1">
-            <Tag bordered={false} color="cyan" className="rounded-xl">
-              <Icon component={RiUserLine} />
-              <Typography.Text className="ml-1">
-                {labelObject.lastEditedBy}
-              </Typography.Text>
-            </Tag>
-          </Row>
-        </>
-      ) : null}
-    </Card>
+          </>
+        ) : null
+      }
+    </Card >
   );
 }

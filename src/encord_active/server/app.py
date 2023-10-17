@@ -12,7 +12,6 @@ from encord_active.server.dependencies import (
     dep_engine,
     dep_engine_readonly,
     dep_settings,
-    verify_premium,
     verify_token,
 )
 
@@ -84,14 +83,6 @@ def get_app(engine: Engine, settings: Settings) -> FastAPI:
     async def on_startup() -> None:
         if not is_dev:
             webbrowser.open(settings.API_URL, new=0, autoraise=True)
-
-    @app.get("/premium_available")
-    async def premium_available() -> bool:
-        try:
-            await verify_premium(settings)
-            return True
-        except:
-            return False
 
     @app.get("/")
     def health_check() -> bool:

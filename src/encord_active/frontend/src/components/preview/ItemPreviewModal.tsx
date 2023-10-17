@@ -6,6 +6,7 @@ import {
   Row,
   Spin,
   Tabs,
+  Tooltip,
   Tree,
   Typography,
 } from "antd";
@@ -58,8 +59,8 @@ export function ItemPreviewModal(props: {
   viewNext: () => void;
   viewPrevious: () => void;
   editUrl:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
 }) {
   const {
     featureHashMap,
@@ -248,26 +249,26 @@ export function ItemPreviewModal(props: {
         tree.push(
           value.length > 1
             ? {
-                title: `${key} - (${value.length})`,
-                key: index,
-                icon:
-                  value[0].shape && value[0].color ? (
-                    <AnnotationShapeIcon
-                      shape={value[0].shape}
-                      color={value[0].color}
-                    />
-                  ) : (
-                    <VscSymbolClass />
-                  ),
-                children: value.map((item: any, subIndex) => ({
-                  title: getTreeObjectElement(item),
-                  key: `${index}-${subIndex}`,
-                })),
-              }
+              title: `${key} - (${value.length})`,
+              key: index,
+              icon:
+                value[0].shape && value[0].color ? (
+                  <AnnotationShapeIcon
+                    shape={value[0].shape}
+                    color={value[0].color}
+                  />
+                ) : (
+                  <VscSymbolClass />
+                ),
+              children: value.map((item: any, subIndex) => ({
+                title: getTreeObjectElement(item),
+                key: `${index}-${subIndex}`,
+              })),
+            }
             : {
-                title: getTreeObjectElement(value[0]),
-                key: index,
-              }
+              title: getTreeObjectElement(value[0]),
+              key: index,
+            }
         );
       });
 
@@ -318,9 +319,9 @@ export function ItemPreviewModal(props: {
           return name === null
             ? labelObject
             : {
-                ...labelObject,
-                name,
-              };
+              ...labelObject,
+              name,
+            };
         }
         return {
           ...labelObject,
@@ -343,30 +344,31 @@ export function ItemPreviewModal(props: {
       onCancel={onClose}
       width="95vw"
       footer={
-        <>
-          <Button onClick={toggleSelection}>
-            {isSelected ? "Remove from" : "Add to"} selection
-          </Button>
-          <Button onClick={onShowSimilar} icon={<MdImageSearch />}>
-            Similarity search
-          </Button>
-          <Button
-            disabled={editUrl === undefined}
-            icon={<EditOutlined />}
-            onClick={() =>
-              editUrl !== undefined &&
-              preview !== undefined &&
-              frame !== undefined
-                ? window.open(
+        <div className="flex justify-end gap-2">
+          <Tooltip title="Similarity search is only available on the hosted version.">
+            <Button disabled icon={<MdImageSearch />}>
+              Similarity search
+            </Button>
+          </Tooltip>
+          <Tooltip title={editUrl === undefined && "Only available for projects imported from the Encord Annotate"}>
+            <Button
+              disabled={editUrl === undefined}
+              icon={<EditOutlined />}
+              onClick={() =>
+                editUrl !== undefined &&
+                  preview !== undefined &&
+                  frame !== undefined
+                  ? window.open(
                     editUrl(preview.data_hash, projectHash, frame),
                     "_blank"
                   )
-                : undefined
-            }
-          >
-            Edit in Encord
-          </Button>
-        </>
+                  : undefined
+              }
+            >
+              Edit in Encord
+            </Button>
+          </Tooltip>
+        </ div>
       }
     >
       {preview === undefined ? (
@@ -485,84 +487,84 @@ export function ItemPreviewModal(props: {
           </Col>
         </Row>
       )}
-    </Modal>
+    </Modal >
   );
   /*
   const dataId = id.split("_").slice(0, 3).join("_");
-  const { data: preview, isLoading } = useProjectDataItem(
-    projectHash,
-    dataId
-  );
+  const {data: preview, isLoading } = useProjectDataItem(
+      projectHash,
+      dataId
+      );
   const mutate = () => console.log("fixme");
 
-  if (isLoading || !preview) {
+      if (isLoading || !preview) {
     return <Spin indicator={loadingIndicator} />;
   }
 
-  // const { description, ...metrics } = preview.metadata.metrics;
-  const { editUrl } = data;
-  const editUrl = "FIXME";
-  const description = "";
+  // const {description, ...metrics } = preview.metadata.metrics;
+      const {editUrl} = data;
+      const editUrl = "FIXME";
+      const description = "";
 
-  return (
-    <div className="flex w-full flex-col items-center gap-3 p-1">
-      <div className="flex w-full justify-between">
-        <div className="flex gap-3">
-          <button
-            className="btn btn-ghost gap-2"
-            disabled={similaritySearchDisabled}
-            onClick={onShowSimilar}
-          >
-            <MdImageSearch className="text-base" />
-            Similar
-          </button>
-          <button
-            className="btn btn-ghost gap-2"
-            onClick={() =>
-              editUrl ? window.open(editUrl, "_blank") : undefined
-            }
-            disabled={editUrl == null}
-          >
-            <FaEdit />
-            Edit
-          </button>
-          <TaggingDropdown
-            disabledReason={scope === "prediction" ? scope : undefined}
-          >
-            <TaggingForm
-              onChange={(groupedTags) => mutate([{ id, groupedTags }])}
-              selectedTags={{ data: [], label: [] }} // FIXME:
-              tabIndex={0}
-              allowTaggingAnnotations={allowTaggingAnnotations}
-            />
-          </TaggingDropdown>
-        </div>
-        <button onClick={onClose} className="btn btn-outline btn-square">
-          <MdClose className="text-base" />
-        </button>
-      </div>
-      <div className="flex w-full justify-between">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col">
-            <div>
-              <span>Title: </span>
-              <span>{preview?.data_title ?? "unknown"}</span>
-            </div>
-            {description && (
-              <div>
-                <span>Description: </span>
-                <span>{description}</span>
-              </div>
-            )}
+      return (
+      <div className="flex w-full flex-col items-center gap-3 p-1">
+        <div className="flex w-full justify-between">
+          <div className="flex gap-3">
+            <button
+              className="btn btn-ghost gap-2"
+              disabled={similaritySearchDisabled}
+              onClick={onShowSimilar}
+            >
+              <MdImageSearch className="text-base" />
+              Similar
+            </button>
+            <button
+              className="btn btn-ghost gap-2"
+              onClick={() =>
+                editUrl ? window.open(editUrl, "_blank") : undefined
+              }
+              disabled={editUrl == null}
+            >
+              <FaEdit />
+              Edit
+            </button>
+            <TaggingDropdown
+              disabledReason={scope === "prediction" ? scope : undefined}
+            >
+              <TaggingForm
+                onChange={(groupedTags) => mutate([{ id, groupedTags }])}
+                selectedTags={{ data: [], label: [] }} // FIXME:
+                tabIndex={0}
+                allowTaggingAnnotations={allowTaggingAnnotations}
+              />
+            </TaggingDropdown>
           </div>
-          {/ <MetadataMetrics metrics={metrics} />
-          <TagList tags={data.tags} /> /}
+          <button onClick={onClose} className="btn btn-outline btn-square">
+            <MdClose className="text-base" />
+          </button>
         </div>
-        <div className="relative inline-block w-fit">
-          <ImageWithPolygons className="" preview={preview} />
+        <div className="flex w-full justify-between">
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col">
+              <div>
+                <span>Title: </span>
+                <span>{preview?.data_title ?? "unknown"}</span>
+              </div>
+              {description && (
+                <div>
+                  <span>Description: </span>
+                  <span>{description}</span>
+                </div>
+              )}
+            </div>
+            {/ <MetadataMetrics metrics={metrics} / >
+              <TagList tags={data.tags} /> /}
+          </div>
+          <div className="relative inline-block w-fit">
+            <ImageWithPolygons className="" preview={preview} />
+          </div>
         </div>
       </div>
-    </div>
-  );
-  */
+      );
+      */
 }

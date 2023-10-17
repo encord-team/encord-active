@@ -49,7 +49,6 @@ import { ItemPreviewModal } from "../preview/ItemPreviewModal";
 import { usePredictionAnalysisSearch } from "../../hooks/queries/usePredictionAnalysisSearch";
 import {
   ExplorerPremiumSearch,
-  useExplorerPremiumSearch,
 } from "./ExplorerPremiumSearch";
 import { ExplorerSearchResults } from "./ExplorerSearchResults";
 import { FeatureHashMap, ModalName } from "../Types";
@@ -70,8 +69,8 @@ export type Props = {
   dataMetricsSummary: ProjectDomainSummary;
   annotationMetricsSummary: ProjectDomainSummary;
   editUrl?:
-    | ((dataHash: string, projectHash: string, frame: number) => string)
-    | undefined;
+  | ((dataHash: string, projectHash: string, frame: number) => string)
+  | undefined;
   featureHashMap: FeatureHashMap;
   setSelectedProjectHash: (projectHash: string | undefined) => void;
   remoteProject: boolean;
@@ -260,9 +259,7 @@ export function Explorer({
   );
   const isLoadingMetrics = isLoadingDataMetrics || isLoadingAnnotationMetrics;
 
-  // Premium search hooks:
-  const { premiumSearchState } = useExplorerPremiumSearch();
-  const { search, setSearch } = premiumSearchState;
+  const [search, setSearch] = useState<string>();
 
   const { data: sortedItemsProject, isLoading: isLoadingSortedItemsProject } =
     useProjectAnalysisSearch(
@@ -532,15 +529,7 @@ export function Explorer({
             tabBarExtraContent={{
               left: (
                 <div className=" flex h-full items-center gap-2">
-                  <ExplorerPremiumSearch
-                    premiumSearchState={{
-                      ...premiumSearchState,
-                      setSearch: (args) => {
-                        setSimilarityItem(undefined);
-                        premiumSearchState.setSearch(args);
-                      },
-                    }}
-                  />
+                  <ExplorerPremiumSearch />
                   <Segmented
                     selected
                     value={analysisDomain}
@@ -604,9 +593,9 @@ export function Explorer({
                                         ...oldState,
                                         ...itemsToRender.slice(
                                           (page - 1) *
-                                            userDisplaySettings.explorerPageSize,
+                                          userDisplaySettings.explorerPageSize,
                                           page *
-                                            userDisplaySettings.explorerPageSize
+                                          userDisplaySettings.explorerPageSize
                                         ),
                                       ]);
                                     })
@@ -619,9 +608,9 @@ export function Explorer({
                                   {
                                     itemsToRender.slice(
                                       (page - 1) *
-                                        userDisplaySettings.explorerPageSize,
+                                      userDisplaySettings.explorerPageSize,
                                       page *
-                                        userDisplaySettings.explorerPageSize
+                                      userDisplaySettings.explorerPageSize
                                     ).length
                                   }
                                   )

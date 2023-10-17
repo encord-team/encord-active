@@ -93,54 +93,6 @@ class AnalysisSearch(BaseModel):
     similarities: Optional[List[float]]
 
 
-@functools.lru_cache
-def get_embedder() -> CLIPEmbedder:
-    return CLIPEmbedder()
-
-
-@functools.lru_cache(maxsize=2)
-def _get_similarity_query_index(
-    project_hash: uuid.UUID,
-    domain: AnalysisDomain,
-    engine: Engine,
-) -> similarity_query.SimilarityQuery:
-    tables = _get_metric_domain_tables(domain)
-    base_domain: DomainTables = tables.primary
-    with Session(engine) as sess:
-        query = select(base_domain.metadata.embedding_clip, *base_domain.select_args(base_domain.metadata)).where(
-            # FIXME: will break for nearest embedding on predictions
-            base_domain.metadata.project_hash == project_hash,  # type: ignore
-            is_not(base_domain.metadata.embedding_clip, None),
-        )
-        results = sess.exec(query).fetchall()
-    embeddings = [np.frombuffer(e[0], dtype=np.float64) for e in results if e is not None]  # type: ignore
-    return similarity_query.SimilarityQuery(embeddings, [rest for _em, *rest in results])  # type: ignore
-
-
-def _find_similar_items(
-    project_hash: uuid.UUID,
-    src_embedding: bytes,
-    domain: AnalysisDomain,
-    tables: DomainTables,
-    engine: Engine,
-    similarity_exclude: Optional[DataOrAnnotateItem],
-    extra_where: Optional[list],
-    extra_where_has_filters: bool,
-    limit: int,
-) -> List[similarity_query.SimilarityResult]:
-    similarity_query_impl = _get_similarity_query_index(project_hash, domain, engine)
-    return similarity_query_impl.filter_query(
-        engine=engine,
-        tables=tables,
-        project_hash=project_hash,
-        filters=extra_where or [],
-        has_filters=extra_where_has_filters,
-        embedding=np.frombuffer(src_embedding, dtype=np.float64),
-        k=limit,
-        item=None if similarity_exclude is None else similarity_exclude,
-    )
-
-
 @router.post("/search")
 def route_project_analysis_search(
     project_hash: uuid.UUID,
@@ -151,9 +103,6 @@ def route_project_analysis_search(
     offset: int = Form(0, ge=0),
     limit: int = Form(1000, le=1000),
     engine: Engine = Depends(dep_engine_readonly),
-    similarity_item: Optional[DataOrAnnotateItem] = Depends(parse_optional_data_or_annotate_item),
-    text: Annotated[Optional[str], Form()] = None,
-    image: Annotated[Optional[UploadFile], File()] = None,
 ) -> AnalysisSearch:
     tables = _get_metric_domain_tables(domain)
     base_table = tables.primary
@@ -164,101 +113,27 @@ def route_project_analysis_search(
         search=filters,
         project_filters={"project_hash": [project_hash]},
     )
-    where_has_filters = len(where) > 1  # 0 is always project hash constraint for 1 table
 
-    similarity_searches = [
-        True for similarity_search in [similarity_item, text, image] if similarity_search is not None
+    with Session(engine) as sess:
+        query = select(*[getattr(base_table.analytics, join_attr) for join_attr in base_table.join]).where(*where)
+
+        if order_by is not None:
+            if order_by in base_table.metrics or order_by in base_table.enums:
+                order_by_attr = getattr(base_table.analytics, order_by)
+                if desc:
+                    order_by_attr = order_by_attr.desc()
+                query = query.order_by(order_by_attr)
+
+        # + 1 to detect truncation.
+        query = query.offset(offset).limit(limit + 1)
+        search_results = sess.exec(query).fetchall()
+
+    results = [
+        _pack_id(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
+        for result in search_results[:limit]
     ]
-
-    is_similarity_query = False
-    if len(similarity_searches) > 1:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Only one of `item`, `text` or `image` is allowed."
-        )
-    elif len(similarity_searches) == 1:
-        is_similarity_query = True
-
-    # Base implementation.
-    if not is_similarity_query:
-        with Session(engine) as sess:
-            query = select(*[getattr(base_table.analytics, join_attr) for join_attr in base_table.join]).where(*where)
-
-            if order_by is not None:
-                if order_by in base_table.metrics or order_by in base_table.enums:
-                    order_by_attr = getattr(base_table.analytics, order_by)
-                    if desc:
-                        order_by_attr = order_by_attr.desc()
-                    query = query.order_by(order_by_attr)
-
-            # + 1 to detect truncation.
-            query = query.offset(offset).limit(limit + 1)
-            search_results = sess.exec(query).fetchall()
-
-        results = [
-            _pack_id(**{str(join_attr): value for join_attr, value in zip(base_table.join, result)})
-            for result in search_results[:limit]
-        ]
-        truncated = len(search_results) == limit + 1
-        return AnalysisSearch(truncated=truncated, results=results, similarities=None)
-
-    # Requested a similarity search implementation
-    # Resolve to requested arguments to similarity enhanced search implementation
-    similarity_embedding_bytes: Optional[bytes]
-    similarity_exclude_constraint: Optional[DataOrAnnotateItem] = None
-    if similarity_item is not None:
-        join_attr_set = {
-            "du_hash": similarity_item.du_hash,
-            "frame": similarity_item.frame,
-        }
-        if similarity_item.annotation_hash is not None:
-            join_attr_set["annotation_hash"] = similarity_item.annotation_hash
-        elif domain == AnalysisDomain.Annotation:
-            raise ValueError(f"Similarity domain mismatch: {similarity_item} in domain {domain}")
-        with Session(engine) as sess:
-            similarity_embedding_bytes = sess.exec(
-                select(base_table.metadata.embedding_clip).where(
-                    base_table.metadata.project_hash == project_hash,
-                    *[
-                        getattr(base_table.metadata, join_attr) == join_attr_set[join_attr]
-                        for join_attr in base_table.join
-                    ],
-                    base_table.metadata.project_hash == project_hash,
-                )
-            ).first()
-            similarity_exclude_constraint = similarity_item
-    elif text is not None:
-        similarity_embedding_bytes = get_embedder().embed_text(text).astype(dtype=np.float64).tobytes()
-    elif image is not None:
-        request_object_content = image.file.read()
-        img_query = Image.open(io.BytesIO(request_object_content))
-        img_exif = img_query.getexif()
-        if img_exif and (274 in img_exif):  # 274 corresponds to orientation key for EXIF metadata
-            img_query = ImageOps.exif_transpose(img_query)
-        similarity_embedding_bytes = get_embedder().embed_image(img_query).astype(dtype=np.float64).tobytes()
-    else:
-        # NOTE: this shouldn't happen, but the type system doesn't understand this.
-        raise ValueError("Missing search term")
-
-    if similarity_embedding_bytes is None:
-        raise RuntimeError("Similarity search against non missing item or failed to create embedding")
-
-    similarity_result = _find_similar_items(
-        project_hash,
-        similarity_embedding_bytes,
-        domain,
-        base_table,
-        engine,
-        similarity_exclude_constraint,
-        where,
-        where_has_filters,
-        limit + 1,
-    )
-    truncated = len(similarity_result) == limit + 1
-    return AnalysisSearch(
-        truncated=truncated,
-        results=[r.item for r in similarity_result[:limit]],
-        similarities=[r.similarity for r in similarity_result[:limit]],
-    )
+    truncated = len(search_results) == limit + 1
+    return AnalysisSearch(truncated=truncated, results=results, similarities=None)
 
 
 @router.get("/scatter")
