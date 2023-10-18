@@ -1,9 +1,12 @@
 import uuid
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import Text, delete, insert, literal, tuple_
+from sqlalchemy import Text, delete, func, literal, tuple_, update
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.engine import Dialect, Engine
 from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
@@ -44,6 +47,16 @@ class ProjectTagEntry(BaseModel):
     name: str
 
 
+class ProjectTagEntryMeta(BaseModel):
+    hash: uuid.UUID
+    name: str
+    description: str
+    dataCount: int
+    labelCount: int
+    createdAt: Optional[datetime]
+    updatedAt: Optional[datetime]
+
+
 @router.get("/")
 def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)) -> List[ProjectTagEntry]:
     with Session(engine) as sess:
@@ -53,18 +66,82 @@ def route_list_tags(project_hash: uuid.UUID, engine: Engine = Depends(dep_engine
     return [ProjectTagEntry(hash=tag_hash, name=name) for tag_hash, name in tags]
 
 
+@router.get("/meta")
+def route_list_tags_meta(
+    project_hash: uuid.UUID, engine: Engine = Depends(dep_engine_readonly)
+) -> List[ProjectTagEntryMeta]:
+    with Session(engine) as sess:
+        tags = sess.exec(
+            select(  # type: ignore
+                ProjectTag.tag_hash,
+                ProjectTag.name,
+                ProjectTag.description,
+                func.count(ProjectTaggedDataUnit.du_hash),
+                ProjectTag.created_at,
+                ProjectTag.updated_at,
+            )
+            .where(ProjectTag.project_hash == project_hash)
+            .outerjoin(ProjectTaggedDataUnit, ProjectTag.tag_hash == ProjectTaggedDataUnit.tag_hash)
+            .group_by(ProjectTag.tag_hash)
+        ).fetchall()
+    return [
+        ProjectTagEntryMeta(
+            hash=tag_hash,
+            name=name,
+            description=description,
+            dataCount=dataCount,
+            labelCount=32,
+            createdAt=created_at,
+            updatedAt=updated_at,
+        )
+        for tag_hash, name, description, dataCount, created_at, updated_at in tags
+    ]
+
+
+class ProjectTagRequest(BaseModel):
+    name: str
+    description: str
+
+
 @router.post("/")
 def route_create_tags(
-    project_hash: uuid.UUID, tag_names: List[str], engine=Depends(dep_engine)
+    project_hash: uuid.UUID, tags: List[ProjectTagRequest], engine=Depends(dep_engine)
 ) -> Dict[str, uuid.UUID]:
     with Session(engine) as sess:
         project_tags = [
-            ProjectTag(tag_hash=uuid.uuid4(), name=name, description="", project_hash=project_hash)
-            for name in tag_names
+            ProjectTag(
+                tag_hash=uuid.uuid4(),
+                name=tag.name,
+                description=tag.description,
+                project_hash=project_hash,
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
+            )
+            for tag in tags
         ]
         sess.add_all(project_tags)
         sess.commit()
         return {tag.name: tag.tag_hash for tag in project_tags}
+
+
+@router.put("/{tag_hash}")
+def route_update_tag(
+    project_hash: uuid.UUID, tag_hash: uuid.UUID, tag: ProjectTagRequest, engine=Depends(dep_engine)
+) -> None:
+    with Session(engine) as sess:
+        sess.execute(
+            update(
+                ProjectTag,
+                values={
+                    ProjectTag.name: tag.name,
+                    ProjectTag.description: tag.description,
+                    ProjectTag.updated_at: datetime.now(),
+                },
+                whereclause=ProjectTag.tag_hash == tag_hash and ProjectTag.project_hash == project_hash,
+            )
+        )
+        sess.commit()
+    return None
 
 
 def _where_tag_items(dialect: Dialect, items: List[str]) -> Tuple[Optional[list], Optional[list]]:
@@ -181,6 +258,11 @@ def route_items_tag_all(
                             tag_hash=tag,
                         )
                     )
+        sess.execute(
+            update(
+                ProjectTag, values={ProjectTag.updated_at: datetime.now()}, whereclause=in_op(ProjectTag.tag_hash, tags)
+            )
+        )
         sess.commit()
 
 
@@ -213,6 +295,11 @@ def route_items_untag_all(
             ).fetchall()
             for annotation_tag in annotation_tags:
                 sess.delete(annotation_tag)
+        sess.execute(
+            update(
+                ProjectTag, values={ProjectTag.updated_at: datetime.now()}, whereclause=in_op(ProjectTag.tag_hash, tags)
+            )
+        )
         sess.commit()
 
 
@@ -276,16 +363,39 @@ def route_filter_tag_all(
         # FIXME: make this 1 query!!!
         guid = GUID().bind_processor(engine.dialect)
         for tag_hash in tags:
-            sess.execute(
-                insert(tables.primary.tag).from_select(
-                    ["project_hash", "tag_hash"] + tables.primary.join,
-                    select(  # type: ignore
-                        literal(guid(project_hash)),
-                        literal(guid(tag_hash)),
-                        *[getattr(tables.primary.analytics, j) for j in tables.primary.join],
-                    ).where(*where),
+            if engine.dialect.name == "postgresql":
+                sess.execute(
+                    postgresql_insert(tables.primary.tag)
+                    .from_select(
+                        ["project_hash", "tag_hash"] + tables.primary.join,
+                        select(  # type: ignore
+                            literal(guid(project_hash)),
+                            literal(guid(tag_hash)),
+                            *[getattr(tables.primary.analytics, j) for j in tables.primary.join],
+                        ).where(*where),
+                    )
+                    .on_conflict_do_nothing()
                 )
+            elif engine.dialect.name == "sqlite":
+                sess.execute(
+                    sqlite_insert(tables.primary.tag)
+                    .from_select(
+                        ["project_hash", "tag_hash"] + tables.primary.join,
+                        select(  # type: ignore
+                            literal(guid(project_hash)),
+                            literal(guid(tag_hash)),
+                            *[getattr(tables.primary.analytics, j) for j in tables.primary.join],
+                        ).where(*where),
+                    )
+                    .on_conflict_do_nothing()
+                )
+        sess.execute(
+            update(
+                ProjectTag,
+                values={ProjectTag.updated_at: datetime.now()},
+                whereclause=in_op(ProjectTag.tag_hash, tags) and ProjectTag.project_hash == project_hash,
             )
+        )
         sess.commit()
 
 
@@ -308,4 +418,20 @@ def route_filter_untag_all(
                 *where,
             )
         )
+        sess.execute(
+            update(
+                ProjectTag, values={ProjectTag.updated_at: datetime.now()}, whereclause=in_op(ProjectTag.tag_hash, tags)
+            )
+        )
         sess.commit()
+    return None
+
+
+@router.delete("/")
+def route_delete_tag(project_hash: uuid.UUID, tags: List[uuid.UUID], engine: Engine = Depends(dep_engine)) -> None:
+    with Session(engine) as sess:
+        sess.execute(
+            delete(ProjectTag).where(in_op(ProjectTag.tag_hash, tags), ProjectTag.project_hash == project_hash)
+        )
+        sess.commit()
+    return None

@@ -310,9 +310,9 @@ function GalleryCardRaw(props: {
                 <>
                   <Icon
                     component={MdImageSearch}
-                    className="top-50 left-50 absolute z-20 text-5xl"
+                    className="top-50 left-50 absolute z-50 text-5xl opacity-70"
                   />
-                  <div className="absolute z-50 h-20 w-20 bg-gray-100 bg-opacity-20" />
+                  <div className="absolute z-40 h-20 w-20 rounded-md bg-gray-100 bg-opacity-70" />
                   <div
                     className={classy(
                       "group absolute z-30 h-full w-full bg-gray-100 bg-opacity-0 hover:bg-opacity-40 hover:opacity-100"

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQuerier } from "../Context";
+import { ProjectTagRequest } from "../../openapi/api";
 
 export function useProjectMutationCreateTag(projectHash: string) {
   const querier = useQuerier();
@@ -7,10 +8,10 @@ export function useProjectMutationCreateTag(projectHash: string) {
 
   return useMutation(
     ["useProjectMutationCreateTag", querier.baseUrl, projectHash],
-    (tagNames: string[]) =>
+    (tags: ProjectTagRequest[]) =>
       querier
         .getProjectAPI()
-        .routeCreateTags(projectHash, tagNames)
+        .routeCreateTags(projectHash, tags)
         .then(async (r) => {
           await queryClient.invalidateQueries([
             "useProjectListTags",

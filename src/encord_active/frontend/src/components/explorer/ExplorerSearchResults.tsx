@@ -101,7 +101,7 @@ function ExplorerSearchResultsRaw(props: {
   return (
     <div className="relative h-full overflow-auto">
       <List
-        className="explorer-search-results absolute px-6"
+        className="explorer-search-results absolute w-full px-6"
         dataSource={dataSource}
         grid={{
           column: gridCount ?? 4,
@@ -109,6 +109,7 @@ function ExplorerSearchResultsRaw(props: {
         loading={loading}
         locale={ExplorerSearchLocale}
         pagination={{
+          responsive: true,
           pageSize,
           current: page,
           onChange: (page, pageSize) => {

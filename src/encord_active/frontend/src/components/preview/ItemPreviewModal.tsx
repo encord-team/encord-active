@@ -16,7 +16,7 @@ import {
   MdOutlineVisibility,
   MdOutlineVisibilityOff,
 } from "react-icons/md";
-import { EditOutlined } from "@ant-design/icons";
+import { EditOutlined, LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { BasicDataNode, DataNode } from "antd/es/tree";
 import { VscSymbolClass } from "react-icons/vsc";
 import { useProjectItem } from "../../hooks/queries/useProjectItem";
@@ -53,6 +53,10 @@ export function ItemPreviewModal(props: {
   domain: "annotation" | "data";
   onClose: () => void;
   onShowSimilar: () => void;
+  isSelected: boolean;
+  toggleSelection: (() => void) | undefined;
+  viewNext: () => void;
+  viewPrevious: () => void;
   editUrl:
     | ((dataHash: string, projectHash: string, frame: number) => string)
     | undefined;
@@ -65,6 +69,10 @@ export function ItemPreviewModal(props: {
     predictionHash,
     onClose,
     onShowSimilar,
+    isSelected,
+    toggleSelection,
+    viewNext,
+    viewPrevious,
     editUrl,
   } = props;
   const dataId =
@@ -325,12 +333,20 @@ export function ItemPreviewModal(props: {
   return (
     <Modal
       className="item-preview-modal"
-      title={preview?.data_title ?? ""}
+      title={
+        <div className="flex gap-2">
+          <Button onClick={viewPrevious} icon={<LeftOutlined />} />
+          <Button onClick={viewNext} icon={<RightOutlined />} />
+        </div>
+      }
       open={dataId !== undefined}
       onCancel={onClose}
       width="95vw"
       footer={
         <>
+          <Button onClick={toggleSelection}>
+            {isSelected ? "Remove from" : "Add to"} selection
+          </Button>
           <Button onClick={onShowSimilar} icon={<MdImageSearch />}>
             Similarity search
           </Button>
@@ -392,6 +408,7 @@ export function ItemPreviewModal(props: {
                             </List.Item>
                           )}
                         />
+
                         <ItemTags
                           tags={preview.tags}
                           annotationHash={annotationHash}

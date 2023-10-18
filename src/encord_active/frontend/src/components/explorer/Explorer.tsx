@@ -14,7 +14,6 @@ import {
   Col,
   Dropdown,
   Modal,
-  Popover,
   Row,
   Segmented,
   Space,
@@ -28,7 +27,6 @@ import {
   InfoCircleOutlined,
   TableOutlined,
 } from "@ant-design/icons";
-import { BulkTaggingForm } from "./Tagging";
 import {
   FilterState,
   DefaultFilters,
@@ -36,7 +34,6 @@ import {
 } from "../util/MetricFilter";
 import { UploadToEncordModal } from "../tabs/modals/UploadToEncordModal";
 import { ExplorerEmbeddings } from "./ExplorerEmbeddings";
-import { CreateSubsetModal } from "../tabs/modals/CreateSubsetModal";
 import {
   AnalysisDomain,
   DomainSearchFilters,
@@ -64,6 +61,8 @@ import { classy } from "../../helpers/classy";
 import { useUserSettings } from "../../hooks/useUserSettings";
 import { CustomTooltip } from "../util/CustomTooltip";
 import { Filters } from "./filters/FIlters";
+import { RemoveFromCollectionModal } from "../tabs/modals/RemoveFromCollectionModal";
+import { AddToCollectionModal } from "../tabs/modals/AddToCollectionModal";
 
 export type Props = {
   projectHash: string;
@@ -81,6 +80,8 @@ export type Props = {
   selectedItems: ReadonlySet<string> | "ALL";
   setSelectedItems: Dispatch<SetStateAction<ReadonlySet<string> | "ALL">>;
   hasSelectedItems: boolean;
+  dataFilters: FilterState;
+  setDataFilters: Dispatch<SetStateAction<FilterState>>;
 };
 
 export function Explorer({
@@ -97,12 +98,15 @@ export function Explorer({
   selectedItems,
   setSelectedItems,
   hasSelectedItems,
+  dataFilters,
+  setDataFilters,
 }: Props) {
   // Item selected for extra analysis operations
   const [similarityItem, setSimilarityItem] = useState<string | undefined>();
 
   const navigate = useNavigate();
   const { previewItem } = useParams<{ previewItem?: string }>();
+
   const navigateBase =
     predictionHash === undefined
       ? `/projects/${projectHash}/explorer`
@@ -183,7 +187,6 @@ export function Explorer({
   const [predictionOutcome, setPredictionOutcome] =
     useState<PredictionDomain>("p");
   const [iou, setIou] = useState<number>(0.5);
-  const [dataFilters, setDataFilters] = useState<FilterState>(DefaultFilters);
   const [annotationFilters, setAnnotationFilters] = useState<FilterState>(
     DefaultAnnotationFilters
   );
@@ -342,6 +345,12 @@ export function Explorer({
     }
     return sortedItems.results;
   }, [sortedItems, similarityItem]);
+
+  const previewItemIndex: number = useMemo(
+    () => (previewItem ? itemsToRender.indexOf(previewItem) : -1),
+    [previewItem, itemsToRender]
+  );
+
   const itemSimilarities: readonly number[] | undefined = useMemo(() => {
     if (sortedItems == null) {
       return undefined;
@@ -385,8 +394,6 @@ export function Explorer({
     [closePreview, setSearch]
   );
 
-  const allowTaggingAnnotations = analysisDomain === AnalysisDomain.Annotation;
-
   const loadingDescription = useMemo(() => {
     const descriptions = [
       {
@@ -424,19 +431,53 @@ export function Explorer({
     "annotation"
   );
 
+  const viewPreviousImage = useCallback(() => {
+    if (previewItem == null) {
+      return undefined;
+    }
+
+    if (previewItemIndex < 1) {
+      return undefined;
+    }
+    return setPreviewedItem(itemsToRender[previewItemIndex - 1]);
+  }, [previewItem, itemsToRender, setPreviewedItem, previewItemIndex]);
+
+  const viewNextImage = useCallback(() => {
+    if (previewItem == null) {
+      return undefined;
+    }
+    if (
+      previewItemIndex === -1 ||
+      previewItemIndex === itemsToRender.length - 1
+    ) {
+      return undefined;
+    }
+    return setPreviewedItem(itemsToRender[previewItemIndex + 1]);
+  }, [previewItem, itemsToRender, setPreviewedItem, previewItemIndex]);
+
   return (
     <div className="h-full">
-      <CreateSubsetModal
-        open={openModal === "subset"}
-        close={close}
-        projectHash={projectHash}
-        filters={filters.filters}
-      />
       <UploadToEncordModal
         open={openModal === "upload"}
         close={close}
         projectHash={projectHash}
         setSelectedProjectHash={setSelectedProjectHash}
+      />
+      <RemoveFromCollectionModal
+        selectedItems={selectedItems}
+        open={openModal === "removeFromCollection"}
+        close={close}
+        projectHash={projectHash}
+        filtersDomain={filters.analysisDomain}
+        filters={filters.filters}
+      />
+      <AddToCollectionModal
+        selectedItems={selectedItems}
+        open={openModal === "addToCollection"}
+        close={close}
+        projectHash={projectHash}
+        filtersDomain={filters.analysisDomain}
+        filters={filters.filters}
       />
       <Modal
         title={`Changing domain to ${analysisDomain}`}
@@ -463,6 +504,19 @@ export function Explorer({
         onShowSimilar={() =>
           previewItem != null ? setSimilaritySearch(previewItem) : undefined
         }
+        isSelected={
+          selectedItems === "ALL" ||
+          (previewItem != null && selectedItems.has(previewItem))
+        }
+        toggleSelection={
+          previewItem != null
+            ? () => {
+                toggleImageSelection(previewItem);
+              }
+            : undefined
+        }
+        viewNext={() => viewNextImage()}
+        viewPrevious={() => viewPreviousImage()}
         editUrl={editUrl}
       />
       <Row className="h-full">
@@ -525,9 +579,9 @@ export function Explorer({
                   <div className="flex h-full flex-col items-center bg-gray-100 py-2">
                     <div
                       className={classy(
-                        "top-1.5 z-[1000] flex flex-shrink flex-grow-0 basis-0 items-center gap-3 rounded-md bg-white py-2 px-6 opacity-0",
+                        "top-1.5 flex flex-shrink flex-grow-0 basis-0 items-center gap-3 rounded-md bg-white py-2 px-6 opacity-0 shadow",
                         {
-                          "opacity-100": hasSelectedItems,
+                          "z-[1000] opacity-100": hasSelectedItems,
                         }
                       )}
                     >
@@ -588,7 +642,7 @@ export function Explorer({
                         trigger={["click"]}
                       >
                         <Space>
-                          Select
+                          Select All
                           <DownOutlined />
                         </Space>
                       </Dropdown>
@@ -606,28 +660,23 @@ export function Explorer({
                           )
                         </span>
                       </Button>
-
-                      <Popover
-                        placement="bottomRight"
-                        content={
-                          <BulkTaggingForm
-                            projectHash={projectHash}
-                            selectedItems={selectedItems}
-                            filtersDomain={filters.analysisDomain}
-                            filters={filters.filters}
-                            allowTaggingAnnotations={allowTaggingAnnotations}
-                          />
-                        }
-                        trigger="click"
+                      <Button
+                        className="border-none bg-gray-9 text-white"
+                        type="default"
+                        disabled={!hasSelectedItems}
+                        onClick={() => setOpenModal("removeFromCollection")}
                       >
-                        <Button
-                          className="border-none bg-gray-9 text-white"
-                          type="default"
-                          disabled={!hasSelectedItems}
-                        >
-                          Tag
-                        </Button>
-                      </Popover>
+                        Remove from collection
+                      </Button>
+
+                      <Button
+                        className="border-none bg-gray-9 text-white"
+                        type="default"
+                        disabled={!hasSelectedItems}
+                        onClick={() => setOpenModal("addToCollection")}
+                      >
+                        Add to a Collection
+                      </Button>
                     </div>
                     <div className="-mt-10 h-full w-full flex-auto">
                       <ExplorerSearchResults
@@ -686,7 +735,10 @@ export function Explorer({
             items={[
               {
                 label: (
-                  <Tooltip title="Gain insight into the quality and quantity of your data and labels. Easy find and view common issues.">
+                  <Tooltip
+                    placement="left"
+                    title="Gain insight into the quality and quantity of your data and labels. Easy find and view common issues."
+                  >
                     Overview
                   </Tooltip>
                 ),

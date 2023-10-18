@@ -30,6 +30,16 @@ export function useProjectMutationFiltersRemoveTag(projectHash: string) {
               projectHash,
             ],
           });
+          await queryClient.invalidateQueries([
+            "useProjectListTagsMeta",
+            querier.baseUrl,
+            projectHash,
+          ]);
+          await queryClient.invalidateQueries([
+            "useProjectAnalysisSearch",
+            querier.baseUrl,
+            projectHash,
+          ]);
         })
   );
 }

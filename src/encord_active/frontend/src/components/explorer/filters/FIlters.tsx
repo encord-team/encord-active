@@ -50,6 +50,9 @@ export function Filters({
 
   return (
     <div className="flex w-full flex-col gap-2">
+      <Button onClick={() => reset()} icon={<MdFilterAltOff />}>
+        Reset filters
+      </Button>
       <Select
         suffixIcon={<PlusOutlined />}
         value="Add a new filter"
@@ -137,13 +140,6 @@ export function Filters({
         collaborators={collaborators ?? []}
         analysisDomain={AnalysisDomain.Annotation}
       />
-      <Button
-        disabled={!canResetFilters}
-        onClick={() => reset()}
-        icon={<MdFilterAltOff />}
-      >
-        Reset filters
-      </Button>
     </div>
   );
 }

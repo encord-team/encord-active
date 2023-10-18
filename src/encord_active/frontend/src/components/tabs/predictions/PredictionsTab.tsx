@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { Divider, Select, Space, Tabs, Typography } from "antd";
 import { PredictionSummaryTab } from "./PredictionSummaryTab";
 import { PredictionsMetricPerformanceTab } from "./PredictionsMetricPerformanceTab";
@@ -6,6 +6,7 @@ import { Explorer, Props as ExplorerProps } from "../../explorer";
 import { ProjectDomainSummary } from "../../../openapi/api";
 import { useProjectListPredictions } from "../../../hooks/queries/useProjectListPredictions";
 import { FeatureHashMap } from "../../Types";
+import { FilterState } from "../../util/MetricFilter";
 
 export function PredictionsTab(
   props: {
@@ -22,6 +23,11 @@ export function PredictionsTab(
     featureHashMap,
     remoteProject,
     setSelectedProjectHash,
+    selectedItems,
+    setSelectedItems,
+    hasSelectedItems,
+    dataFilters,
+    setDataFilters,
   } = props;
   const [predictionHash, setPredictionHash] = useState<undefined | string>();
   const { data: allPredictions } = useProjectListPredictions(projectHash);

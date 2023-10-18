@@ -34,6 +34,14 @@ export const DefaultAnnotationFilters: FilterState = {
   ordering: [],
 };
 
+function roundDownDecimal(num: number, precision: number) {
+  return Math.floor(num * 10 ** precision) / 10 ** precision;
+}
+
+function roundUpDecimal(num: number, precision: number) {
+  return Math.ceil(num * 10 ** precision) / 10 ** precision;
+}
+
 export function getMetricBounds<
   R extends {
     min: number;
@@ -47,27 +55,21 @@ export function getMetricBounds<
   max: number;
   step: number;
 } {
-  if (metric.type === "normal") {
+  if (metric.type === "normal" || metric.type === "ufloat") {
     return {
-      min: 0.0,
-      max: 1.0,
+      min: roundDownDecimal(bounds.min, 2),
+      max: roundUpDecimal(bounds.max, 2),
       step: 0.01,
-    };
-  } else if (metric.type === "ufloat") {
-    return {
-      min: 0.0,
-      max: bounds.max,
-      step: bounds.max / 100,
     };
   } else if (metric.type === "uint") {
     return {
-      min: 0,
+      min: bounds.min,
       max: bounds.max,
       step: 1,
     };
   } else if (metric.type === "rank") {
     return {
-      min: 0,
+      min: bounds.min,
       max: bounds.max,
       step: 1,
     };
@@ -202,9 +204,17 @@ export function addNewEntry(
     }
 
     // Try insert new 'enum' key.
-    const newEnumEntry = Object.entries(metricsSummary.enums).find(
+
+    let newEnumEntry = Object.entries(metricsSummary.enums).find(
       ([candidate]) => !(candidate in old.enumFilters)
     );
+
+    if (newMetricName !== undefined) {
+      newEnumEntry = Object.entries(metricsSummary.enums).find(
+        ([candidate]) => candidate === newMetricName
+      );
+    }
+
     if (newEnumEntry != null) {
       const [newEnumKey, newEnumSummary] = newEnumEntry;
       if (newEnumSummary !== undefined) {

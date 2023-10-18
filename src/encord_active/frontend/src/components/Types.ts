@@ -47,7 +47,12 @@ export type FeatureHashMap = Readonly<
   Record<string, { readonly color: string; readonly name: string }>
 >;
 
-export type ModalName = "subset" | "upload";
+export type ModalName =
+  | "subset"
+  | "upload"
+  | "removeFromCollection"
+  | "addToCollection"
+  | "editCollection";
 
 export type UserSettings = {
   explorerGridCount: number;

@@ -29,6 +29,7 @@ export const Colors = {
   purple: "#5658dd",
   darkGray: "#434343",
   lightGray: "#595959",
+  lightestGray: "#a0a0a0",
 };
 export const GRID_MIN_COUNT = 1;
 export const GRID_MAX_COUNT = 6;

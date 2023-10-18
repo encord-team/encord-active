@@ -8,8 +8,14 @@ export function CreateSubsetModal(props: {
   close: () => void;
   projectHash: string;
   filters: SearchFilters;
+  prefill: {
+    project_title?: string;
+    project_description?: string;
+    dataset_title?: string;
+    dataset_description?: string;
+  };
 }) {
-  const { open, close, projectHash, filters } = props;
+  const { open, close, projectHash, filters, prefill } = props;
   const [form] = Form.useForm<{
     project_title: string;
     project_description?: string | undefined;
@@ -77,20 +83,20 @@ export function CreateSubsetModal(props: {
           label="Project Title"
           rules={[{ required: true }]}
         >
-          <Input />
+          <Input defaultValue={prefill.project_title} />
         </Form.Item>
         <Form.Item name="project_description" label="Project Description">
-          <Input type="textarea" />
+          <Input defaultValue={prefill.project_description} type="textarea" />
         </Form.Item>
         <Form.Item
           name="dataset_title"
           label="Dataset Title"
           rules={[{ required: true }]}
         >
-          <Input />
+          <Input defaultValue={prefill.dataset_title} />
         </Form.Item>
         <Form.Item name="dataset_description" label="Dataset Description">
-          <Input type="textarea" />
+          <Input type="textarea" defaultValue={prefill.dataset_description} />
         </Form.Item>
       </Form>
     </Modal>

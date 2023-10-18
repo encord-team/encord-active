@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Spin, Tabs } from "antd";
+import { Badge, Spin, Tabs } from "antd";
 import { useNavigate, useParams } from "react-router";
-import { PlusOutlined } from "@ant-design/icons";
 import {
   FeatureHashMap,
   ModalName,
@@ -15,9 +14,11 @@ import { SummaryView } from "./tabs/AnalyticsView";
 import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
-import { env } from "../constants";
-import { classy } from "../helpers/classy";
+import { Colors } from "../constants";
 import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
+import { Collections } from "./tabs/collections/Collections";
+import { DefaultFilters, FilterState } from "./util/MetricFilter";
+import { useProjectListTagsMeta } from "../hooks/queries/useProjectListTagsMeta";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -32,6 +33,8 @@ export function ProjectPage(props: {
   if (!tab) {
     throw Error("Missing `tab` path parameter");
   }
+
+  const { data: projectTagsMeta = [] } = useProjectListTagsMeta(projectHash);
 
   const { data: projectSummary, isError } = useProjectSummary(projectHash);
 
@@ -111,6 +114,7 @@ export function ProjectPage(props: {
   // Modal state
   const [openModal, setOpenModal] = useState<ModalName | undefined>();
 
+  const [dataFilters, setDataFilters] = useState<FilterState>(DefaultFilters);
   // Loading screen while waiting for full summary of project metrics.
   if (projectSummary == null) {
     return <Spin indicator={loadingIndicator} />;
@@ -135,23 +139,6 @@ export function ProjectPage(props: {
             setSelectedProjectHash={setSelectedProjectHash}
           />
         ),
-        right: (
-          <Button
-            className={classy(
-              "text-white disabled:bg-gray-9 disabled:bg-opacity-40 disabled:text-white",
-              {
-                "border-none bg-gray-9": hasSelectedItems,
-              }
-            )}
-            onClick={() => setOpenModal("subset")}
-            disabled={!hasSelectedItems}
-            hidden={env === "sandbox"}
-            icon={<PlusOutlined />}
-            size="large"
-          >
-            Create Annotate Project
-          </Button>
-        ),
       }}
       items={[
         {
@@ -172,6 +159,8 @@ export function ProjectPage(props: {
               selectedItems={selectedItems}
               setSelectedItems={setSelectedItems}
               hasSelectedItems={hasSelectedItems}
+              dataFilters={dataFilters}
+              setDataFilters={setDataFilters}
             />
           ),
         },
@@ -196,22 +185,35 @@ export function ProjectPage(props: {
               dataMetricsSummary={projectSummary.data}
               featureHashMap={featureHashMap}
               setSelectedProjectHash={setSelectedProjectHash}
-              remoteProject={remoteProject}
+              selectedItems={selectedItems}
+              setSelectedItems={setSelectedItems}
+              hasSelectedItems={hasSelectedItems}
+              dataFilters={dataFilters}
+              setDataFilters={setDataFilters}
             />
           ),
         },
-
-        // {
-        //   label: "Project Comparison",
-        //   key: "comparison",
-        //   children: (
-        //     <ProjectComparisonTab
-        //       projectHash={projectHash}
-        //       dataMetricsSummary={projectSummary.data}
-        //       annotationMetricsSummary={projectSummary.annotation}
-        //     />
-        //   ),
-        // },
+        {
+          label: (
+            <div className="flex items-center gap-1">
+              <div>Collections</div>
+              <Badge
+                count={projectTagsMeta.length}
+                color={Colors.lightestGray}
+              />
+            </div>
+          ),
+          key: "collections",
+          children: (
+            <Collections
+              projectHash={projectHash}
+              dataFilters={dataFilters}
+              setDataFilters={setDataFilters}
+              openModal={openModal}
+              setOpenModal={setOpenModal}
+            />
+          ),
+        },
       ]}
       activeKey={tab}
       onChange={(key) => navigate(`../${key}`, { relative: "path" })}

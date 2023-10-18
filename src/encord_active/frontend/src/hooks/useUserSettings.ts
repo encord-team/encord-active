@@ -7,7 +7,7 @@ export function useUserSettings(): [
 ] {
   const DEFAULT_SETTINGS: UserSettings = {
     explorerGridCount: 5,
-    explorerPageSize: 20,
+    explorerPageSize: 10,
   };
 
   const USER_SETTINGS_KEY = "userDisplaySettings";

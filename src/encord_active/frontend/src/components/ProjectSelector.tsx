@@ -21,7 +21,7 @@ export function ProjectSelector({
   );
 
   return (
-    <Space size="small">
+    <Space size="large">
       <Button
         className="border-none shadow-none"
         onClick={() => setSelectedProjectHash(undefined)}
@@ -31,6 +31,7 @@ export function ProjectSelector({
         value={selectedProjectHash}
         onChange={(projectHash) => setSelectedProjectHash(projectHash)}
         className="max-w-lg"
+        popupClassName="min-w-fit"
         options={[
           {
             label: "User Projects",

@@ -1,9 +1,16 @@
+from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from sqlmodel import Index, SQLModel
 
 from encord_active.db.models.project import Project
-from encord_active.db.util.fields import field_text, field_uuid, fk_constraint
+from encord_active.db.util.fields import (
+    field_datetime,
+    field_text,
+    field_uuid,
+    fk_constraint,
+)
 
 
 class ProjectTag(SQLModel, table=True):
@@ -12,6 +19,8 @@ class ProjectTag(SQLModel, table=True):
     project_hash: UUID = field_uuid()
     name: str = field_text()
     description: str = field_text()
+    created_at: Optional[datetime] = field_datetime(nullable=True)
+    updated_at: Optional[datetime] = field_datetime(nullable=True)
 
     __table_args__ = (
         fk_constraint(["project_hash"], Project, "fk_project_tags"),
