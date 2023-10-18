@@ -69,7 +69,7 @@ def _unpack_id(ident: str) -> Tuple[uuid.UUID, int, Optional[str]]:
 
 
 @router.get("/summary")
-def route_project_summary(
+def route_project_analysis_summary(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
@@ -142,7 +142,7 @@ def _find_similar_items(
 
 
 @router.post("/search")
-def route_project_search(
+def route_project_analysis_search(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     filters: search_query.SearchFiltersFastAPI = SearchFiltersFastAPIDepends,
@@ -262,7 +262,7 @@ def route_project_search(
 
 
 @router.get("/scatter")
-def route_project_scatter(
+def route_project_analysis_scatter(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     x_metric: str,
@@ -285,7 +285,7 @@ def route_project_scatter(
 
 
 @router.get("/distribution")
-def route_project_distribution(
+def route_project_analysis_distribution(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     group: str,
@@ -308,7 +308,7 @@ def route_project_distribution(
 
 
 @router.get("/reductions/{reduction_hash}/summary")
-def route_project_reduction_scatter(
+def route_project_analysis_reduction_scatter(
     project_hash: uuid.UUID,
     domain: AnalysisDomain,
     reduction_hash: uuid.UUID,

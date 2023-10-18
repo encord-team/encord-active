@@ -9,12 +9,7 @@ export function useProjectMutationItemsRemoveTag(projectHash: string) {
   return useMutation(
     ["useProjectMutationItemsRemoveTag", querier.baseUrl, projectHash],
     async (tag: { items: Array<string>; tags: Array<string> }) => {
-      await querier
-        .getProjectAPI()
-        .routeItemsUntagAllApiProjectsV2ProjectHashTagsItemsUntagAllPost(
-          projectHash,
-          tag
-        );
+      await querier.getProjectAPI().routeItemsUntagAll(projectHash, tag);
       const invalidateSet = new Set(tag.items.map(toDataItemID));
       await Promise.all(
         [...invalidateSet].map((dataItem) =>

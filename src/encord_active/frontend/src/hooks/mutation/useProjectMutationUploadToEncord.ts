@@ -7,14 +7,11 @@ export function useProjectMutationUploadToEncord(projectHash: string) {
   const queryClient = useQueryClient();
 
   return useMutation(
-    ["useProjectMutationCreateSubset", querier.baseUrl, projectHash],
+    ["useProjectMutationUploadToEncord", querier.baseUrl, projectHash],
     (uploadEncordAction: UploadProjectToEncordPostAction) =>
       querier
         .getProjectAPI()
-        .routeActionUploadProjectToEncordApiProjectsV2ProjectHashActionsUploadToEncordPost(
-          projectHash,
-          uploadEncordAction
-        )
+        .routeActionUploadProjectToEncord(projectHash, uploadEncordAction)
         .then(async (r) => {
           await queryClient.invalidateQueries([
             "useProjectList",

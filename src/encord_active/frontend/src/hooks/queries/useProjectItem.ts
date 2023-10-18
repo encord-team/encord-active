@@ -14,10 +14,7 @@ export function useProjectItem(
     () =>
       querier
         .getProjectAPI()
-        .routeProjectDataItemApiProjectsV2ProjectHashItemDataItemGet(
-          projectHash,
-          dataItem
-        )
+        .routeProjectDataItem(projectHash, dataItem)
         .then((r) => r.data),
     { ...options, staleTime: STALE_TIME_ITEM, cacheTime: CACHE_TIME_ITEM }
   );

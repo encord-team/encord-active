@@ -16,9 +16,7 @@ export function useProjectListCollaborators(
     () =>
       querier
         .getProjectAPI()
-        .routeProjectListCollaboratorsApiProjectsV2ProjectHashCollaboratorsGet(
-          projectHash
-        )
+        .routeProjectListCollaborators(projectHash)
         .then((r) => r.data),
     {
       ...options,

@@ -19,11 +19,7 @@ export function useProjectFilterListTags(
     () =>
       querier
         .getProjectAPI()
-        .routeFilterAllTagsApiProjectsV2ProjectHashTagsDomainFilterAllTagsPost(
-          projectHash,
-          domain,
-          filters
-        )
+        .routeFilterAllTags(projectHash, domain, filters)
         .then((r) => r.data),
     {
       ...options,

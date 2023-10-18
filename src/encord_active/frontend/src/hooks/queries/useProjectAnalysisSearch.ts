@@ -36,7 +36,7 @@ export function useProjectAnalysisSearch(
     () =>
       querier
         .getProjectAPI()
-        .routeProjectSearchApiProjectsV2ProjectHashAnalysisDomainSearchPost(
+        .routeProjectAnalysisSearch(
           projectHash,
           domain,
           orderByDesc,

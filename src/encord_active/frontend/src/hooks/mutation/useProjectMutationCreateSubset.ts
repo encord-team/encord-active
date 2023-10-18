@@ -11,10 +11,7 @@ export function useProjectMutationCreateSubset(projectHash: string) {
     (createSubsetAction: CreateProjectSubsetPostAction) =>
       querier
         .getProjectAPI()
-        .routeActionCreateProjectSubsetApiProjectsV2ProjectHashActionsCreateProjectSubsetPost(
-          projectHash,
-          createSubsetAction
-        )
+        .routeActionCreateProjectSubset(projectHash, createSubsetAction)
         .then(async (r) => {
           await queryClient.invalidateQueries([
             "useProjectList",

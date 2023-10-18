@@ -17,10 +17,7 @@ export function useProjectItemsListTags(
     () =>
       querier
         .getProjectAPI()
-        .routeItemsAllTagsApiProjectsV2ProjectHashTagsItemsAllTagsPost(
-          projectHash,
-          items
-        )
+        .routeItemsAllTags(projectHash, items)
         .then((r) => r.data),
     {
       ...options,

@@ -13,7 +13,7 @@ export function useProjectSummary(
     () =>
       querier
         .getProjectAPI()
-        .routeProjectSummaryApiProjectsV2ProjectHashSummaryGet(projectHash)
+        .routeProjectSummary(projectHash)
         .then((r) => r.data),
     {
       ...options,

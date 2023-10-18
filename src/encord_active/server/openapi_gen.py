@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from fastapi.openapi.utils import get_openapi
+from fastapi.routing import APIRoute
 
 from encord_active.server.app import get_app
 from encord_active.server.settings import Env, Settings
@@ -23,6 +24,15 @@ def generate_openapi_fe_components() -> None:
     app = get_app(MagicMock(), settings)
     # Output openapi
     with open(openapi_json_path, "w", encoding="UTF-8") as f:
+        # OpenAPI Patching.
+        used_route_names = set()
+        for route in app.routes:
+            if isinstance(route, APIRoute):
+                new_operation_id = route.name
+                if new_operation_id in used_route_names:
+                    raise RuntimeError(f"Duplicate operation name: {new_operation_id}")
+                route.operation_id = new_operation_id
+                used_route_names.add(new_operation_id)
         json.dump(
             get_openapi(
                 title=app.title,

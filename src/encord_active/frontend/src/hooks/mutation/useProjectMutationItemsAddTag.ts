@@ -9,12 +9,7 @@ export function useProjectMutationItemsAddTag(projectHash: string) {
   return useMutation(
     ["useProjectMutationItemsAddTag", querier.baseUrl, projectHash],
     async (tag: { items: Array<string>; tags: Array<string> }) => {
-      await querier
-        .getProjectAPI()
-        .routeItemsTagAllApiProjectsV2ProjectHashTagsItemsTagAllPost(
-          projectHash,
-          tag
-        );
+      await querier.getProjectAPI().routeItemsTagAll(projectHash, tag);
       const invalidateSet = new Set(tag.items.map(toDataItemID));
       await Promise.all(
         [...invalidateSet].map((dataItem) =>

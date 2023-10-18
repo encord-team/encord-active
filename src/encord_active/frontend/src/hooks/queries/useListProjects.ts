@@ -13,7 +13,7 @@ export function useProjectList(options: Pick<UseQueryOptions, "enabled"> = {}) {
     () =>
       querier
         .getProjectAPI()
-        .routeListProjectsApiProjectsV2Get()
+        .routeListProjects()
         .then((r) => r.data),
     {
       ...options,

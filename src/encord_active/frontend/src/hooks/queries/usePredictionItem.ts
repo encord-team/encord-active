@@ -21,11 +21,7 @@ export function usePredictionItem(
     () =>
       querier
         .getPredictionAPI()
-        .routePredictionDataItemApiProjectsV2ProjectHashPredictionsPredictionHashPreviewDataItemGet(
-          projectHash,
-          predictionHash,
-          dataItem
-        )
+        .routePredictionDataItem(projectHash, predictionHash, dataItem)
         .then((r) => r.data),
     { ...options, staleTime: STALE_TIME_ITEM, cacheTime: CACHE_TIME_ITEM }
   );

@@ -15,11 +15,10 @@ export function useProjectMutationFiltersAddTag(projectHash: string) {
     }) =>
       querier
         .getProjectAPI()
-        .routeFilterTagAllApiProjectsV2ProjectHashTagsDomainFilterTagAllPost(
-          projectHash,
-          tag.domain,
-          { filters: tag.filters, tags: tag.tags }
-        )
+        .routeFilterTagAll(projectHash, tag.domain, {
+          filters: tag.filters,
+          tags: tag.tags,
+        })
         .then(async () => {
           await queryClient.invalidateQueries({
             queryKey: ["useProjectItem", querier.baseUrl, projectHash],

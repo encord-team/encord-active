@@ -22,7 +22,7 @@ export function useProjectCompareDissimilarity(
     () =>
       querier
         .getProjectAPI()
-        .routeProjectCompareMetricDissimilarityApiProjectsV2ProjectHashAnalysisDomainProjectCompareMetricDissimilarityGet(
+        .routeProjectCompareMetricDissimilarity(
           projectHash,
           domain,
           compareProjectHash

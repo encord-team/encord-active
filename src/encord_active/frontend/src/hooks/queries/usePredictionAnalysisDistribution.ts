@@ -34,7 +34,7 @@ export function usePredictionAnalysisDistribution(
     () =>
       querier
         .getPredictionAPI()
-        .routePredictionDistributionApiProjectsV2ProjectHashPredictionsPredictionHashAnalyticsDomainDistributionGet(
+        .routePredictionDistribution(
           projectHash,
           predictionHash,
           domain,

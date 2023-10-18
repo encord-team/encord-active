@@ -10,7 +10,7 @@ export function useProjectMutationCreateTag(projectHash: string) {
     (tagNames: string[]) =>
       querier
         .getProjectAPI()
-        .routeCreateTagsApiProjectsV2ProjectHashTagsPost(projectHash, tagNames)
+        .routeCreateTags(projectHash, tagNames)
         .then(async (r) => {
           await queryClient.invalidateQueries([
             "useProjectListTags",

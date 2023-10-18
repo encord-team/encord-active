@@ -13,7 +13,7 @@ export function useProjectMetadata(
     () =>
       querier
         .getProjectAPI()
-        .routeProjectMetadataApiProjectsV2ProjectHashMetadataGet(projectHash)
+        .routeProjectMetadata(projectHash)
         .then((r) => r.data),
     {
       ...options,

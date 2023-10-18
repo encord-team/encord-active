@@ -22,7 +22,7 @@ export function useProjectAnalysisSummary(
     () =>
       querier
         .getProjectAPI()
-        .routeProjectSummaryApiProjectsV2ProjectHashAnalysisDomainSummaryGet(
+        .routeProjectAnalysisSummary(
           projectHash,
           domain,
           filters !== undefined ? JSON.stringify(filters) : undefined

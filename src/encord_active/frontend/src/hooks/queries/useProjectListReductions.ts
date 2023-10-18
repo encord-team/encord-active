@@ -16,9 +16,7 @@ export function useProjectListReductions(
     () =>
       querier
         .getProjectAPI()
-        .routeProjectListReductionsApiProjectsV2ProjectHashReductionsGet(
-          projectHash
-        )
+        .routeProjectListReductions(projectHash)
         .then((r) => r.data),
     {
       ...options,
