@@ -15,13 +15,11 @@ import { loadingIndicator } from "./Spin";
 import { useProjectSummary } from "../hooks/queries/useProjectSummary";
 import { useProjectHash } from "../hooks/useProjectHash";
 import { Colors } from "../constants";
-import { PredictionsTab } from "./tabs/predictions/PredictionsTab";
 import { Collections } from "./tabs/collections/Collections";
 import { DefaultFilters, FilterState } from "./util/MetricFilter";
 import { useProjectListTagsMeta } from "../hooks/queries/useProjectListTagsMeta";
-import { env } from "../constants";
-import { classy } from "../helpers/classy";
 import { CustomTooltip } from "./util/CustomTooltip";
+import { ProjectComparisonTab } from "./tabs/ProjectComparisonTab";
 
 export function ProjectPage(props: {
   encordDomain: string;
@@ -207,6 +205,11 @@ export function ProjectPage(props: {
             />
           )
         },
+        {
+          label: "Project Comparison",
+          key: "project-comparison",
+          children: (<ProjectComparisonTab projectHash={projectHash} dataMetricsSummary={projectSummary.data} annotationMetricsSummary={projectSummary.annotation} />)
+        }
       ]}
       activeKey={tab}
       onChange={(key) => navigate(`../${key}`, { relative: "path" })}

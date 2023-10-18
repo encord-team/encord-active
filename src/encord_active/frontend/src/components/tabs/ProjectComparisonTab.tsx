@@ -21,7 +21,7 @@ export function ProjectComparisonTab(props: {
     domain === "data" ? dataMetricsSummary : annotationMetricsSummary;
 
   return (
-    <>
+    <div className="p-8">
       <Row align="middle">
         <Col span={12}>
           <Row align="middle">
@@ -76,6 +76,6 @@ export function ProjectComparisonTab(props: {
           />
         </>
       )}
-    </>
+    </div>
   );
 }
