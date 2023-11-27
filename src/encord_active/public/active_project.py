@@ -1,6 +1,5 @@
-from typing import Dict
-
 import pandas as pd
+from encord.objects import OntologyStructure
 from sqlalchemy import MetaData, Table, create_engine, select, text
 from sqlalchemy.engine import Engine
 
@@ -22,7 +21,7 @@ class ActiveProject:
             result = connection.execute(stmt).fetchone()
             self._project_hash = result[0]
 
-    def get_ontology(self) -> Dict:
+    def get_ontology(self) -> OntologyStructure:
         active_project = Table("active_project", self._metadata, autoload_with=self._engine)
 
         stmt = select(active_project.c.project_ontology).where(active_project.c.project_hash == f"{self._project_hash}")
@@ -31,7 +30,7 @@ class ActiveProject:
             result = connection.execute(stmt).fetchone()
             ontology = result[0]
 
-        return ontology
+        return OntologyStructure.from_dict(ontology)
 
     def get_prediction_metrics(self) -> pd.DataFrame:
         active_project_prediction = Table("active_project_prediction", self._metadata, autoload_with=self._engine)
