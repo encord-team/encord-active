@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Dict
 
 import pandas as pd
@@ -34,7 +33,7 @@ class ActiveProject:
 
         return ontology
 
-    def get_prediction_metrics(self):
+    def get_prediction_metrics(self) -> pd.DataFrame:
         active_project_prediction = Table("active_project_prediction", self._metadata, autoload_with=self._engine)
         stmt = select(active_project_prediction.c.prediction_hash).where(
             active_project_prediction.c.project_hash == f"{self._project_hash}"
