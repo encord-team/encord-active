@@ -73,7 +73,7 @@ BASE_PROJECTS: dict[str, PrebuiltProject] = {
         stats=ProjectStats(dataUnits=199, labels=1617, classes=71),
     ),
     "[open-source]-Fruits": PrebuiltProject(
-        url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopensource%5D-Fruits.zip",
+        url="https://storage.googleapis.com/encord-active-sandbox-data/%5Bopen-source%5D-Fruits.zip",
         hash="6c34affe-172e-416d-ad81-d8ac99b71388",
         name="[open-source]-Fruits",
         image_filename="Fruits.png",
