@@ -8,8 +8,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build Encord.Active
+  build-frontend:
+    name: Build frontend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -18,10 +18,34 @@ jobs:
           token: ${{ secrets.AUTOMATION_BOT_ACCESS_TOKEN }}
           ref: main
 
-      - name: Build frontend
+      - name: Build
         uses: ./.github/actions/build-frontend
         with:
           secrets: ${{ toJSON(secrets) }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-build-${{ github.sha }}
+          path: src/encord_active/frontend/dist
+          if-no-files-found: error
+
+  build-package:
+    needs: ["build-frontend"]
+    name: Build Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.AUTOMATION_BOT_ACCESS_TOKEN }}
+          ref: main
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v3
+        with:
+          name: frontend-build-${{ github.sha }}
+          path: src/encord_active/frontend/dist
 
       - name: Setup root poetry environment
         uses: ./.github/actions/setup-root-poetry-environment
