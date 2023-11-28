@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID
 
 from encord.objects import OntologyStructure
@@ -29,8 +29,8 @@ class ActiveDataset(Dataset):
     def __init__(
         self,
         database_path: Path,
-        project_hash: set[str] | str,
-        tag_name: Optional[str] = None,
+        project_hash: Union[set[str], str],
+        tag_name: Optional[Union[set[str], str]] = None,
         ontology_hashes: Optional[list[str]] = None,
         transform=None,
         target_transform=None,
@@ -41,7 +41,7 @@ class ActiveDataset(Dataset):
         self.root_path = database_path.parent
         self.engine = get_engine(database_path, use_alembic=False)
         self.project_hash = {UUID(project_hash)} if isinstance(project_hash, str) else set(map(UUID, project_hash))
-        self.tag_name = tag_name
+        self.tag_name = {tag_name} if isinstance(tag_name, str) else tag_name
         self.ontology_hashes = ontology_hashes
 
         self.identifiers: list[tuple[UUID, int]] = []
@@ -54,18 +54,29 @@ class ActiveDataset(Dataset):
     def get_identifier_query(self, sess: Session):
         tag_hash = None
         if self.tag_name is not None:
-            try:
-                where_clause = ProjectTag.tag_hash == UUID(self.tag_name)
-            except ValueError:
-                where_clause = ProjectTag.name == self.tag_name
+            in_uids = set()
+            in_names = set()
+            for name in self.tag_name:
+                try:
+                    in_uids.add(UUID(name))
+                except ValueError:
+                    in_names.add(name)
 
+            where_clauses = [
+                in_op(col, vals) for col, vals in [(ProjectTag.tag_hash, in_uids), (ProjectTag.name, in_names)] if vals
+            ]
             tag_query = select(ProjectTag.tag_hash).where(
-                in_op(ProjectTag.project_hash, self.project_hash), where_clause
+                in_op(ProjectTag.project_hash, self.project_hash), *where_clauses
             )
-            tag_hash = sess.exec(tag_query).first()
+            tag_hash = set(sess.exec(tag_query).all())
 
-            if tag_hash is None:
-                raise ValueError(f"Couldn't find a data tag with either name or tag_hash `{self.tag_name}`")
+            if not tag_hash:
+                valid_tag_names = sess.exec(
+                    select(ProjectTag.name).where(in_op(ProjectTag.project_hash, self.project_hash))
+                ).all()
+                raise ValueError(
+                    f"Couldn't find a data tag with either name or tag_hash `{self.tag_name}`. Valid tags for the specified project(s) are {valid_tag_names}."
+                )
 
         identifier_query = select(D.du_hash, D.frame)
         if tag_hash is not None:
@@ -77,7 +88,7 @@ class ActiveDataset(Dataset):
         )
 
         if tag_hash is not None:
-            identifier_query = identifier_query.where(T.tag_hash == tag_hash)
+            identifier_query = identifier_query.where(in_op(T.tag_hash, tag_hash))
 
         return identifier_query
 
@@ -85,13 +96,18 @@ class ActiveDataset(Dataset):
         with Session(self.engine) as sess:
             # Check that data is available locally
             identifier_query = self.get_identifier_query(sess)
-            probe = sess.exec(identifier_query.add_columns(ProjectDataUnitMetadata.data_uri).limit(1)).first()
+            probe = sess.exec(identifier_query.add_columns(D.data_uri).limit(1)).first()
             if (
                 probe is not None
                 and probe[-1] is not None
                 and url_to_file_path(probe[-1], self.root_path) is None  # type: ignore
             ):
                 raise ValueError("Couldn't find data locally. Please execute `encord-active download-data` first.")
+
+            # Check for videos
+            video_probe = sess.exec(identifier_query.where(D.data_uri_is_video).limit(1)).first()
+            if video_probe is not None:
+                raise ValueError("Dataset contains videos. This is currently not supported for this dataloader.")
 
             # Load and validate ontology
             if len(self.project_hash) > 1:
@@ -125,12 +141,41 @@ class ActiveClassificationDataset(ActiveDataset):
     def __init__(
         self,
         database_path: Path,
-        project_hash: str,
-        tag_name: Optional[str] = None,
+        project_hash: Union[set[str], str],
+        tag_name: Optional[Union[set[str], str]] = None,
         ontology_hashes: Optional[list[str]] = None,
         transform=None,
         target_transform=None,
     ):
+        """
+        A dataset hooked up to an Encord Active database.
+        The dataset can filter (image) data from Encord Active based on both `project_hash`es
+        and `tag_hash`/`tag_name`s. For example, if you have added a tag called
+        "train" within Encord Active, you can use that tag name by setting
+        `tag_name="train"` option. You can also combine multiple tags into one
+        dataset by providing a set of names. Similarly, you can use multiple
+        projects if they share the same ontology. Just provide the relevant
+        project hashes.
+
+        Note: that this dataset requires that you have downloaded the data locally.
+        This can be done with `encord-active project download-data`.
+
+        ⚠️  Videos are not yet supported.
+
+        Args:
+            database_path: Path to where the `encord_active.sqlite` database lives
+                on your system.
+            project_hash: The project hash (or set of hashes) of the project(s)
+                to load data from.
+            tag_name: tag names (or hashes) for the tags you want to include.
+                If no tags are specified, all images with labels from the project
+                will be included.
+            ontology_hashes: The `feature_node_hash` of the radio button classification
+                question used for labels. The first radiobutton within that
+                classification will be used.
+            transform (): Data transform applied to PIL images
+            target_transform (): Target transform applied to the uint label tensor.
+        """
         assert (
             ontology_hashes is None or len(ontology_hashes) == 1
         ), "Either don't define ontology hashes to use first radio button in ontology or specify the feature node hash of the classification you want."
