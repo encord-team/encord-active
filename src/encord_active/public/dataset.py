@@ -36,7 +36,7 @@ class ActiveDataset(Dataset):
     ):
         database_path = database_path.expanduser().resolve()
         if not database_path.is_file():
-            raise ValueError(f"DB doesn't exist `database_path`")
+            raise FileNotFoundError(f"The database file does not exist at the specified path: '{database_path}'")
         self.root_path = database_path.parent
         self.engine = get_engine(database_path, use_alembic=False)
         self.project_hash = {UUID(project_hash)} if isinstance(project_hash, str) else set(map(UUID, project_hash))
@@ -205,7 +205,7 @@ class ActiveClassificationDataset(ActiveDataset):
                 and ((not self.ontology_hashes) or c.feature_node_hash in self.ontology_hashes)
             ]
             if len(ontology_pairs) == 0:
-                raise ValueError(f"Found no ontology items to use for labels")
+                raise ValueError("No ontology classifications were found to use for labels")
             classification, attribute = ontology_pairs[0]
             indices = {o.feature_node_hash: i for i, o in enumerate(attribute.options)}
             self.class_names = [o.title for o in attribute.options]
@@ -328,10 +328,18 @@ class ActiveObjectDataset(ActiveDataset):
             }
 
             if self.ontology_hashes is not None and len(feature_hash_to_ontology_object) != len(self.ontology_hashes):
-                raise ValueError(f"Objects with the `ontology_hashes` don't match any supported shape.")
-
+                missing_feature_hashes = set(self.ontology_hashes).difference(set(feature_hash_to_ontology_object))
+                error_log = []
+                for feature_hash in missing_feature_hashes:
+                    ontology_object = feature_hash_to_ontology_object.get(feature_hash)
+                    shape = "UNKNOWN" if ontology_object is None else ontology_object.shape.name
+                    error_log.append(f"  {ontology_object.title}: {shape}")
+                raise ValueError(
+                    "Mismatch between objects with specified `ontology_hashes` and supported shapes\n"
+                    "\n".join(error_log)
+                )
             if len(feature_hash_to_ontology_object) == 0:
-                raise ValueError(f"Found no suitable ontology objects to be used as labels.")
+                raise ValueError("No ontology objects with supported shapes were found to use for labels")
 
             self.class_names = [o.title for o in feature_hash_to_ontology_object.values()]
 
