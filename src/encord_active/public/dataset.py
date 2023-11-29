@@ -2,8 +2,7 @@ from pathlib import Path
 from typing import Optional, Union
 from uuid import UUID
 
-from encord.objects import OntologyStructure
-from encord.objects.attributes import RadioAttribute
+from encord.objects import Object, OntologyStructure, RadioAttribute, Shape
 from PIL import Image
 from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
@@ -261,3 +260,119 @@ class ActiveClassificationDataset(ActiveDataset):
 
     def __len__(self):
         return len(self.labels)
+
+
+class ActiveObjectDataset(ActiveDataset):
+    def __init__(
+        self,
+        database_path: Path,
+        project_hash: Union[set[str], str],
+        tag_name: Optional[Union[set[str], str]] = None,
+        ontology_hashes: Optional[list[str]] = None,
+        transform=None,
+        target_transform=None,
+    ):
+        """
+        A dataset hooked up to an Encord Active database.
+        The dataset can filter (image) data from Encord Active based on both `project_hash`es
+        and `tag_hash`/`tag_name`s. For example, if you have added a tag called
+        "train" within Encord Active, you can use that tag name by setting
+        `tag_name="train"` option. You can also combine multiple tags into one
+        dataset by providing a set of names. Similarly, you can use multiple
+        projects if they share the same ontology. Just provide the relevant
+        project hashes.
+
+        Note: This dataset requires that you have downloaded the data locally.
+        This can be done with `encord-active project download-data`.
+
+        ⚠️  Videos are not yet supported.
+
+        Args:
+            database_path: Path to where the `encord_active.sqlite` database lives
+                on your system.
+            project_hash: The project hash (or set of hashes) of the project(s)
+                to load data from.
+            tag_name: tag names (or hashes) for the tags you want to include.
+                If no tags are specified, all images with labels from the project
+                will be included.
+            ontology_hashes: The `feature_node_hash` of the objects used for labels.
+            transform (): Data transform applied to PIL images
+            target_transform (): Target transform applied to the uint label tensor. # TODO update the type
+        """
+        super().__init__(
+            database_path,
+            project_hash,
+            tag_name,
+            ontology_hashes,
+            transform,
+            target_transform,
+        )
+
+    def setup(self):
+        super().setup()
+
+        with Session(self.engine) as sess:
+            identifier_query = self.get_identifier_query(sess)
+            identifier_query = identifier_query.join(L, onclause=(L.data_hash == D.data_hash)).where(
+                in_op(L.project_hash, self.project_hash)
+            )
+            identifier_query = identifier_query.add_columns(D.data_uri, D.objects, L.label_row_json)
+            identifiers = sess.exec(identifier_query).all()
+
+            supported_shapes = [Shape.BOUNDING_BOX]
+            feature_hash_to_ontology_object: dict[str, Object] = {
+                o.feature_node_hash: o
+                for o in self.ontology.objects
+                if (self.ontology_hashes is None or (o.feature_node_hash in self.ontology_hashes))
+                and o.shape in supported_shapes
+            }
+
+            if self.ontology_hashes is not None and len(feature_hash_to_ontology_object) != len(self.ontology_hashes):
+                raise ValueError(f"Objects with the `ontology_hashes` don't match any supported shape.")
+
+            if len(feature_hash_to_ontology_object) == 0:
+                raise ValueError(f"Found no suitable ontology objects to be used as labels.")
+
+            self.class_names = [o.title for o in feature_hash_to_ontology_object.values()]
+
+            self.data_unit_paths: list[Path] = []
+            self.labels_per_data_unit: list[list[dict]] = []
+            self.label_attributes_per_data_unit: list[dict] = []
+            for (  # type: ignore
+                *_,
+                data_uri,
+                all_objects,
+                label_row_json,
+            ) in identifiers:
+                object_hash_to_object = {
+                    o["objectHash"]: o for o in all_objects if o["featureHash"] in feature_hash_to_ontology_object
+                }
+                object_attributes = {
+                    k: v for k, v in label_row_json["object_answers"].items() if k in object_hash_to_object
+                }
+
+                data_unit_path = url_to_file_path(data_uri, self.root_path)
+                if data_unit_path is None:
+                    # Skip file as it's missing
+                    continue
+
+                self.data_unit_paths.append(data_unit_path)  # TODO check "type: ignore"
+                self.labels_per_data_unit.append(list(object_hash_to_object.values()))
+                self.label_attributes_per_data_unit.append(object_attributes)
+
+    def __getitem__(self, idx):
+        data_unit_path = self.data_unit_paths[idx]
+
+        img = Image.open(data_unit_path)
+        labels = self.labels_per_data_unit[idx]
+
+        if self.transform:
+            img = self.transform(img)
+
+        if self.target_transform:
+            labels = self.target_transform(labels)
+
+        return img, labels
+
+    def __len__(self):
+        return len(self.data_unit_paths)
