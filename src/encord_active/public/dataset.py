@@ -52,7 +52,7 @@ class ActiveDataset(Dataset):
         self.target_transform = target_transform
 
     def get_identifier_query(self, sess: Session):
-        tag_hash = None
+        identifier_query = select(D.du_hash, D.frame)
         if self.tag_name is not None:
             in_uids = set()
             in_names = set()
@@ -70,7 +70,7 @@ class ActiveDataset(Dataset):
             )
             tag_hash = set(sess.exec(tag_query).all())
 
-            if not tag_hash:
+            if tag_hash is None:
                 valid_tag_names = sess.exec(
                     select(ProjectTag.name).where(in_op(ProjectTag.project_hash, self.project_hash))
                 ).all()
@@ -78,17 +78,15 @@ class ActiveDataset(Dataset):
                     f"Couldn't find a data tag with either name or tag_hash `{self.tag_name}`. Valid tags for the specified project(s) are {valid_tag_names}."
                 )
 
-        identifier_query = select(D.du_hash, D.frame)
-        if tag_hash is not None:
-            identifier_query = identifier_query.join(T, onclause=((T.du_hash == D.du_hash) & (T.frame == D.frame)))
-
-        identifier_query = identifier_query.where(
-            in_op(D.project_hash, self.project_hash),
-            in_op(T.project_hash, self.project_hash),
-        )
-
-        if tag_hash is not None:
-            identifier_query = identifier_query.where(in_op(T.tag_hash, tag_hash))
+            identifier_query = identifier_query.join(
+                T, onclause=((T.du_hash == D.du_hash) & (T.frame == D.frame))
+            ).where(
+                in_op(D.project_hash, self.project_hash),
+                in_op(T.project_hash, self.project_hash),
+                in_op(T.tag_hash, tag_hash),
+            )
+        else:
+            identifier_query = identifier_query.where(in_op(D.project_hash, self.project_hash))
 
         return identifier_query
 
