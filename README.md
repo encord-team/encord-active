@@ -1,5 +1,5 @@
 <h1 align="center">
-  <a href="https://colab.research.google.com/drive/13bw-ALLhcm_xxrlittD1u6x5ULhx8w9R?usp=sharing"><img src="https://storage.googleapis.com/encord-active-sandbox-projects/hc-content/banner.png" alt="Hallucinations Banner"/></a>
+  <a href="https://colab.research.google.com/drive/13bw-ALLhcm_xxrlittD1u6x5ULhx8w9R?usp=sharing"><img src="https://storage.googleapis.com/encord-active-sandbox-projects/hc-content/banner-new.png" alt="Hallucinations Banner"/></a>
 </h1>
 
 <p align="center">
