@@ -1,3 +1,7 @@
+<h1 align="center">
+  <a href="https://colab.research.google.com/drive/13bw-ALLhcm_xxrlittD1u6x5ULhx8w9R?usp=sharing"><img src="https://storage.googleapis.com/encord-active-sandbox-projects/hc-content/banner.png" alt="Hallucinations Banner"/></a>
+</h1>
+
 <p align="center">
 <a href="https://docs.encord.com/docs/active-overview" target="_blank">Documentation</a> |
 <a href="https://github.com/encord-team/encord-notebooks" target="_blank">Try it Now</a> |
@@ -76,12 +80,13 @@ pip install encord-active
 > installing it [here](https://docs.encord.com/docs/active-installation). If just want to see it in action try out [this Colab notebook](https://colab.research.google.com/github/encord-team/encord-notebooks/blob/main/colab-notebooks/01_Encord_Active_Notebooks_Download_sandbox_project.ipynb).
 
 ### 🖥️ Supported Platforms
+
 🚨 Note: Currently, this library does not support Linux 🚫🐧.
 
 Supported platforms include:
 
-* Windows
-* macOS
+- Windows
+- macOS
 
 #### 🐧 Linux Support
 
@@ -214,11 +219,11 @@ Visit our [documentation][encord-active-docs] to learn more.
 ### Supported data:
 
 | Data Types |     | Labels          |     | Project sizes |               |
-|------------|-----|-----------------|-----|---------------|---------------|
-| `jpg`      | ✅   | Bounding Boxes  | ✅   | Images        | 25.000        |
-| `png`      | ✅   | Polygons        | ✅   | Videos \*     | 25.000 frames |
-| `tiff`     | ✅   | Segmentations   | ✅   |               |               |
-| `mp4` \*   | ✅   | Classifications | ✅   |               |               |
+| ---------- | --- | --------------- | --- | ------------- | ------------- |
+| `jpg`      | ✅  | Bounding Boxes  | ✅  | Images        | 25.000        |
+| `png`      | ✅  | Polygons        | ✅  | Videos \*     | 25.000 frames |
+| `tiff`     | ✅  | Segmentations   | ✅  |               |               |
+| `mp4` \*   | ✅  | Classifications | ✅  |               |               |
 |            |     | Polylines       | 🟡  |               |               |
 
 \* Requires an Encord Annotate account
@@ -230,7 +235,7 @@ Visit our [documentation][encord-active-docs] to learn more.
 Encord Active is built with customizability in mind. Therefore, you can easily build your own custom metrics 🔧.
 See the [Writing Your Own Metric][encord-active-docs-write-metric] page in the docs for details on this topic.
 
-If you need help or guidance feel free to ping us in our  **[Slack workspace][slack-join]**!
+If you need help or guidance feel free to ping us in our **[Slack workspace][slack-join]**!
 
 ## 👪 Community and support
 
