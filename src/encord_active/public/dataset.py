@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional, Union
 from uuid import UUID
 
-from encord.objects import Object, OntologyStructure, RadioAttribute, Shape
+from encord.objects import Object, OntologyStructure, RadioAttribute
 from PIL import Image
 from sqlalchemy.sql.operators import in_op
 from sqlmodel import Session, select
@@ -319,12 +319,10 @@ class ActiveObjectDataset(ActiveDataset):
             identifier_query = identifier_query.add_columns(D.data_uri, D.objects, L.label_row_json)
             identifiers = sess.exec(identifier_query).all()
 
-            supported_shapes = [Shape.BOUNDING_BOX]
             feature_hash_to_ontology_object: dict[str, Object] = {
                 o.feature_node_hash: o
                 for o in self.ontology.objects
                 if (self.ontology_hashes is None or (o.feature_node_hash in self.ontology_hashes))
-                and o.shape in supported_shapes
             }
 
             if self.ontology_hashes is not None and len(feature_hash_to_ontology_object) != len(self.ontology_hashes):
@@ -333,10 +331,10 @@ class ActiveObjectDataset(ActiveDataset):
                 for feature_hash in missing_feature_hashes:
                     ontology_object = feature_hash_to_ontology_object.get(feature_hash)
                     shape = "UNKNOWN" if ontology_object is None else ontology_object.shape.name
-                    error_log.append(f"  {ontology_object.title}: {shape}")
+                    error_log.append(f"{(ontology_object and ontology_object.title) or feature_hash}: {shape}")
                 raise ValueError(
-                    "Mismatch between objects with specified `ontology_hashes` and supported shapes\n"
-                    "\n".join(error_log)
+                    "Mismatch between objects with specified `ontology_hashes` and supported shapes: "
+                    + ", ".join(error_log)
                 )
             if len(feature_hash_to_ontology_object) == 0:
                 raise ValueError("No ontology objects with supported shapes were found to use for labels")
