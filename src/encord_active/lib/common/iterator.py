@@ -44,7 +44,9 @@ class Iterator(Sized):
         self.label_rows = self.project.label_rows
 
     @abstractmethod
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
+    def iterate(
+        self, desc: str = "", include_images: bool = True
+    ) -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         pass
 
     @abstractmethod
@@ -77,7 +79,9 @@ class DatasetIterator(Iterator):
             0,
         )
 
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
+    def iterate(
+        self, desc: str = "", include_images: bool = True
+    ) -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         with PrismaConnection(self.project_file_structure) as cache_db:
             pbar = tqdm(total=self.length, desc=desc, leave=False)
             for label_hash, label_row in self.label_rows.items():
@@ -87,7 +91,6 @@ class DatasetIterator(Iterator):
                     self.num_frames = len(label_row.data_units)
                     data_units = sorted(label_row.data_units.values(), key=lambda du: int(du["data_sequence"]))
                     for data_unit in data_units:
-
                         if self._skip_labeled_data:
                             du_label = data_unit.get("labels", {})
                             if du_label.get("objects", []) != [] or du_label.get("classifications", []) != []:
@@ -104,7 +107,7 @@ class DatasetIterator(Iterator):
                                 None,
                             )
                             image = None
-                            if img_metadata is not None:
+                            if img_metadata is not None and include_images:
                                 image = download_image(
                                     img_metadata.signed_url,
                                     project_dir=self.project_file_structure.project_dir,
@@ -156,7 +159,7 @@ class DatasetIterator(Iterator):
                                     continue
 
                             image_path = next(video_images_dir.glob(f"{self.du_hash}_{frame_id}.*"), None)
-                            if image_path:
+                            if image_path and include_images:
                                 yield fake_data_unit, Image.open(image_path)
                             else:
                                 yield fake_data_unit, None

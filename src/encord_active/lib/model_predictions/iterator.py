@@ -165,7 +165,9 @@ class PredictionIterator(Iterator):
             manualAnnotation=False,
         )
 
-    def iterate(self, desc: str = "") -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
+    def iterate(
+        self, desc: str = "", include_images: bool = True
+    ) -> Generator[Tuple[dict, Optional[Image.Image]], None, None]:
         pbar = tqdm(total=self.length, desc=desc, leave=False)
         with PrismaConnection(self.project_file_structure) as cache_db:
             for label_hash, lh_group in self.predictions.groupby("label_hash"):
@@ -203,9 +205,7 @@ class PredictionIterator(Iterator):
                             logger.error("The prediction is not in the ontology objects or classifications")
 
                     du["labels"] = {"objects": objects, "classifications": classifications}
-                    image = self.get_image(fr_preds.iloc[0], cache_db=cache_db)
-                    if image is None:
-                        logger.error(f"Failed to open Image at frame: {self.du_hash}/{fr_preds.iloc[0]}")
+                    image = (include_images and self.get_image(fr_preds.iloc[0], cache_db=cache_db)) or None
                     yield du, image
                     pbar.update(1)
 

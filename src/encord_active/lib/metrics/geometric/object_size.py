@@ -19,7 +19,6 @@ logger = logger.opt(colors=True)
 
 def get_area(obj: dict) -> float:
     if obj["shape"] in {*BoxShapes, ObjectShape.POLYGON}:
-
         points = get_object_coordinates(obj)
         if points is None or len(points) < 3:
             logger.debug("Less than 3 points")
@@ -65,7 +64,7 @@ class RelativeObjectAreaMetric(Metric):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
-        for data_unit, _ in iterator.iterate(desc="Computing object area"):
+        for data_unit, _ in iterator.iterate(desc="Computing object area", include_images=False):
             for obj in data_unit["labels"].get("objects", []):
                 if obj["shape"] not in valid_annotation_types:
                     continue
