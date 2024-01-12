@@ -89,7 +89,7 @@ class ActiveProject:
 
         def transform(df):
             if self._root_path is None:
-                raise ValueError(f"Root path is not set. Provide it in the constructor or use `from_db_file`")
+                raise ValueError("Root path is not set. Provide it in the constructor or use `from_db_file`")
             df["data_uri"] = df.data_uri.map(partial(url_to_file_path, project_dir=self._root_path))
             return df
 
@@ -157,7 +157,7 @@ class ActiveProject:
                 transforms.append(transform)
 
             df = pd.DataFrame(sess.exec(stmt).all())
-            df.columns = list(sess.exec(stmt).keys())
+            df.columns = list(sess.exec(stmt).keys())  # type: ignore
 
             for transform in transforms:
                 df = transform(df)
@@ -174,7 +174,8 @@ class ActiveProject:
                 Disclaimer. We take no measures here to counteract SQL injections so avoid using "funky" characters like '"\\/` in your tag names.
         """
         with Session(self._engine) as sess:
-            stmt = select(*[c for c in ProjectDataAnalytics.__table__.c]).where(  # type: ignore -- hack to get all columns without the pydantic model
+            # hack to get all columns without the pydantic model
+            stmt = select(*[c for c in ProjectDataAnalytics.__table__.c]).where(  # type: ignore
                 ProjectDataAnalytics.project_hash == self.project_hash
             )
             transforms = []
@@ -186,7 +187,7 @@ class ActiveProject:
                 transforms.append(transform)
             image_metrics = sess.exec(stmt).all()
             df = pd.DataFrame(image_metrics)
-            df.columns = list(sess.execute(stmt).keys())
+            df.columns = list(sess.execute(stmt).keys())  # type: ignore
 
             for transform in transforms:
                 df = transform(df)
