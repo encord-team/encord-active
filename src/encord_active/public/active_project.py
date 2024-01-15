@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
 from typing import Optional, Type, Union
 from uuid import UUID, uuid4
@@ -88,9 +87,11 @@ class ActiveProject:
         ).where(ProjectDataUnitMetadata.project_hash == self.project_hash)
 
         def transform(df):
-            if self._root_path is None:
+            _root_path = self._root_path
+            if _root_path is None:
                 raise ValueError("Root path is not set. Provide it in the constructor or use `from_db_file`")
-            df["data_uri"] = df.data_uri.map(partial(url_to_file_path, project_dir=self._root_path))
+
+            df["data_uri"] = df.data_uri.map(lambda p: url_to_file_path(p, project_dir=_root_path) if p else p)
             return df
 
         return stmt, transform
@@ -98,20 +99,23 @@ class ActiveProject:
     def _join_data_tags_statement(self, stmt, base_model: AnalyticsModel, group_by_cols=None):
         stmt = stmt.add_columns(("[" + func.group_concat('"' + ProjectTag.name + '"', ", ") + "]").label("data_tags"))
         stmt = (
-            stmt.join(
+            stmt.outerjoin(
                 ProjectTaggedDataUnit,
                 onclause=(base_model.du_hash == ProjectTaggedDataUnit.du_hash)
                 & (base_model.frame == ProjectTaggedDataUnit.frame),
             )
-            .join(ProjectTag, onclause=ProjectTag.tag_hash == ProjectTaggedDataUnit.tag_hash)
-            .where(
-                ProjectTag.project_hash == self.project_hash, ProjectTaggedDataUnit.project_hash == self.project_hash
+            .outerjoin(
+                ProjectTag,
+                onclause=(
+                    (ProjectTag.tag_hash == ProjectTaggedDataUnit.tag_hash)
+                    & (ProjectTaggedDataUnit.project_hash == self.project_hash)
+                ),
             )
             .group_by(base_model.du_hash, base_model.frame, *(group_by_cols or []))
         )
 
         def transform(df):
-            df["data_tags"] = df.data_tags.map(eval)
+            df["data_tags"] = df.data_tags.map(lambda x: eval(x) if x else [])
             return df
 
         return stmt, transform
@@ -127,7 +131,7 @@ class ActiveProject:
 
         """
         if self._model_hash is None:
-            raise ValueError(f"Project with name {self._project_name} does not have any model predictions")
+            raise ValueError(f"Project with name `{self._project_name}` does not have any model predictions")
 
         with Session(self._engine) as sess:
             P = ProjectPredictionAnalytics
@@ -157,7 +161,7 @@ class ActiveProject:
                 transforms.append(transform)
 
             df = pd.DataFrame(sess.exec(stmt).all())
-            df.columns = list(sess.exec(stmt).keys())  # type: ignore
+            df.columns = list(sess.exec(stmt).keys()) or df.columns  # type: ignore
 
             for transform in transforms:
                 df = transform(df)
@@ -175,7 +179,7 @@ class ActiveProject:
         """
         with Session(self._engine) as sess:
             # hack to get all columns without the pydantic model
-            stmt = select(*[c for c in ProjectDataAnalytics.__table__.c]).where(  # type: ignore
+            stmt = select(*[c for c in ProjectDataAnalytics.__table__.c][:3]).where(  # type: ignore
                 ProjectDataAnalytics.project_hash == self.project_hash
             )
             transforms = []
@@ -186,8 +190,9 @@ class ActiveProject:
                 stmt, transform = self._join_data_tags_statement(stmt, ProjectDataAnalytics)
                 transforms.append(transform)
             image_metrics = sess.exec(stmt).all()
+
             df = pd.DataFrame(image_metrics)
-            df.columns = list(sess.execute(stmt).keys())  # type: ignore
+            df.columns = list(sess.execute(stmt).keys()) or df.columns  # type: ignore
 
             for transform in transforms:
                 df = transform(df)
