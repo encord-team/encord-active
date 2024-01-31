@@ -103,6 +103,16 @@ Whether you've just started collecting data, labeled your first batch of samples
 
 ![encord active diagram](https://storage.googleapis.com/docs-media.encord.com/static/img/process-chart-ea.webp)
 
+### 🚀 Encord Active Versions
+
+Encord Active (EA) is available in two versions:
+- Encord Active Cloud 🌥️
+- Encord Active OS 💻
+
+[Active Cloud][active-cloud] is tightly integrated with [Encord Annotate][annotate], with Active Cloud and Annotate being hosted by Encord--you can signup and start using Active without installing anything. 
+
+Or self-host and start using the open source toolkit locally ⬇️.
+
 ## 🔖 Documentation
 
 Our full documentation is available [here][encord-active-docs]. In particular, we recommend checking out:
@@ -210,20 +220,22 @@ Visit our [documentation][encord-active-docs] to learn more.
 | `mp4` \*   | ✅  | Classifications | ✅  |               |               |
 |            |     | Polylines       | 🟡  |               |               |
 
-\* Requires an Encord Annotate account
+\* Requires an [Encord Annotate][annotate] account
 
 ## Active Cloud 🌩️
-Don't want to host Encord Active on your server? Or are you loading >25k images for your project? Check out [Active Cloud](https://encord.com/active/) extending features from Encord Active open source to help you:
+
+Don't want to host Encord Active on your server? Or are you loading >25k images for your project? Check out [Active Cloud][active-cloud] extending features from Encord Active open source to help you:
 
 ✅ Curate datasets better with [Collections][collections] \
 ✅ Evaluate models with in-built and custom metrics \
 ✅ Perform Natural Language Search \
 ✅ Search your dataset by images \
 ✅ Integrate with annotation platform \
+✅ Filter by metadata 
 
 > [**Try it for free**][try-cloud-free]
 
-![active-cloud-gif]
+![active-cloud-gif][active-cloud]
 
 ## 🧑🏽‍💻Development
 
@@ -273,3 +285,5 @@ This repository is published under the Apache 2.0 licence.
 [active-cloud-gif]: https://github.com/encord-team/encord-active/blob/main/encord_active_cloud_github_readme.gif
 [collections]: https://docs.encord.com/docs/active-create-collections
 [try-cloud-free]: https://encord.com/try-it-free/
+[annotate]: https://encord.com/annotate/
+[active-cloud]: https://encord.com/active/
