@@ -226,7 +226,7 @@ Visit our [documentation][encord-active-docs] to learn more.
 
 Don't want to host Encord Active on your server? Or are you loading >25k images for your project? Check out [Active Cloud][active-cloud] extending features from Encord Active open source to help you:
 
-✅ Curate datasets better with [Collections][collections] \
+✅ Curate datasets better with Collections \
 ✅ Evaluate models with in-built and custom metrics \
 ✅ Perform Natural Language Search \
 ✅ Search your dataset by images \
