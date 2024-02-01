@@ -75,18 +75,6 @@ pip install encord-active
 > If you have trouble installing `encord-active`, you find more detailed instructions on
 > installing it [here](https://docs.encord.com/docs/active-installation). If just want to see it in action try out [this Colab notebook](https://colab.research.google.com/github/encord-team/encord-notebooks/blob/main/colab-notebooks/01_Encord_Active_Notebooks_Download_sandbox_project.ipynb).
 
-### 🖥️ Supported Platforms
-
-🚨 Note: Currently, this library does not support Linux 🚫🐧.
-
-Supported platforms include:
-
-- Windows
-- macOS
-
-#### 🐧 Linux Support
-
-We understand the importance of Linux in many development environments. We are actively exploring ways to bring Linux support in the future 🔍. If you're interested in contributing or have suggestions, please read the [contribution guidelines][contribute-url] 🤝.
 
 ## 👋 Quickstart
 
@@ -114,6 +102,16 @@ Encord Active helps you understand and improve your data, labels, and models at 
 Whether you've just started collecting data, labeled your first batch of samples, or have multiple models in production, Encord Active can help you.
 
 ![encord active diagram](https://storage.googleapis.com/docs-media.encord.com/static/img/process-chart-ea.webp)
+
+### 🚀 Encord Active Versions
+
+Encord Active (EA) is available in two versions:
+- Encord Active Cloud 🌥️
+- Encord Active OS 💻
+
+[Active Cloud][active-cloud] is tightly integrated with [Encord Annotate][annotate], with Active Cloud and Annotate being hosted by Encord--you can signup and start using Active without installing anything. 
+
+Or self-host and start using the open source toolkit locally ⬇️.
 
 ## 🔖 Documentation
 
@@ -222,7 +220,21 @@ Visit our [documentation][encord-active-docs] to learn more.
 | `mp4` \*   | ✅  | Classifications | ✅  |               |               |
 |            |     | Polylines       | 🟡  |               |               |
 
-\* Requires an Encord Annotate account
+\* Requires an [Encord Annotate][annotate] account
+
+## Active Cloud 🌩️
+
+Don't want to host Encord Active on your server? Or are you loading >25k images for your project? Check out [Active Cloud][active-cloud] extending features from Encord Active open source to help you:
+
+✅ Curate datasets better with Collections \
+✅ Evaluate models with in-built and custom metrics \
+✅ Perform Natural Language Search \
+✅ Search your dataset by images \
+✅ Integrate with annotation platform \
+✅ Filter by metadata
+
+![active-cloud][active-banner]
+> [**Try it for free**][try-cloud-free]
 
 ## 🧑🏽‍💻Development
 
@@ -269,3 +281,9 @@ This repository is published under the Apache 2.0 licence.
 [python-39]: https://www.python.org/downloads/release/python-3915/
 [report-issue]: https://github.com/encord-team/encord-active/issues/new/choose
 [slack-join]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
+[active-cloud-gif]: https://github.com/encord-team/encord-active/blob/main/encord_active_cloud_github_readme.gif
+[active-banner]: https://github.com/encord-team/encord-active/blob/active-cloud-cta/active-cloud.jpg
+[collections]: https://docs.encord.com/docs/active-create-collections
+[try-cloud-free]: https://encord.com/try-it-free/
+[annotate]: https://encord.com/annotate/
+[active-cloud]: https://encord.com/active/
