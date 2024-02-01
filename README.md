@@ -282,7 +282,7 @@ This repository is published under the Apache 2.0 licence.
 [report-issue]: https://github.com/encord-team/encord-active/issues/new/choose
 [slack-join]: https://join.slack.com/t/encordactive/shared_invite/zt-1hc2vqur9-Fzj1EEAHoqu91sZ0CX0A7Q
 [active-cloud-gif]: https://github.com/encord-team/encord-active/blob/main/encord_active_cloud_github_readme.gif
-[active-banner]: https://github.com/encord-team/encord-active/blob/active-cloud-cta/active-cloud.jpg
+[active-banner]: https://github.com/encord-team/encord-active/blob/main/active-cloud.jpg
 [collections]: https://docs.encord.com/docs/active-create-collections
 [try-cloud-free]: https://encord.com/try-it-free/
 [annotate]: https://encord.com/annotate/
