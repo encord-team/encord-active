@@ -96,7 +96,7 @@ hash, they will be flagged as a potentially broken track.
         # Prepare sliding window of previous two frames to compare polygons over time
         window: List[List[Tuple[dict, Polygon]]] = []
 
-        for data_unit, _ in iterator.iterate(desc="Looking for broken tracks"):
+        for data_unit, _ in iterator.iterate(desc="Looking for broken tracks", include_images=False):
             label_row = iterator.label_rows[iterator.label_hash]
             frame = iterator.frame
 
@@ -211,7 +211,7 @@ hash, they will be flagged as a potentially broken track.
         # Collect the results in the CSV file.
         # Everything not found above with get score "1" meaning "no issues".
         annotated = {k: False for k in error_store.errors}
-        for data_unit, _ in iterator.iterate(desc="Storing results"):
+        for data_unit, _ in iterator.iterate(desc="Storing results", include_images=False):
             for obj in data_unit["labels"].get("objects", []):
                 key = (obj["objectHash"], iterator.frame)
                 if key in error_store.errors:

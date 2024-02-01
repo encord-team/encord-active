@@ -22,7 +22,7 @@ class RandomImageMetric(Metric):
         )
 
     def execute(self, iterator: Iterator, writer: CSVMetricWriter):
-        for _ in iterator.iterate(desc="Assigning random values to images"):
+        for _ in iterator.iterate(desc="Assigning random values to images", include_images=False):
             writer.write(np.random.uniform())
 
 
@@ -46,7 +46,9 @@ class RandomObjectMetric(Metric):
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
 
         found_any = False
-        for data_unit, _ in iterator.iterate(desc="Searching for objects and assigning random scores"):
+        for data_unit, _ in iterator.iterate(
+            desc="Searching for objects and assigning random scores", include_images=False
+        ):
             for obj in data_unit["labels"].get("objects", []):
                 if not obj["shape"] in valid_annotation_types:
                     continue
