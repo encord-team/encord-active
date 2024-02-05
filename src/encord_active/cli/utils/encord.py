@@ -70,7 +70,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
             )
             exit()
 
-        choices = list(map(lambda p: Choice(p.project_hash, name=p.title), projects))
+        choices = [Choice(p.project_hash, name=p.title) for p in projects]
         project_hash = i.fuzzy(
             message="What project would you like to import?",
             choices=choices,
@@ -119,7 +119,7 @@ Check that you have the correct ssh key set up and available projects on [blue]h
 NOTE: this will affect the results of 'encord.Project.list_label_rows()' as every label row will now have a label_hash.
         """
     ):
-        untoched_data = list(filter(lambda x: x.label_hash is None, project.list_label_rows_v2()))
+        untoched_data = [x for x in project.list_label_rows_v2() if x.label_hash is None]
         collect_async(lambda x: x.initialise_labels(), untoched_data, desc="Preparing uninitialized label rows")
         project.refetch_data()
         rich.print()
