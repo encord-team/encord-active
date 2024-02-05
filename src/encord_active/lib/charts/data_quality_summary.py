@@ -69,14 +69,14 @@ def create_labels_distribution_chart(
     fig = go.Figure(
         data=[
             go.Bar(
-                x=labels_df.loc[labels_df[LabelStatisticsSchema.status] == False][LabelStatisticsSchema.name],
-                y=labels_df[labels_df[LabelStatisticsSchema.status] == False][LabelStatisticsSchema.count],
+                x=labels_df.loc[labels_df[LabelStatisticsSchema.status] is False][LabelStatisticsSchema.name],
+                y=labels_df[labels_df[LabelStatisticsSchema.status] is False][LabelStatisticsSchema.count],
                 name="representative",
                 marker_color="#3380FF",
             ),
             go.Bar(
-                x=labels_df.loc[labels_df[LabelStatisticsSchema.status] == True][LabelStatisticsSchema.name],
-                y=labels_df[labels_df[LabelStatisticsSchema.status] == True][LabelStatisticsSchema.count],
+                x=labels_df.loc[labels_df[LabelStatisticsSchema.status] is True][LabelStatisticsSchema.name],
+                y=labels_df[labels_df[LabelStatisticsSchema.status] is True][LabelStatisticsSchema.count],
                 name="undersampled",
                 marker_color="tomato",
             ),
