@@ -46,8 +46,7 @@ def launch_server_app(target: Path, port: int):
             f"[orange1]Port [blue]{port}[/blue] already in use. Try changing the `[blue]--port[/blue]` option.[/orange1]"
         )
         raise typer.Exit()
-    else:
-        rich.print("[yellow]Bear with us, this might take a short while...")
+    rich.print("[yellow]Bear with us, this might take a short while...")
 
     if did_schema_change():
         generate_prisma_client()

@@ -130,7 +130,7 @@ def _assign_metrics(
     if metric_column_name not in metrics_dict:
         raw_score = score
         if metric_column_name in WELL_KNOWN_PERCENTAGE_METRICS:
-            score = score / 100.0
+            score /= 100.0
         metric_def = metric_types[metric_column_name]
         # Run set of patches to generate correctly scaled results.
         if metric_column_name == "metric_sharpness":
@@ -145,7 +145,7 @@ def _assign_metrics(
             score = math.sqrt(score) / (8.0 * 255.0)
         elif metric_column_name == "metric_label_shape_outlier":
             # NOTE: guesswork, not based on any analysis of hu moments
-            score = score / 10000.0
+            score /= 10000.0
             pass
         # Update the score
         if metric_def.type == MetricType.NORMAL:
@@ -580,14 +580,7 @@ def __migrate_predictions(
                 # Non-annotated metrics (new version - harder to process)
                 # attempt to guess what the metric should be associated with.
                 metric_target = " (P)"
-                if metric_name in [
-                    "Random Values on Images",
-                    "Aspect Ratio",
-                    "Area",
-                    "Image Difficulty",
-                    "Image Diversity",
-                    "Image Singularity",
-                ]:
+                if metric_name in {"Random Values on Images", "Aspect Ratio", "Area", "Image Difficulty", "Image Diversity", "Image Singularity"}:
                     metric_target = " (F)"
                 metric_key = WELL_KNOWN_METRICS[metric_name]
             if metric_key == "$SKIP":
@@ -604,7 +597,7 @@ def __migrate_predictions(
                         description_dict=None,
                         description=None,
                     )
-                elif metric_key == "metric_object_density" or metric_key == "metric_object_count":
+                elif metric_key in {'metric_object_density', 'metric_object_count'}:
                     pass  # FIXME: this p-metric should be stored somewhere.
                 else:
                     raise ValueError(f"Unknown prediction metric: {metric_key}")
@@ -862,7 +855,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
                 du_json = data_units_json[data_unit.data_hash]
                 if data_type != "video":
                     expected_data_units.remove(data_unit.data_hash)
-                if data_type == "image" or data_type == "img_group":
+                if data_type in {'image', 'img_group'}:
                     labels_json = du_json["labels"]
                 elif data_type == "video":
                     labels_json = du_json["labels"].get(str(data_unit.frame), {})
@@ -1146,7 +1139,7 @@ def migrate_disk_to_db(pfs: ProjectFileStructure, delete_existing_project: bool 
         names = {child_dir.name for child_dir in predictions_child_dirs}
         if "predictions.csv" not in names:
             # 1 or 2 predictions for objects / classifications in the child structure
-            predictions_dir = predictions_dir / prediction_type.value
+            predictions_dir /= prediction_type.value
         elif prediction_type == MainPredictionType.CLASSIFICATION:
             # 1 prediction for objects - hence classification predictions should be skipped.
             continue

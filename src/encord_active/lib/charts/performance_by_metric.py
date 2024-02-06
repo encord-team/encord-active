@@ -99,17 +99,15 @@ def bin_bar_chart(
                 alt.Tooltip(f"{BinSchema.class_name}:N", title="Class name"),
             ],
         )
-    else:
-        # Only use aggregate over all classes
-        return chart.encode(
-            alt.X(f"{BinSchema.bin}:Q"),
-            alt.Y("sum(pctf):Q", stack="zero"),
-            tooltip=[
-                alt.Tooltip(BinSchema.bin, title=metric_name, format=FLOAT_FMT),
-                alt.Tooltip("count():Q", title=f"Num. {str_type}", format=COUNT_FMT),
-                alt.Tooltip("sum(pct):Q", title=f"% of total {str_type}", format=PCT_FMT),
-            ],
-        )
+    return chart.encode(
+        alt.X(f"{BinSchema.bin}:Q"),
+        alt.Y("sum(pctf):Q", stack="zero"),
+        tooltip=[
+            alt.Tooltip(BinSchema.bin, title=metric_name, format=FLOAT_FMT),
+            alt.Tooltip("count():Q", title=f"Num. {str_type}", format=COUNT_FMT),
+            alt.Tooltip("sum(pct):Q", title=f"% of total {str_type}", format=PCT_FMT),
+        ],
+    )
 
 
 def performance_rate_line_chart(

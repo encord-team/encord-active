@@ -49,13 +49,7 @@ class EncordMaskRCNNDataset(torchvision.datasets.CocoDetection):
         segmentations = [obj["segmentation"] for obj in target]
         masks = convert_coco_poly_to_mask(segmentations, img_height, img_width)
 
-        processed_target = {}
-        processed_target["boxes"] = torch.as_tensor(boxes, dtype=torch.float32)
-        processed_target["labels"] = torch.as_tensor(labels, dtype=torch.int64)
-        processed_target["masks"] = masks
-        processed_target["image_id"] = torch.tensor([image_id])
-        processed_target["area"] = torch.tensor(area)
-        processed_target["iscrowd"] = torch.as_tensor(iscrowd, dtype=torch.int64)
+        processed_target = {"boxes": torch.as_tensor(boxes, dtype=torch.float32), "labels": torch.as_tensor(labels, dtype=torch.int64), "masks": masks, "image_id": torch.tensor([image_id]), "area": torch.tensor(area), "iscrowd": torch.as_tensor(iscrowd, dtype=torch.int64)}
 
         if self._transforms is not None:
             img, processed_target = self._transforms(img, processed_target)
