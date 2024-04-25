@@ -101,12 +101,12 @@ class CocoEncoder:
         self._labels_list = labels_list
         self._metrics = metrics
         self._ontology = ontology
-        self._coco_json: dict = dict()
+        self._coco_json: dict = {}
         self._current_annotation_id: int = 0
-        self._object_hash_to_track_id_map: dict = dict()
-        self._coco_categories_id_to_ontology_object_map: dict = dict()  # DENIS: do we need this?
-        self._feature_hash_to_coco_category_id_map: dict = dict()
-        self._data_hash_to_image_id_map: dict = dict()
+        self._object_hash_to_track_id_map: dict = {}
+        self._coco_categories_id_to_ontology_object_map: dict = {}  # DENIS: do we need this?
+        self._feature_hash_to_coco_category_id_map: dict = {}
+        self._data_hash_to_image_id_map: dict = {}
         """Map of (data_hash, frame_offset) to the image id"""
 
         # self._data_location_to_image_id_map = dict()
@@ -172,14 +172,11 @@ class CocoEncoder:
     def get_description(self) -> Optional[str]:
         if len(self._labels_list) == 0:
             return None
-        else:
-            return self._download_file_path.as_posix().split("/")[-1]
+        return self._download_file_path.as_posix().split("/")[-1]
 
     def get_categories(self) -> List[dict]:
         """This does not translate classifications as they are not part of the Coco spec."""
-        categories = []
-        for object_ in self._ontology.objects:
-            categories.append(self.get_category(object_))
+        categories = [self.get_category(object_) for object_ in self._ontology.objects]
 
         return categories
 
@@ -379,7 +376,7 @@ class CocoEncoder:
                     continue
                 data_unit_metrics = self._metrics[label_hash][data_hash]
 
-                if data_unit["data_type"] in ["video", "application/dicom"]:
+                if data_unit["data_type"] in {"video", "application/dicom"}:
                     if not self._include_videos:
                         continue
                     for frame_num, frame_item in data_unit["labels"].items():
@@ -502,7 +499,7 @@ class CocoEncoder:
         )
 
     def get_polygon(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
-        if not len(object_["polygon"]) >= 3:
+        if len(object_["polygon"]) < 3:
             return None
 
         polygon = get_polygon_from_dict(object_["polygon"], size.width, size.height)
@@ -530,7 +527,7 @@ class CocoEncoder:
 
     def get_polyline(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         """Polylines are technically not supported in COCO, but here we use a trick to allow a representation."""
-        if not len(object_["polyline"]) >= 2:
+        if len(object_["polyline"]) < 2:
             return None
 
         polygon = get_polygon_from_dict(object_["polyline"], size.width, size.height)
@@ -622,7 +619,7 @@ class CocoEncoder:
 
     def get_skeleton(self, object_: dict, image_id: int, size: Size) -> Union[CocoAnnotation, SuperClass, None]:
         # DENIS: next up: check how this is visualised.
-        if not len(object_["skeleton"]) >= 1:
+        if len(object_["skeleton"]) < 1:
             return None
 
         area = 0
@@ -686,10 +683,9 @@ class CocoEncoder:
     def get_and_set_track_id(self, object_hash: str) -> int:
         if object_hash in self._object_hash_to_track_id_map:
             return self._object_hash_to_track_id_map[object_hash]
-        else:
-            next_track_id = len(self._object_hash_to_track_id_map)
-            self._object_hash_to_track_id_map[object_hash] = next_track_id
-            return next_track_id
+        next_track_id = len(self._object_hash_to_track_id_map)
+        self._object_hash_to_track_id_map[object_hash] = next_track_id
+        return next_track_id
 
     def download_image(self, url: str, path: Path):
         """Check if directory exists, create the directory if needed, download the file, store it into the path."""
