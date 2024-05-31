@@ -75,7 +75,6 @@ pip install encord-active
 > If you have trouble installing `encord-active`, you find more detailed instructions on
 > installing it [here](https://docs.encord.com/docs/active-installation). If just want to see it in action try out [this Colab notebook](https://colab.research.google.com/github/encord-team/encord-notebooks/blob/main/colab-notebooks/01_Encord_Active_Notebooks_Download_sandbox_project.ipynb).
 
-
 ## 👋 Quickstart
 
 Get started immediately by sourcing your environment and running the code below.
@@ -106,10 +105,11 @@ Whether you've just started collecting data, labeled your first batch of samples
 ### 🚀 Encord Active Versions
 
 Encord Active (EA) is available in two versions:
+
 - Encord Active Cloud 🌥️
 - Encord Active OS 💻
 
-[Active Cloud][active-cloud] is tightly integrated with [Encord Annotate][annotate], with Active Cloud and Annotate being hosted by Encord--you can signup and start using Active without installing anything. 
+[Active Cloud][active-cloud] is tightly integrated with [Encord Annotate][annotate], with Active Cloud and Annotate being hosted by Encord--you can signup and start using Active without installing anything.
 
 Or self-host and start using the open source toolkit locally ⬇️.
 
@@ -138,7 +138,7 @@ The app should then open in the browser.
 If not, navigate to [`localhost:8000`](http://localhost:8000).
 Our [docs][encord-active-docs] contain more information about what you can see in the page.
 
-## <img width="24" height="24" src="https://storage.googleapis.com/docs-media.encord.com/static/img/icons/encord_icon.png"/> Import your dataset
+## <img width="24" height="24" src="https://storage.googleapis.com/docs-media.encord.com/static/img/icons/Icon%20solo%20-%20Primary.svg"/> Import your dataset
 
 ### Quick import Dataset
 
@@ -234,6 +234,7 @@ Don't want to host Encord Active on your server? Or are you loading >25k images 
 ✅ Filter by metadata
 
 ![active-cloud][active-banner]
+
 > [**Try it for free**][try-cloud-free]
 
 ## 🧑🏽‍💻Development
