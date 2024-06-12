@@ -92,7 +92,7 @@ This metric gives each image a score that shows each image's uniqueness.
         fix_duplicate_image_orders_in_knn_graph_all_rows(query_res.indices)
         scores = self.score_images(embedding_info, query_res, iterator.project.project_hash)
 
-        for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
+        for data_unit, _ in iterator.iterate(desc="Writing scores to a file", include_images=False):
             data_unit_info = scores.get(data_unit["data_hash"])
             if data_unit_info is not None:
                 writer.write(
