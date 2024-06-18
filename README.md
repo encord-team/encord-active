@@ -265,6 +265,19 @@ If you want to share your custom metrics or improve the tool, please see our [co
 
 [@Javi Leguina](https://github.com/jleguina)
 
+## BibTeX
+
+```
+@misc{Encord2024,
+  author = {Encord},
+  title = {Encord Active},
+  year = {2024},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/encord-team/encord-ctive}},
+}
+```
+
 ## Licence
 
 This repository is published under the Apache 2.0 licence.
