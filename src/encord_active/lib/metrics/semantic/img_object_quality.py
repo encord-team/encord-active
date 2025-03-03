@@ -135,7 +135,7 @@ class ObjectEmbeddingSimilarityTest(Metric):
         label_scores = label_matches.mean(axis=-1)
 
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
-        for data_unit, _ in iterator.iterate(desc="Storing index"):
+        for data_unit, _ in iterator.iterate(desc="Storing index", include_images=False):
             for obj in data_unit["labels"].get("objects", []):
                 if obj["shape"] not in valid_annotation_types:
                     continue

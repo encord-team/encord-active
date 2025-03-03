@@ -70,7 +70,7 @@ track-ids, they will be flagged as potential inconsistencies in tracks.
         label_hash = ""
         previous_objects = None
         previous_polygons = None
-        for data_unit, _ in iterator.iterate(desc="Looking for overlapping objects"):
+        for data_unit, _ in iterator.iterate(desc="Looking for overlapping objects", include_images=False):
             label_row = iterator.label_rows[iterator.label_hash]
             data_type = label_row["data_type"]
             if not (data_type == "video" or (data_type == "img_group" and len(label_row["data_units"]) > 1)):
