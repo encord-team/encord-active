@@ -63,7 +63,7 @@ the lower its score will be.""",
         hu_moments_df = get_hu_embeddings(iterator)
         hu_moments_identifiers = set(hu_moments_df["identifier"])
 
-        for data_unit, _ in iterator.iterate(desc="Computing moment similarity"):
+        for data_unit, _ in iterator.iterate(desc="Computing moment similarity", include_images=False):
             for obj in data_unit["labels"].get("objects", []):
                 if obj["shape"] not in valid_annotation_types:
                     continue

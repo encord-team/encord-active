@@ -108,7 +108,7 @@ merged by keeping the samples of classes the same for the first _N_ samples.
 
         data_hash_to_score = self._get_difficulty_ranking(cluster_size)
 
-        for data_unit, _ in iterator.iterate(desc="Writing scores to a file"):
+        for data_unit, _ in iterator.iterate(desc="Writing scores to a file", include_images=False):
             score = data_hash_to_score.get(data_unit["data_hash"])
             if score is not None:
                 writer.write(score=score)

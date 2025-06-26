@@ -34,7 +34,7 @@ is used to measure closeness of two annotations.""",
         valid_annotation_types = {annotation_type.value for annotation_type in self.metadata.annotation_type}
         found_any = False
 
-        for data_unit, _ in iterator.iterate(desc="Looking for duplicates"):
+        for data_unit, _ in iterator.iterate(desc="Looking for duplicates", include_images=False):
             objects = [obj for obj in data_unit["labels"].get("objects", []) if obj["shape"] in valid_annotation_types]
             polygons = [get_polygon(obj) for obj in objects]
 
